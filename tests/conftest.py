@@ -1,6 +1,6 @@
 import pytest
 
-from timeseries.data.lorenz import Lorenz
+from timeseries.data.lorenz.lorenz import Lorenz
 
 
 @pytest.fixture

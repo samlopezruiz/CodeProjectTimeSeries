@@ -4,11 +4,11 @@ from scipy.integrate import odeint
 
 class Lorenz:
 
-    def __init__(self, sigma=10., rho=28., beta=8. / 3.):
+    def __init__(self, sigma=10., rho=-28., beta=8. / 3.):
         self.sigma = sigma
         self.rho = rho
         self.beta = beta
-        self.initial_state = [0.1, 0, 0]
+        self.initial_state = [0, 1, 1.05]
         start_time = 0
         end_time = 100
         self.time_points = np.linspace(start_time, end_time, end_time * 100)
