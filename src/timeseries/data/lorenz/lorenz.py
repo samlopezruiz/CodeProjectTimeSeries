@@ -3,6 +3,13 @@ from scipy.integrate import odeint
 import matplotlib.pyplot as plt
 import os
 
+from timeseries.plot.plot_utils import plotly_row_traces, plotly_save, plotly_phase_plots, plotly_3d
+import pandas as pd
+import plotly.graph_objects as go
+from plotly.offline import plot
+from plotly.subplots import make_subplots
+from itertools import combinations
+
 
 class Lorenz:
 
@@ -40,64 +47,30 @@ class Lorenz:
         self.y = xyz[:, 1]
         self.z = xyz[:, 2]
 
-    def plot3d(self, save_folder=None):
+    def plot3d(self, file_path=None, size=None):
         if len(self.x) > 1:
-            # plot the lorenz attractor in three-dimensional phase space
-            fig = plt.figure(figsize=(12, 9))
-            ax = fig.gca(projection='3d')
-            ax.xaxis.set_pane_color((1, 1, 1, 1))
-            ax.yaxis.set_pane_color((1, 1, 1, 1))
-            ax.zaxis.set_pane_color((1, 1, 1, 1))
-            ax.plot(self.x, self.y, self.z, color='g', alpha=0.7, linewidth=0.6)
-            ax.set_title('Lorenz attractor phase diagram')
-
-            if save_folder is not None:
-                fig.savefig('{}/lorenz-attractor-3d.png'.format(save_folder), dpi=180, bbox_inches='tight')
-            plt.show()
+            df = pd.DataFrame(data=np.array([self.x, self.y, self.z]).transpose(), index=self.time_points,
+                              columns=['x', 'y', 'z'])
+            plotly_3d(df, title="Lorenz attractor 3D",
+                               file_path=file_path, size=size)
         else:
             print("Solve ODE first")
 
-    def plot2d(self, save_folder=None):
+    def plot2d(self, file_path=None, size=None):
         if len(self.x) > 1:
-            # now plot two-dimensional cuts of the three-dimensional phase space
-            fig, ax = plt.subplots(1, 3, sharex=False, sharey=False, figsize=(17, 6))
-
-            # plot the x values vs the y values
-            ax[0].plot(self.x, self.y, color='r', alpha=0.7, linewidth=0.3)
-            ax[0].set_title('x-y phase plane')
-
-            # plot the x values vs the z values
-            ax[1].plot(self.x, self.z, color='m', alpha=0.7, linewidth=0.3)
-            ax[1].set_title('x-z phase plane')
-
-            # plot the y values vs the z values
-            ax[2].plot(self.y, self.z, color='b', alpha=0.7, linewidth=0.3)
-            ax[2].set_title('y-z phase plane')
-
-            if save_folder is not None:
-                fig.savefig('{}/lorenz-attractor-phase-plane.png'.format(save_folder), dpi=180, bbox_inches='tight')
-            plt.show()
+            df = pd.DataFrame(data=np.array([self.x, self.y, self.z]).transpose(), index=self.time_points,
+                              columns=['x', 'y', 'z'])
+            plotly_phase_plots(df, title="Lorenz attractor phase plane",
+                               file_path=file_path, size=size)
         else:
             print("Solve ODE first")
 
-    def plot_time_series(self, save_folder=None):
+    def plot_time_series(self, file_path=None, size=None):
         if len(self.x) > 1:
-            fig, ax = plt.subplots(3, 1, figsize=(17, 10))
-            # plot the x values vs the y values
-            ax[0].plot(self.time_points, self.x, color='r', alpha=1, linewidth=0.4)
-            ax[0].set_title('x phase plane')
-
-            # plot the x values vs the z values
-            ax[1].plot(self.time_points, self.y, color='m', alpha=1, linewidth=0.4)
-            ax[1].set_title('y phase plane')
-
-            # plot the y values vs the z values
-            ax[2].plot(self.time_points, self.z, color='b', alpha=1, linewidth=0.4)
-            ax[2].set_title('zz phase plane')
-
-            if save_folder is not None:
-                fig.savefig('{}/lorenz-attractor-time-series.png'.format(save_folder), dpi=180, bbox_inches='tight')
-            plt.show()
+            df = pd.DataFrame(data=np.array([self.x, self.y, self.z]).transpose(), index=self.time_points,
+                              columns=['x', 'y', 'z'])
+            plotly_row_traces(df, title="Lorenz Attactor Time Series",
+                              file_path=file_path, size=size)
         else:
             print("Solve ODE first")
 
@@ -107,18 +80,14 @@ class Lorenz:
 
 if __name__ == '__main__':
     save_folder = 'images'
-    if not os.path.exists(save_folder):
-        os.makedirs(save_folder)
-
     start_time = 0
     end_time = 100
-    t = np.linspace(start_time, end_time, end_time * 100)
+    t = np.linspace(start_time, end_time, end_time * 100 + 1, dtype='float64')
+    # t = np.arange(start_time, end_time * 100 + 1) / 100
 
     lorenz_sys = Lorenz(sigma=10., rho=28., beta=8. / 3.)
     lorenz_sys.solve(t)
     xyz = lorenz_sys.get_time_series()
-    lorenz_sys.plot3d(save_folder=save_folder)
-    lorenz_sys.plot2d(save_folder=save_folder)
-    lorenz_sys.plot_time_series(save_folder=save_folder)
-
-
+    lorenz_sys.plot3d(file_path=[save_folder, 'lorenz-attractor-3d'])
+    lorenz_sys.plot2d(file_path=[save_folder, 'lorenz-attractor-phase-plane'])
+    lorenz_sys.plot_time_series(file_path=[save_folder, 'lorenz-attractor-time-series'])
