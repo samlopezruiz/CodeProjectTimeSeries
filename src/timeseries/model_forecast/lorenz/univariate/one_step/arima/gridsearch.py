@@ -3,12 +3,15 @@ import numpy as np
 
 
 # one-step sarima forecast
+from timeseries.model.univariate.explore.functions import grid_search
+
+
 def sarima_forecast(history, config):
     order, sorder, trend = config
-    # define model
+    # define model_forecast
     model = SARIMAX(history, order=order, seasonal_order=sorder, trend=trend, enforce_stationarity=False,
                     enforce_invertibility=False)
-    # fit model
+    # fit model_forecast
     model_fit = model.fit(disp=False)
     # make one step forecast
     yhat = model_fit.predict(len(history), len(history))
@@ -45,7 +48,7 @@ if __name__ == '__main__':
     from timeseries.data.lorenz.lorenz import Lorenz
 
     # define dataset
-    # data = [10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0]
+    data = [10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0]
     start_time = 0
     end_time = 100
     t = np.linspace(start_time, end_time, end_time * 100)
@@ -53,15 +56,15 @@ if __name__ == '__main__':
     lorenz_sys = Lorenz(sigma=10., rho=28., beta=8. / 3.)
     lorenz_sys.solve(t)
     xyz = lorenz_sys.get_time_series()
-    data = xyz[0]
+    # data = xyz[0]
     print(len(data))
     # data split
-    n_test = 200
-    # model configs
+    n_test = 2
+    # model_forecast configs
     cfg_list = sarima_configs()
     # grid search
-    # scores = grid_search(data, cfg_list, n_test, parallel=False)
-    # print('done')
-    # # list top 3 configs
-    # for cfg, error in scores[:3]:
-    #     print(cfg, error)
+    scores = grid_search(data, cfg_list, n_test, sarima_forecast, parallel=True)
+    print('done')
+    # list top 3 configs
+    for cfg, error in scores[:3]:
+        print(cfg, error)
