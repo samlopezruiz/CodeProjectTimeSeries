@@ -1,5 +1,8 @@
 import pandas as pd
 import os
+from datetime import date
+
+
 
 template = ["plotly", "plotly_white", "plotly_dark", "ggplot2", "seaborn", "none"]
 
@@ -41,11 +44,13 @@ def set_y_labels(f, features, fig):
 
 
 def plotly_save(fig, file_path, size):
+    today = date.today()
+
     print("saving .html and .png")
     if not os.path.exists(file_path[0]):
         os.makedirs(file_path[0])
-    image_path = file_path[:-1].copy() + [file_path[-1] + ".png"]
-    html_path = file_path[:-1].copy() + [file_path[-1] + ".html"]
+    image_path = file_path[:-1].copy() + [file_path[-1] + '_' + today.strftime("%Y_%m_%d") + ".png"]
+    html_path = file_path[:-1].copy() + [file_path[-1] + '_' + today.strftime("%Y_%m_%d") + ".html"]
     if size is None:
         size = (1980, 1080)
     fig.write_image(os.path.join(*image_path), width=size[0], height=size[1])

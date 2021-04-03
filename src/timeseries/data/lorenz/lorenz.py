@@ -1,12 +1,23 @@
 import numpy as np
 from scipy.integrate import odeint
 import pandas as pd
+from timeseries.models.lorenz.functions.functions import train_test_split
 from timeseries.plotly.plot import plotly_3d, plotly_phase_plots, plotly_time_series
+
+
+def offset_series(series, offset=100):
+    min_s = np.min(series)
+    if min_s < 0:
+        return np.array(series) - min_s + offset
+    elif min_s < 1:
+        return np.array(series) + offset
+    else:
+        return series
 
 
 class Lorenz:
 
-    def __init__(self, sigma=10., rho=-28., beta=8. / 3.):
+    def __init__(self, sigma=10., rho=-28., beta=8. / 3., granularity=1):
         self.sigma = sigma
         self.rho = rho
         self.beta = beta
@@ -15,6 +26,9 @@ class Lorenz:
         end_time = 100
         self.x = self.y = self.z = [0]
         self.time_points = np.linspace(start_time, end_time, end_time * 100)
+        self.df = None
+        self.solved = False
+        self.granularity = granularity
 
     def lorenz_system(self, current_state, t):
         # positions of x, y, z in space at the current time point
@@ -28,71 +42,144 @@ class Lorenz:
         # return a list of the equations that describe the system
         return [dx_dt, dy_dt, dz_dt]
 
-    def solve(self, time_points=None):
+    def solve(self, time_points=None, positive_offset=False, noise=False, mu=0.15, trend=False):
         if time_points is None:
             time_points = self.time_points
         else:
             self.time_points = time_points
         xyz = odeint(self.lorenz_system, self.initial_state, time_points)
 
+        self.x, self.y, self.z = xyz[:, 0], xyz[:, 1], xyz[:, 2]
+        if noise:
+            mu, sigma = 1, mu
+            # creating a noise with the same dimension as the dataset (2,2)
+            self.x = self.x * np.random.normal(mu, sigma, self.x.shape)
+            self.y = self.y * np.random.normal(mu, sigma, self.y.shape)
+            self.z = self.z * np.random.normal(mu, sigma, self.z.shape)
+
         # extract the individual arrays of x, y, and z values from the array of arrays
-        self.x = xyz[:, 0]
-        self.y = xyz[:, 1]
-        self.z = xyz[:, 2]
+        if positive_offset:
+            self.x = offset_series(self.x)
+            self.y = offset_series(self.y)
+            self.z = offset_series(self.z)
 
-    def plot3d(self, file_path=None, size=None, save=True):
-        if len(self.x) > 1:
-            df = pd.DataFrame(data=np.array([self.x, self.y, self.z]).transpose(), index=self.time_points,
-                              columns=['x', 'y', 'z'])
-            plotly_3d(df, title="Lorenz attractor 3D",
-                               file_path=file_path, size=size, save=save)
+        if trend:
+            self.x = offset_series(self.x) + np.array(self.time_points)
+            self.y = offset_series(self.y) + np.array(self.time_points)
+            self.z = offset_series(self.z) + np.array(self.time_points)
+
+        df = pd.DataFrame(data=np.array([self.x, self.y, self.z]).transpose(), index=self.time_points,
+                          columns=['x', 'y', 'z'])
+        self.df = df.iloc[::self.granularity, :]
+        self.solved = True
+
+    def plot3d(self, file_path=None, size=None, save=True, title_bool=True, label_scale=2):
+        if self.solved:
+            plotly_3d(self.df, title="Lorenz attractor 3D" if title_bool else None,
+                      file_path=file_path, size=size, save=save, label_scale=label_scale)
         else:
             print("Solve ODE first")
 
-    def plot2d(self, file_path=None, size=None, save=True):
-        if len(self.x) > 1:
-            df = pd.DataFrame(data=np.array([self.x, self.y, self.z]).transpose(), index=self.time_points,
-                              columns=['x', 'y', 'z'])
-            plotly_phase_plots(df, title="Lorenz attractor phase plane",
-                               file_path=file_path, size=size, save=save)
+    def plot2d(self, file_path=None, size=None, save=True, title_bool=True, label_scale=2):
+        if self.solved:
+            plotly_phase_plots(self.df, title="Lorenz attractor phase plane" if title_bool else None,
+                               file_path=file_path, size=size, save=save, label_scale=label_scale)
         else:
             print("Solve ODE first")
 
-    def plot_time_series(self, file_path=None, size=None, save=True, markers='lines'):
-        if len(self.x) > 1:
-            df = pd.DataFrame(data=np.array([self.x, self.y, self.z]).transpose(), index=self.time_points,
-                              columns=['x', 'y', 'z'])
-            plotly_time_series(df, rows=list(range(3)), title="Lorenz Attactor Time Series",
-                               file_path=file_path, size=size, save=save, markers=markers)
+    def plot_time_series(self, ini=None, end=None, file_path=None, size=None, save=True, markers='lines',
+                         title_bool=True, label_scale=2):
+        if self.solved:
+            df = self.df
+            df = df[df.index < end] if end is not None else df
+            df = df[df.index >= ini] if ini is not None else df
+            plotly_time_series(df, rows=list(range(3)), title="Lorenz Attactor Time Series" if title_bool else None,
+                               file_path=file_path, size=size, save=save, markers=markers, label_scale=label_scale)
         else:
             print("Solve ODE first")
 
     def get_time_series(self):
-        return [self.x, self.y, self.z]
+        return [self.df['x'].values, self.df['y'].values, self.df['z'].values]
 
     def get_dataframe(self):
-        if len(self.x) > 1:
-            return pd.DataFrame(data=np.array([self.x, self.y, self.z]).transpose(), index=self.time_points,
-                              columns=['x', 'y', 'z'])
-        else:
+        if not self.solved:
             print("Solve ODE first")
-            return None
+        return self.df
 
 
-def lorenz_system(start_time=0, end_time=100):
+def lorenz_system(start_time=0, end_time=100, granularity=1, positive_offset=False, noise=False, mu=0.15, trend=False):
     t = np.arange(start_time, end_time * 100 + 1) / 100
-    lorenz_sys = Lorenz(sigma=10., rho=28., beta=8. / 3.)
-    lorenz_sys.solve(t)
-    xyz = lorenz_sys.get_time_series()
+    lorenz_sys = Lorenz(sigma=10., rho=28., beta=8. / 3., granularity=granularity)
+    lorenz_sys.solve(t, positive_offset=positive_offset, noise=noise, mu=mu, trend=trend)
+    xyz = np.array(lorenz_sys.get_time_series())
     df = lorenz_sys.get_dataframe()
-    return df, xyz, t, lorenz_sys
+    return df, xyz, list(df.index), lorenz_sys
+
+
+def lorenz_wrapper(cfg):
+    variate = cfg.get('variate', 'uni')
+    granularity = cfg.get('granularity', 1)
+    preproc = cfg.get('preprocess', False)
+    positive_offset = True if preproc else cfg.get('positive_offset', False)
+    noise = cfg.get('noise', False)
+    mu = cfg.get('mu', 0.15)
+    trend = cfg.get('trend', False)
+
+
+    if variate == 'multi':
+        res = multivariate_lorenz(test_perc=25, t_ini=15, granularity=granularity, end_time=120,
+                                  y_col=0, positive_offset=positive_offset, noise=noise, mu=mu, trend=trend)
+    else:
+        res = univariate_lorenz(test_perc=25, t_ini=15, granularity=granularity, end_time=120,
+                                positive_offset=positive_offset, noise=noise, mu=mu, trend=trend)
+
+
+    lorenz_df, train, test, t_train, t_test = res
+
+    return lorenz_df, train, test, t_train, t_test
+
+
+def univariate_lorenz(test_perc=20, t_ini=15, granularity=1, end_time=100, positive_offset=False,
+                      noise=False, mu=0.15, trend=False):
+    lorenz_df, xyz, t, _ = lorenz_system(end_time=end_time, granularity=granularity,
+                                         positive_offset=positive_offset, noise=noise, mu=mu, trend=trend)
+    x = lorenz_df['x']
+    x = x[x.index > t_ini]
+    data = np.array(x)
+    test_size = int(len(x) * test_perc // 100)
+    train, test = train_test_split(data, test_size)
+    t_train, t_test = train_test_split(np.array(x.index), test_size)
+    return lorenz_df, train, test, t_train, t_test
+
+
+def multivariate_lorenz(test_perc=20, t_ini=15, granularity=1, end_time=100, y_col=0, positive_offset=False,
+                        noise=False, mu=0.15, trend=False):
+    lorenz_df, xyz, t, _ = lorenz_system(end_time=end_time, granularity=granularity,
+                                         positive_offset=positive_offset, noise=noise, mu=mu, trend=trend)
+    df = lorenz_df[lorenz_df.index > t_ini]
+    data = np.array(df)
+    test_size = int(data.shape[0] * test_perc // 100)
+    train, test = ([], [])
+    test_col = df.columns[y_col]
+    for col in list(lorenz_df.columns) + [test_col]:
+        train1, test1 = train_test_split(np.array(df[col]), test_size)
+        train.append(train1)
+        test.append(test1)
+
+    t_train, t_test = train_test_split(np.array(df.index), test_size)
+
+    return lorenz_df, np.vstack(train).transpose(), np.vstack(test).transpose(), t_train, t_test
 
 
 if __name__ == '__main__':
     save_folder = 'images'
     save_plots = False
-    df, xyz, t, lorenz_sys = lorenz_system()
+    plot_titles = False
+    df, xyz, t, lorenz_sys = lorenz_system(positive_offset=False, noise=True, granularity=5, mu=0.15, trend=True)
+    # lorenz_df, train, test, t_train, t_test = multivariate_lorenz(granularity=5, positive_offset=True, noise=True)
 
-    lorenz_sys.plot3d(file_path=[save_folder, 'lorenz-attractor-3d'], save=save_plots)
-    lorenz_sys.plot2d(file_path=[save_folder, 'lorenz-attractor-phase-plane'], save=save_plots)
-    lorenz_sys.plot_time_series(file_path=[save_folder, 'lorenz-attractor-time-series'], save=save_plots)
+
+    lorenz_sys.plot3d(file_path=[save_folder, 'lorenz-attractor-3d'], save=save_plots, title_bool=plot_titles)
+    lorenz_sys.plot2d(file_path=[save_folder, 'lorenz-attractor-phase-plane'], save=save_plots, title_bool=plot_titles)
+    lorenz_sys.plot_time_series(file_path=[save_folder, 'lorenz-attractor-time-series'], save=save_plots,
+                                title_bool=plot_titles)
