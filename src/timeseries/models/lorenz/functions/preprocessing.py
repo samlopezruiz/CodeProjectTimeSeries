@@ -1,13 +1,14 @@
-import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 import pandas as pd
 from timeseries.data.lorenz.lorenz import lorenz_wrapper
+from timeseries.models.lorenz.functions.functions import ismv
 from timeseries.plotly.plot import plotly_time_series
-import seaborn as sns
+
+from timeseries.preprocessing.func import ln_returns, ema
 
 
-def preprocess_x(x, detrend=None, scale=True, standard_scaler=None):
+def preprocess_x(x, detrend=None, scale=True, standard_scaler=None, ema_period=0):
     if len(detrend) == 2:
         detrend, period = detrend  # ('ema_diff', 14)
     elif detrend == 'ema_diff':
@@ -15,7 +16,10 @@ def preprocess_x(x, detrend=None, scale=True, standard_scaler=None):
         return
 
     if detrend == 'ln_return':
-        x = ln_returns(x)
+        if ema_period > 0:
+            x = ln_returns(ema(x, ema_period))
+        else:
+            x = ln_returns(x)
     if detrend == 'ema_diff':
         x = np.array(x) - ema(x, period)
     if detrend == 'diff':
@@ -39,8 +43,8 @@ def reconstruct_x(a_1, forecast, feature_col, steps=1, test=None, standscaler=No
 
     # forecast = prep_forecast(forecast)
     forecast = inverse_scaler(forecast, standscaler)
-
-    forecast = forecast[:, feature_col]
+    if ismv(forecast):
+        forecast = forecast[:, feature_col]
     if test is not None:
         test = test[:, feature_col]
     if detrend == 'ln_return':
@@ -52,29 +56,6 @@ def reconstruct_x(a_1, forecast, feature_col, steps=1, test=None, standscaler=No
     else:
         pred = forecast
     return np.array(pred)
-
-
-def ln_returns(x):
-    ln_r = np.log(x) - np.log(np.roll(x, 1, axis=0))
-    # first row has no returns
-    return ln_r[1:]
-
-
-def ema(x, period, last_ema=None):
-    c1 = 2 / (1 + period)
-    c2 = 1 - (2 / (1 + period))
-    x = np.array(x)
-    if last_ema is None:
-        ema_x = np.array(x)
-        for i in range(1, ema_x.shape[0]):
-            ema_x[i] = x[i] * c1 + c2 * ema_x[i - 1]
-    else:
-        ema_x = np.zeros((len(x) + 1,))
-        ema_x[0] = last_ema
-        for i in range(1, ema_x.shape[0]):
-            ema_x[i] = x[i] * c1 + c2 * ema_x[i - 1]
-        ema_x = ema_x[1:]
-    return ema_x
 
 
 def series_from_ln_r(p_1, ln_r):
@@ -164,7 +145,11 @@ def inverse_scaler(ln_r, standscaler):
 def preprocess(input_cfg, train, test):
     if input_cfg.get('preprocess', False):
         detrend = input_cfg.get('detrend', 'ln_return')
-        train_pp, ss = preprocess_x(train, detrend=detrend)
+        if len(train.shape) == 1:
+            train = train.reshape(-1, 1)
+            test = test.reshape(-1, 1)
+        ema_period = input_cfg.get('ema_period', 0)
+        train_pp, ss = preprocess_x(train, detrend=detrend, ema_period=ema_period)
         # remove only 1 element at beginning
         all_pp, _ = preprocess_x(np.vstack((train, test)), detrend=detrend, standard_scaler=ss)
         test_pp = all_pp[train_pp.shape[0]:]
@@ -177,6 +162,9 @@ def preprocess(input_cfg, train, test):
 
 def reconstruct(forecast, train, test, input_cfg, cfg, ss=None):
     if input_cfg.get('preprocess', False):
+        if len(train.shape) == 1:
+            train = train.reshape(-1, 1)
+            test = test.reshape(-1, 1)
         return reconstruct_x(train[-1, -1], forecast, train.shape[1] - 1,
                              detrend=input_cfg.get('detrend', 'ln_return'),
                              standscaler=ss, test=test, steps=cfg.get('n_steps_out',1))
@@ -188,16 +176,23 @@ if __name__ == '__main__':
     # %% INPUT
     save_folder = 'images'
     plot_title = True
-    save_plots = True
-    name = "CONV-LSTM"
+    save_plots = False
+    name = "PREPROCESS"
     detrend_ops = ['ln_return', ('ema_diff', 14), 'diff']
     input_cfg = {"variate": "multi", "granularity": 5, "noise": False, "positive_offset": True,
-                 'detrend': detrend_ops[2]}
+                 'detrend': detrend_ops[0]}
     lorenz_df, train, test, t_train, t_test = lorenz_wrapper(input_cfg)
 
     # %% RETURNS
-    train_pp, ss = preprocess_x(train, detrend=input_cfg['detrend'], scale=True)
-    plotly_time_series(pd.DataFrame(train_pp), rows=[0, 1, 2, 3], markers='lines')
+    train_pp, ss = preprocess_x(train, detrend=input_cfg['detrend'], scale=True, ema_period=2)
+    plotly_time_series(pd.DataFrame(train_pp), rows=[0, 1, 2, 3], markers='lines',
+                       title="SERIES: " + str(input_cfg),
+                       file_path=[save_folder, name], plot_title=plot_title, save=save_plots)
+
+    df = pd.DataFrame([train[:, 1], train_pp[:, 1]]).T
+    plotly_time_series(df, rows=[0, 1], markers='lines',
+                       title="SERIES: " + str(input_cfg), legend=False,
+                       file_path=[save_folder, name+'_lag'], plot_title=plot_title, save=save_plots)
 
     # %% RECONSTRUCT ORIGINAL SERIES
     feature_col = 3

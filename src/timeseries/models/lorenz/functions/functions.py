@@ -10,16 +10,26 @@ import pandas as pd
 from statsmodels.tsa.statespace.sarimax import SARIMAXResultsWrapper
 from joblib import Parallel, delayed
 from sklearn.metrics import mean_squared_error
+from timeseries.preprocessing.func import ema
 
 
-def walk_forward_step_forecast_werrs(train, test, cfg, model_forecast, model_fit, steps=1, verbose=0):
-    is_mv = len(train.shape) > 1
+def ismv(train):
+    if len(train.shape) > 1:
+        is_mv = True if train.shape[1] > 1 else False
+    else:
+        is_mv = False
+    return is_mv
+
+
+def walk_forward_step_forecast_werrs(train, test, cfg, model_forecast, model_fit,
+                                     steps=1, verbose=0, plot_hist=False):
+    is_mv = ismv(train)
     predictions = list()
     history, test_bundles, y_test = get_bundles(is_mv, steps, test, train)
-    errors = deque(maxlen=cfg['in_steps'])
-    for _ in range(cfg['in_steps']):
+    errors = deque(maxlen=cfg['n_steps_in'])
+    for _ in range(cfg['n_steps_in']):
         errors.append(0)
-    model = model_fit(train, cfg)
+    model = model_fit(train, cfg, plot_hist=plot_hist)
     start_time = time.time()
 
     for bundle, y in zip(test_bundles, y_test):
@@ -29,17 +39,14 @@ def walk_forward_step_forecast_werrs(train, test, cfg, model_forecast, model_fit
         errors.append(bundle[-1] - yhat)
         [predictions.append(y) for y in yhat] if steps > 1 else predictions.append(yhat)
         history = np.vstack([history, bundle]) if is_mv else np.hstack([history, bundle])
-    try:
-        error = measure_rmse(y_test, predictions[:len(y_test)])
-    except:
-        print("error in rmse")
-        error = None
     print_pred_time(start_time, test_bundles, verbose)
-    return error, predictions[:len(y_test)]
+    predictions = prep_forecast(predictions)
+    return predictions[:len(y_test)]
 
 
-def walk_forward_step_forecast(train, test, cfg, model_forecast, model_fit, steps=1, verbose=0, plot_hist=False):
-    is_mv = len(train.shape) > 1
+def walk_forward_step_forecast(train, test, cfg, model_forecast, model_fit, steps=1, verbose=0,
+                               plot_hist=False):
+    is_mv = ismv(train)
     predictions = list()
     history, test_bundles, y_test = get_bundles(is_mv, steps, test, train)
 

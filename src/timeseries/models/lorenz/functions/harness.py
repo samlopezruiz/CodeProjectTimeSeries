@@ -14,27 +14,31 @@ def difference(data, interval):
     return [data[i] - data[i - interval] for i in range(interval, len(data))]
 
 
-def repeat_evaluate(train_pp, test_pp, train, test, input_cfg, cfg, model_forecast, model_fit, ss, n_repeats=30):
+def repeat_evaluate(train_pp, test_pp, train, test, input_cfg, cfg, model_forecast, model_fit, ss, n_repeats=30,
+                    walkforward=walk_forward_step_forecast):
     metrics = []
     predictions = []
     start_t = time.time()
     for i in range(n_repeats):
-        forecast = walk_forward_step_forecast(train_pp, test_pp, cfg, model_forecast,
+        forecast = walkforward(train_pp, test_pp, cfg, model_forecast,
                                               model_fit, steps=cfg.get('n_steps_out', 1))
         forecast_reconst = reconstruct(forecast, train, test, input_cfg, cfg, ss=ss)
-        metric = forecast_accuracy(forecast_reconst, test[:, -1])
+        metric = forecast_accuracy(forecast_reconst, test[:, -1] if input_cfg['variate'] == 'multi' else test)
         metrics.append(metric)
         predictions.append(forecast)
-        print("{}/{} - ({}%) in {}s".format(i+1, n_repeats, round(100*(i+1)/n_repeats),
+        print("{}/{} - ({}%) in {}s".format(i + 1, n_repeats, round(100 * (i + 1) / n_repeats),
                                             round(time.time() - start_t)), end="\r")
     return metrics, predictions
 
 
-def summarize_scores(name, metrics, score_type='rmse', input_cfg=None, model_cfg=None):
+def summarize_scores(name, metrics, score_type='rmse', input_cfg=None, model_cfg=None, plot=True):
     scores = [m[score_type] for m in metrics]
     scores_m, score_std = mean(scores), std(scores)
     print('{}: {} {}  (+/- {})'.format(name, round(scores_m, 4), score_type, round(score_std, 4)))
-    plot_scores(scores, score_type=score_type, title="SERIES: " + str(input_cfg) + '<br>' + name + ': ' + str(model_cfg))
+    if plot:
+        plot_scores(scores, score_type=score_type,
+                    title="SERIES: " + str(input_cfg) + '<br>' + name + ': ' + str(model_cfg))
+    return scores, scores_m, score_std
     # pyplot.boxplot(scores)
     # pyplot.show()
 

@@ -5,16 +5,18 @@ from plotly import graph_objects as go
 from plotly.subplots import make_subplots
 from timeseries.plotly.utils import plotly_params_check, plotly_save
 import plotly.io as pio
+
 pio.renderers.default = "browser"
 import matplotlib.pyplot as plt
 
 
-def plotly_time_series(df, title=None, save=False, legend=True, file_path=None, size=(1980, 1080),
-                       markers='lines+markers', xaxis_title="time", plot_title=True, label_scale=1, **kwargs):
+def plotly_time_series(df, title=None, save=False, legend=True, file_path=None, size=(1980, 1080), color_col=None,
+                       markers='lines+markers', xaxis_title="time", markersize=5, plot_title=True, label_scale=1,
+                       **kwargs):
     params_ok, params = plotly_params_check(df, **kwargs)
-    features, rows, cols, type_plot = params
+    features, rows, cols, type_plot, alphas = params
     n_rows = len(set(rows))
-    n_cols = 1 #len(set(cols))
+    n_cols = 1  # len(set(cols))
     if not params_ok:
         return
 
@@ -31,6 +33,7 @@ def plotly_time_series(df, title=None, save=False, legend=True, file_path=None, 
                 visible=True,
                 showlegend=legend,
                 name=features[i],
+                opacity=alphas[i]
             ) if type_plot[i] == 'bar' else
             go.Scatter(
                 x=df_ss.index,
@@ -39,6 +42,10 @@ def plotly_time_series(df, title=None, save=False, legend=True, file_path=None, 
                 showlegend=legend,
                 name=features[i],
                 mode=markers,
+                marker=dict(size=markersize,
+                            color=None if color_col is None else df[color_col].values,
+                            colorscale="Bluered_r"),
+                opacity=alphas[i]
             ),
             row=rows[i] + 1,
             col=cols[i] + 1
@@ -47,10 +54,71 @@ def plotly_time_series(df, title=None, save=False, legend=True, file_path=None, 
             fig['layout']['xaxis' + str(i + 1)]['title'] = xaxis_title
 
     fig.update_layout(template="plotly_white", xaxis_rangeslider_visible=False,
-                      title=title if plot_title else None, legend=dict(font=dict(size=18*label_scale)))
+                      title=title if plot_title else None, legend=dict(font=dict(size=18 * label_scale)))
 
-    fig.update_xaxes(tickfont=dict(size=14*label_scale), title_font=dict(size=18*label_scale))
-    fig.update_yaxes(tickfont=dict(size=14*label_scale), title_font=dict(size=18*label_scale))
+    fig.update_xaxes(tickfont=dict(size=14 * label_scale), title_font=dict(size=18 * label_scale))
+    fig.update_yaxes(tickfont=dict(size=14 * label_scale), title_font=dict(size=18 * label_scale))
+
+    # plotly(fig)
+    fig.show()
+    time.sleep(1.5)
+
+    if file_path is not None and save is True:
+        plotly_save(fig, file_path, size)
+    return fig
+
+
+def plotly_ts_regime(df, title=None, save=False, legend=True, file_path=None, size=(1980, 1080), regime_col=None,
+                     regimes=None, markers='lines+markers', xaxis_title="time", markersize=5, plot_title=True, label_scale=1,
+                     **kwargs):
+    params_ok, params = plotly_params_check(df, **kwargs)
+    features, rows, cols, type_plot, alphas = params
+    n_rows = len(set(rows))
+    n_cols = 1  # len(set(cols))
+    if not params_ok:
+        return
+
+    f = len(features)
+    fig = make_subplots(rows=n_rows, cols=n_cols, shared_xaxes=True)
+
+    for i in range(f):
+        df_ss = df[features[i]].dropna()
+        fig.append_trace(
+            go.Scatter(
+                x=df_ss.index,
+                y=df_ss,
+                visible=True,
+                showlegend=legend,
+                name=features[i],
+                mode=markers,
+                marker=dict(size=markersize,
+                            color=None if regime_col is None else df[regime_col].values,
+                            colorscale="Bluered_r"),
+                opacity=alphas[i]
+            ),
+            row=rows[i] + 1,
+            col=cols[i] + 1
+        )
+        if i == n_rows - 1:
+            fig['layout']['xaxis' + str(i + 1)]['title'] = xaxis_title
+
+    colors = ['lightcyan', 'lightblue', 'dodgerblue', 'darkblue', 'black']
+    # colors = ['beige', 'palegoldenrod', 'burlywood', 'orange', 'dodgerblue', 'teal']
+
+    if regimes is not None:
+        for r, regime in enumerate(regimes):
+            for i in range(0, len(regime), 2):
+                fig.add_vrect(
+                    x0=regime[i], x1=regime[i+1],
+                    fillcolor=colors[r], opacity=0.5,
+                    layer="below", line_width=0,
+                ),
+
+    fig.update_layout(template="plotly_white", xaxis_rangeslider_visible=False,
+                      title=title if plot_title else None, legend=dict(font=dict(size=18 * label_scale)))
+
+    fig.update_xaxes(tickfont=dict(size=14 * label_scale), title_font=dict(size=18 * label_scale))
+    fig.update_yaxes(tickfont=dict(size=14 * label_scale), title_font=dict(size=18 * label_scale))
 
     # plotly(fig)
     fig.show()
@@ -62,8 +130,7 @@ def plotly_time_series(df, title=None, save=False, legend=True, file_path=None, 
 
 
 def plotly_one_series(s, title=None, save=False, legend=True, file_path=None, size=(1980, 1080),
-                       markers='lines+markers', xaxis_title="time", label_scale=1, **kwargs):
-
+                      markers='lines+markers', xaxis_title="time", label_scale=1, **kwargs):
     fig = make_subplots(rows=1, cols=1, shared_xaxes=True)
     fig.append_trace(
         go.Scatter(
@@ -78,9 +145,9 @@ def plotly_one_series(s, title=None, save=False, legend=True, file_path=None, si
         col=1
     )
     fig.update_layout(template="plotly_white", xaxis_rangeslider_visible=False,
-                      title=title, legend=dict(font=dict(size=18*label_scale)))
-    fig.update_xaxes(tickfont=dict(size=14*label_scale), title_font=dict(size=18*label_scale))
-    fig.update_yaxes(tickfont=dict(size=14*label_scale), title_font=dict(size=18*label_scale))
+                      title=title, legend=dict(font=dict(size=18 * label_scale)))
+    fig.update_xaxes(tickfont=dict(size=14 * label_scale), title_font=dict(size=18 * label_scale))
+    fig.update_yaxes(tickfont=dict(size=14 * label_scale), title_font=dict(size=18 * label_scale))
 
     # plotly(fig)
     fig.show()
@@ -91,7 +158,8 @@ def plotly_one_series(s, title=None, save=False, legend=True, file_path=None, si
     return fig
 
 
-def plotly_phase_plots(df, title=None, save=False, file_path=None, size=(1980, 1080), label_scale=1, legend=True, **kwargs):
+def plotly_phase_plots(df, title=None, save=False, file_path=None, size=(1980, 1080), label_scale=1, legend=True,
+                       **kwargs):
     params_ok, params = plotly_params_check(df, **kwargs)
     features, rows, cols, type_plot = params
 
@@ -199,7 +267,7 @@ def plotly_acf_pacf(df_acf, df_pacf, save=False, legend=True, file_path=None, si
     fig['layout']['xaxis' + str(2)]['title'] = 'Lags'
     fig['layout']['yaxis' + str(2)]['title'] = "Partial Autocorrelation"
     fig.update_layout(xaxis_rangeslider_visible=False, title="ACF and PACF" if title_bool else None,
-                      legend=dict(font=dict(size=18*label_scale)))
+                      legend=dict(font=dict(size=18 * label_scale)))
     fig.update_xaxes(tickfont=dict(size=14 * label_scale), title_font=dict(size=18 * label_scale))
     fig.update_yaxes(tickfont=dict(size=14 * label_scale), title_font=dict(size=18 * label_scale))
     fig.show()
@@ -211,7 +279,6 @@ def plotly_acf_pacf(df_acf, df_pacf, save=False, legend=True, file_path=None, si
 
 def plot_history(history, title=None, save=False, legend=True, file_path=None, size=(1980, 1080),
                  markers='lines+markers', label_scale=1, plot_title=True):
-
     fig = make_subplots(rows=1, cols=1, shared_xaxes=True)
     fig.append_trace(
         go.Scatter(
@@ -245,7 +312,6 @@ def plot_history(history, title=None, save=False, legend=True, file_path=None, s
 
 def plot_scores(scores, score_type, title=None, save=False, file_path=None, size=(1980, 1080),
                 label_scale=1, plot_title=True):
-
     fig = make_subplots(rows=1, cols=1, shared_xaxes=True)
     fig.append_trace(
         go.Box(y=scores),
@@ -265,4 +331,63 @@ def plot_scores(scores, score_type, title=None, save=False, file_path=None, size
 
     if file_path is not None and save is True:
         plotly_save(fig, file_path, size)
+    return fig
+
+
+def plot_multiple_scores(scores, score_type, names, title=None, save=False, file_path=None, size=(1980, 1080),
+                         label_scale=1, plot_title=True):
+    fig = make_subplots(rows=1, cols=len(scores), shared_xaxes=True)
+    for i, s in enumerate(scores):
+        fig.append_trace(
+            go.Box(y=s,
+                   name=names[i]),
+            row=1,
+            col=1
+        )
+    fig['layout']['yaxis' + str(1)]['title'] = score_type
+    fig.update_layout(template="plotly_white", xaxis_rangeslider_visible=False,
+                      title=title if plot_title else None, legend=dict(font=dict(size=18 * label_scale)))
+
+    fig.update_xaxes(tickfont=dict(size=14 * label_scale), title_font=dict(size=18 * label_scale))
+    fig.update_yaxes(tickfont=dict(size=14 * label_scale), title_font=dict(size=18 * label_scale))
+
+    # plotly(fig)
+    fig.show()
+    time.sleep(1.5)
+
+    if file_path is not None and save is True:
+        plotly_save(fig, file_path, size)
+    return fig
+
+
+def plot_dc_clusters(dc_df, labels, n_clusters, plot_title=True, title=None, save=False,
+                     file_path=None, size=(1980, 1080), label_scale=1, markersize=5):
+    fig = make_subplots(rows=1, cols=1, shared_xaxes=True)
+    for c in range(n_clusters):
+        fig.append_trace(
+            go.Scatter(
+                x=dc_df['t'].dropna()[labels == c],
+                y=dc_df['tmv'].dropna()[labels == c],
+                visible=True,
+                showlegend=True,
+                mode='markers',
+                name='cluster:' + str(c),
+                marker=dict(size=markersize),
+            ),
+            row=1,
+            col=1
+        )
+    fig['layout']['xaxis1']['title'] = 't'
+    fig['layout']['yaxis1']['title'] = 'tmv'
+
+    fig.update_layout(template="plotly_white", xaxis_rangeslider_visible=False,
+                      title=title if plot_title else None, legend=dict(font=dict(size=18 * label_scale)))
+    fig.update_xaxes(tickfont=dict(size=14 * label_scale), title_font=dict(size=18 * label_scale))
+    fig.update_yaxes(tickfont=dict(size=14 * label_scale), title_font=dict(size=18 * label_scale))
+
+    fig.show()
+
+    if file_path is not None and save is True:
+        plotly_save(fig, file_path, size)
+
     return fig

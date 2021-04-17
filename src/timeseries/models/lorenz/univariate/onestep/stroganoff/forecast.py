@@ -3,7 +3,9 @@ from timeseries.models.lorenz.functions.functions import walk_forward_step_forec
 from timeseries.models.lorenz.functions.preprocessing import reconstruct_x, preprocess, reconstruct
 from timeseries.models.lorenz.multivariate.multistep.convlstm.func import convlstm_multi_step_mv_fit, \
     convlstm_multi_step_mv_predict
-from timeseries.models.utils.forecast import multi_step_forecast_df
+from timeseries.models.lorenz.univariate.onestep.stroganoff.func import stroganoff_one_step_uv_fit, \
+    stroganoff_one_step_uv_predict
+from timeseries.models.utils.forecast import multi_step_forecast_df, one_step_forecast_df
 from timeseries.models.utils.metrics import forecast_accuracy
 from timeseries.plotly.plot import plotly_time_series
 
@@ -14,42 +16,42 @@ if __name__ == '__main__':
     save_folder = 'images'
     plot_title = True
     save_plots = False
-    plot_hist = False
+    plot_hist = True
     verbose = 1
     suffix = 'trend_pp_noise_1'
 
     # MODEL AND TIME SERIES INPUTS
-    name = "CONV-LSTM"
-    input_cfg = {"variate": "multi", "granularity": 5, "noise": True, 'preprocess': True,
+    name = "STROGANOFF"
+    input_cfg = {"variate": "uni", "granularity": 5, "noise": True, 'preprocess': True,
                  'trend': True, 'detrend': 'ln_return'}
-    model_cfg = {"n_seq": 3, "n_steps_in": 12, "n_steps_out": 6, "n_filters": 256,
-                 "n_kernel": 3, "n_nodes": 200, "n_epochs": 15, "n_batch": 100}
+    model_cfg = {"n_steps_in": 20, "n_gen": 20, "n_pop": 300, "cxpb": 0.9, "mxpb": 0.1,
+                 "depth": 10, 'elitism_size': 2, 'selection': 'tournament', 'tour_size': 5}
+
 
     lorenz_df, train, test, t_train, t_test = lorenz_wrapper(input_cfg)
     train_pp, test_pp, ss = preprocess(input_cfg, train, test)
 
     # %% FORECAST
-    # model = convlstm_multi_step_mv_fit(train, model_cfg, verbose=1)
+    # model = stroganoff_one_step_uv_fit(train_pp, model_cfg, verbose=1)
     # # history doesn't contain last y column
-    # history = train[:, :-1]
-    # forecast = convlstm_multi_step_mv_predict(model, history, model_cfg)
+    # history = train
+    # forecast = stroganoff_one_step_uv_predict(model, train_pp, model_cfg)
     # forecast_reconst = reconstruct(forecast, train, test, input_cfg, model_cfg, ss=ss)
-    # df = multi_step_forecast_df(train[:, -1], test[:model_cfg['n_steps_out'], -1], forecast, t_train,
-    #                           t_test[:model_cfg['n_steps_out']], train_prev_steps=500)
+    # df = one_step_forecast_df(train, test[:1], forecast_reconst[0], t_train, t_test[:1], train_prev_steps=200)
     # plotly_time_series(df, title="SERIES: " + str(input_cfg) + '<br>' + name + ': ' + str(model_cfg),
     #                    file_path=[save_folder, name], plot_title=plot_title, save=save_plots)
 
     # %% PLOT WALK FORWARD FORECAST
-    forecast = walk_forward_step_forecast(train_pp, test_pp, model_cfg, convlstm_multi_step_mv_predict,
-                                          convlstm_multi_step_mv_fit, steps=model_cfg['n_steps_out'],
+    forecast = walk_forward_step_forecast(train_pp, test_pp, model_cfg, stroganoff_one_step_uv_predict,
+                                          stroganoff_one_step_uv_fit, steps=1,
                                           plot_hist=plot_hist, verbose=verbose)
 
     # %%
     forecast_reconst = reconstruct(forecast, train, test, input_cfg, model_cfg, ss=ss)
-    metrics = forecast_accuracy(forecast_reconst, test[:, -1])
+    metrics = forecast_accuracy(forecast_reconst, test)
 
     # %%
-    df = multi_step_forecast_df(train[:, -1], test[:, -1], forecast_reconst, train_prev_steps=200)
+    df = multi_step_forecast_df(train, test, forecast_reconst, train_prev_steps=200)
     plotly_time_series(df,
                        title="SERIES: " + str(input_cfg) + '<br>' + name + ': ' + str(model_cfg) + '<br>RES: ' + str(
                            metrics),

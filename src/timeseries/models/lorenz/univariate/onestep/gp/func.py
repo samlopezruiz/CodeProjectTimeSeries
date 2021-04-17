@@ -8,9 +8,8 @@ from deap import tools
 from deap import gp
 from math import sqrt
 from collections import deque
-
 from timeseries.models.lorenz.functions.dataprep import split_uv_seq_multi_step
-from timeseries.models.lorenz.univariate.onestep.gp.plotgp import plot_gp_log
+from timeseries.models.lorenz.univariate.onestep.gp.plotgp import plot_gp_log, plot_ind
 
 
 def original(x):
@@ -88,8 +87,8 @@ def create_toolbox(ts_train, in_steps=10, out_steps=1):
     return toolbox, pset
 
 
-def train_gp(ts_train, in_steps=10, out_steps=1, ngen=40):
-    random.seed(318)
+def train_gp(ts_train, in_steps=10, out_steps=1, ngen=40, cxpb=0.8, mutpb=0.2):
+    # random.seed(318)
 
     toolbox, pset = create_toolbox(ts_train, in_steps=in_steps, out_steps=out_steps)
 
@@ -104,20 +103,26 @@ def train_gp(ts_train, in_steps=10, out_steps=1, ngen=40):
     mstats.register("min", np.min)
     mstats.register("max", np.max)
 
-    pop, log = algorithms.eaSimple(pop, toolbox, cxpb=0.8, mutpb=0.2, ngen=ngen, stats=mstats,
+    pop, log = algorithms.eaSimple(pop, toolbox, cxpb=cxpb, mutpb=mutpb, ngen=ngen, stats=mstats,
                                    halloffame=hof, verbose=True)
     # print log
     return toolbox, pset, pop, log, hof
 
 
-def gp_one_step_uv_fit(train, cfg):
-    toolbox, pset, pop, log, hof = train_gp(train, in_steps=cfg['in_steps'],
-                                            out_steps=cfg['out_steps'], ngen=cfg['ngen'])
-    plot_gp_log(log)
+def gp_one_step_uv_fit(train, cfg, plot_hist=False, verbose=0):
+    toolbox, pset, pop, log, hof = train_gp(train, in_steps=cfg['n_steps_in'],
+                                            out_steps=cfg.get('n_steps_out',1), ngen=cfg['ngen'], cxpb=cfg['cxpb'], mutpb=cfg['mutpb'])
+    if plot_hist:
+        plot_gp_log(log)
 
-    pop.sort(key=lambda x: x.fitness, reverse=True)
+    pop_wo_nans = [p for p in pop if p.fitness.values[0] > 0]
+    pop_wo_nans.sort(key=lambda x: x.fitness, reverse=True)
     for i in range(3):
-        print("{}: {} = {}".format(i, str(pop[i]), round(toolbox.evaluate(pop[i])[0], 6)))
+        print("{}: {} = {}".format(i, str(pop_wo_nans[i]), round(toolbox.evaluate(pop_wo_nans[i])[0], 6)))
+
+    if plot_hist:
+        best = pop_wo_nans[0]
+        plot_ind(best, root=0)
 
     return gp.compile(pop[0], pset)
 
@@ -125,7 +130,7 @@ def gp_one_step_uv_fit(train, cfg):
 # forecast with a pre-fit model
 def gp_one_step_uv_predict(model, history, errors, cfg, steps=1):
     # unpack config
-    n_input = cfg['in_steps']
+    n_input = cfg['n_steps_in']
     # prepare data
     x_input = list(errors) + list(history[-n_input:])
     # forecast

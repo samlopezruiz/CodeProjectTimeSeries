@@ -3,7 +3,6 @@ import os
 from datetime import date
 
 
-
 template = ["plotly", "plotly_white", "plotly_dark", "ggplot2", "seaborn", "none"]
 
 
@@ -17,6 +16,7 @@ def plotly_params_check(df, **kwargs):
     f = len(features)
     rows = kwargs.get('rows') if kwargs.get('rows', None) is not None else [0 for _ in range(f)]
     cols = kwargs.get('cols') if kwargs.get('cols', None) is not None else [0 for _ in range(f)]
+    alphas = kwargs.get('alphas') if kwargs.get('alphas', None) is not None else [1 for _ in range(f)]
     type_plot = kwargs.get('type_plot') if kwargs.get('type_plot', None) is not None else ["line" for _ in range(f)]
 
     for feature in features:
@@ -36,7 +36,8 @@ def plotly_params_check(df, **kwargs):
         print("ERROR: len(type_plot) != features")
         params_ok = False
 
-    return params_ok, (features, rows, cols, type_plot)
+    return params_ok, (features, rows, cols, type_plot, alphas)
+
 
 def set_y_labels(f, features, fig):
     for i in range(f):

@@ -34,6 +34,7 @@ def plot_steps_needed(thold, in_out_ratio=3):
     plt.grid(b=True, which='major', color='k', linestyle='-', alpha=0.2)
     plt.show()
 
+
 if __name__ == '__main__':
     save_folder = 'images'
     save_plots = False
@@ -46,23 +47,23 @@ if __name__ == '__main__':
     plot_steps_needed(thold=20)
 
 #%%
-    # lorenz_df, _, _, lorenz_sys = lorenz_system(granularity=1)
+    lorenz_df, _, _, lorenz_sys = lorenz_system(granularity=1)
     # lorenz_sys.plot3d(file_path=[save_folder, 'lorenz-attractor-3d-grain1'], save=save_plots)
     # lorenz_sys.plot2d(file_path=[save_folder, 'lorenz-attractor-phase-plane-grain1'], save=save_plots)
-    # lorenz_sys.plot_time_series(ini=80, end=90, file_path=[save_folder, 'lorenz-attractor-time-series-grain1'],
-    #                             save=save_plots, markers='lines+markers')
+    lorenz_sys.plot_time_series(ini=80, end=90, file_path=[save_folder, 'lorenz-attractor-time-series-grain1'],
+                                save=save_plots, markers='lines+markers')
 
 #%%
-    # lorenz_df, _, _, lorenz_sys = lorenz_system(granularity=5)
+    lorenz_df, _, _, lorenz_sys = lorenz_system(granularity=5)
     # lorenz_sys.plot3d(file_path=[save_folder, 'lorenz-attractor-3d-grain5'], save=save_plots)
     # lorenz_sys.plot2d(file_path=[save_folder, 'lorenz-attractor-phase-plane-grain5'], save=save_plots)
-    # lorenz_sys.plot_time_series(ini=80, end=90, file_path=[save_folder, 'lorenz-attractor-time-series-grain5'],
-    #                             save=save_plots, markers='lines+markers')
+    lorenz_sys.plot_time_series(ini=80, end=90, file_path=[save_folder, 'lorenz-attractor-time-series-grain5'],
+                                save=save_plots, markers='lines+markers')
 
 #%%
-    # lorenz_df, _, _, lorenz_sys = lorenz_system(granularity=10)
+    lorenz_df, _, _, lorenz_sys = lorenz_system(granularity=10)
     # lorenz_sys.plot3d(file_path=[save_folder, 'lorenz-attractor-3d-grain10'], save=save_plots)
     # lorenz_sys.plot2d(file_path=[save_folder, 'lorenz-attractor-phase-plane-grain10'], save=save_plots)
-    # lorenz_sys.plot_time_series(ini=80, end=90, file_path=[save_folder, 'lorenz-attractor-time-series-grain10'],
-    #                             save=save_plots, markers='lines+markers')
+    lorenz_sys.plot_time_series(ini=80, end=90, file_path=[save_folder, 'lorenz-attractor-time-series-grain10'],
+                                save=save_plots, markers='lines+markers')
 

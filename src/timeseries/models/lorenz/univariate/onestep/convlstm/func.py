@@ -6,7 +6,7 @@ from tensorflow.keras.layers import ConvLSTM2D, Dense, Flatten
 from numpy import array
 
 
-def convlstm_one_step_uv_fit(train, cfg):
+def convlstm_one_step_uv_fit(train, cfg, plot_hist=False, verbose=0):
     # unpack config
     n_seq, n_steps, n_filters = cfg['n_seq'], cfg['n_steps_in'], cfg['n_filters']
     n_kernel, n_nodes, n_epochs, n_batch = cfg['n_kernel'], cfg['n_nodes'], cfg['n_epochs'], cfg['n_batch']
@@ -21,7 +21,7 @@ def convlstm_one_step_uv_fit(train, cfg):
     model.add(Dense(1))
     model.compile(loss='mse', optimizer='adam')
     # fit
-    model.fit(X, y, epochs=n_epochs, batch_size=n_batch, verbose=0)
+    model.fit(X, y, epochs=n_epochs, batch_size=n_batch, verbose=verbose)
     return model
 
 
