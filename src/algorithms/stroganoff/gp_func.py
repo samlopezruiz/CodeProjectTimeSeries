@@ -70,7 +70,7 @@ def train_stroganoff(n_gen, n_terminals, depth, X, y, n_pop=100, selec=selection
             selected[i] = deepcopy(pop[ix])
 
         # CROSSOVER
-        for i in range(elitism_size, n_pop, 2):
+        for i in range(elitism_size, n_pop-1, 2):
             if np.random.rand() < cxpb:
                 selected[i], selected[i + 1] = crossover(selected[i], selected[i + 1], max_depth=depth)
 

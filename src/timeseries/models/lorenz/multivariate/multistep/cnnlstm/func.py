@@ -1,13 +1,14 @@
 import os
+from timeseries.plotly.plot import plot_history
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 from tensorflow.keras import Sequential
 from tensorflow.keras.layers import LSTM, Dense, TimeDistributed, Conv1D, MaxPooling1D, Flatten
 from timeseries.models.lorenz.functions.dataprep import step_feature_one_step_xy_from_uv, \
     step_feature_one_step_xy_from_mv, step_feature_multi_step_xy_from_mv
 from numpy import array
+import time
 
-
-def cnnlstm_multi_step_mv_fit(train, cfg):
+def cnnlstm_multi_step_mv_fit(train, cfg, plot_hist=False, verbose=0):
     # unpack config
     n_seq, n_steps, n_steps_out, n_filters = cfg['n_seq'], cfg['n_steps_in'], cfg['n_steps_out'], cfg['n_filters']
     n_kernel, n_nodes, n_epochs, n_batch = cfg['n_kernel'], cfg['n_nodes'], cfg['n_epochs'], cfg['n_batch']
@@ -17,6 +18,19 @@ def cnnlstm_multi_step_mv_fit(train, cfg):
     X, y = step_feature_multi_step_xy_from_mv(train, n_input, n_steps_out, n_seq)
     n_features = X.shape[3]
     # define model
+    model = cnnlstm_multi_step_mv_build(cfg, n_features)
+    # fit
+    start_time = time.time()
+    history = model.fit(X, y, epochs=n_epochs, batch_size=n_batch, verbose=verbose)
+    train_time = round((time.time() - start_time), 2)
+    if plot_hist:
+        plot_history(history, title='CNN-LSTM: ' + str(cfg), plot_title=True)
+    return model, train_time
+
+
+def cnnlstm_multi_step_mv_build(cfg, n_features):
+    n_steps, n_steps_out, n_filters = cfg['n_steps_in'], cfg['n_steps_out'], cfg['n_filters']
+    n_kernel, n_nodes = cfg['n_kernel'], cfg['n_nodes']
     model = Sequential()
     model.add(TimeDistributed(Conv1D(n_filters, n_kernel, activation='relu', input_shape=(None, n_steps, n_features))))
     model.add(TimeDistributed(Conv1D(n_filters, n_kernel, activation='relu')))
@@ -26,8 +40,6 @@ def cnnlstm_multi_step_mv_fit(train, cfg):
     model.add(Dense(n_nodes, activation='relu'))
     model.add(Dense(n_steps_out))
     model.compile(loss='mse', optimizer='adam')
-    # fit
-    model.fit(X, y, epochs=n_epochs, batch_size=n_batch, verbose=0)
     return model
 
 

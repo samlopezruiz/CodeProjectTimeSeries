@@ -1,7 +1,7 @@
 from algorithms.gpregress.classes import Primitives, Individual
 from algorithms.gpregress.gp_func import initialize_pop, evaluate_pop, train_gpregress, selection_roullete
-from algorithms.gpregress.math import protected_div, protected_sqrt
-from algorithms.gpregress.plot import plot_log
+from algorithms.gpregress.math import protected_div, protected_sqrt, score_error
+from algorithms.gpregress.plot import plot_log, plot_pred
 from algorithms.gpregress.standalone import print_tree
 from algorithms.stroganoff.tests.multi import func_ts
 from timeseries.models.lorenz.functions.dataprep import split_uv_seq_one_step
@@ -31,8 +31,8 @@ if __name__ == '__main__':
     depth = 5
 
     best, pop, log, stat, size_log = train_gpregress(n_gen, n_terminals, primitives, depth, X, y, n_pop=n_pop,
-                                                     selec=selection_roullete, cxpb=0.5, mxpb=0.05, elitism_size=0,
-                                                     verbose=1, tour_size=3)
+                                                     selec=selection_roullete, cxpb=0.5, mxpb=0.1, elitism_size=2,
+                                                     verbose=2, tour_size=3)
 
     plot_log(stat, ylabel='MDL', title='MDL vs GENERATION')
     plot_log(size_log, ylabel='DEPTH', title='DEPTH vs GENERATION')
@@ -43,7 +43,7 @@ if __name__ == '__main__':
     history = list(ts[:n_steps_in])
     for i in range(n_steps_in, len(ts)):
         x = np.array(history[-n_steps_in:])
-        y_pred.append(best.eval_x(x)[0])
+        y_pred.append(best.predict(x)[0])
         history.append(ts[i])
 
     y_pred = y_pred[:len(ts)]

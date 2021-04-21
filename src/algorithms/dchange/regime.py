@@ -1,11 +1,6 @@
 from timeseries.data.lorenz.lorenz import multivariate_lorenz
-from timeseries.dchange.func import direct_change, extract_regimes_clusters, get_regimes
-from timeseries.plotly.plot import plotly_ts_regime, plot_dc_clusters, plotly_time_series
-from timeseries.utils.func import sync_df
-from timeseries.preprocessing.func import ema
-import numpy as np
-import pandas as pd
-
+from algorithms.dchange.func import direct_change, extract_regimes_clusters
+from timeseries.plotly.plot import plotly_ts_regime, plot_dc_clusters
 
 if __name__ == '__main__':
     # %% INPUTS

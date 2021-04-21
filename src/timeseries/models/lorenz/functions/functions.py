@@ -1,6 +1,5 @@
 import math
 from collections import deque
-
 import numpy as np
 import time
 from math import sqrt
@@ -10,6 +9,8 @@ import pandas as pd
 from statsmodels.tsa.statespace.sarimax import SARIMAXResultsWrapper
 from joblib import Parallel, delayed
 from sklearn.metrics import mean_squared_error
+
+from timeseries.models.utils.models import get_params
 from timeseries.preprocessing.func import ema
 
 
@@ -50,7 +51,8 @@ def walk_forward_step_forecast(train, test, cfg, model_forecast, model_fit, step
     predictions = list()
     history, test_bundles, y_test = get_bundles(is_mv, steps, test, train)
 
-    model = model_fit(train, cfg, plot_hist=plot_hist, verbose=verbose)
+    model, train_t = model_fit(train, cfg, plot_hist=plot_hist, verbose=verbose)
+    n_params = get_params(model, cfg)
     start_time = time.time()
     for i, bundle in enumerate(test_bundles):
         bundle = reshape_bundle(bundle, is_mv)
@@ -58,10 +60,11 @@ def walk_forward_step_forecast(train, test, cfg, model_forecast, model_fit, step
         yhat = model_forecast(model, steps=steps, history=history, cfg=cfg)
         [predictions.append(y) for y in yhat] if steps > 1 else predictions.append(yhat)
         history = np.vstack([history, bundle]) if is_mv else np.hstack([history, bundle])
-
+    end_time = time.time()
     print_pred_time(start_time, test_bundles, verbose)
+    pred_t = round((end_time - start_time) / len(test_bundles), 4)
     predictions = prep_forecast(predictions)
-    return predictions[:len(y_test)]
+    return predictions[:len(y_test)], train_t, pred_t, n_params
 
 
 def prep_forecast(forecast):
@@ -102,8 +105,8 @@ def print_pred_time(start_time, test_bundles, verbose):
     end_time = time.time()
     if verbose >= 1:
         print("{} predictions in {}s: avg: {}s".format(len(test_bundles), round(end_time - start_time, 2),
-
                                                        round((end_time - start_time) / len(test_bundles), 4)))
+
 def append_data_to_model(bundle, model, steps):
     if steps == 1:
         model = model.append([bundle])
@@ -142,7 +145,7 @@ def score_model(train, test, cfg, model_forecast, model_creation, steps=1, debug
 
 
 # grid search configs
-def grid_search(train, test, cfg_list, model_forecast, model_fit, parallel=True):
+def grid_search_parallel(train, test, cfg_list, model_forecast, model_fit, parallel=True):
     if parallel:
         # execute configs in parallel
         executor = Parallel(n_jobs=cpu_count(), backend='multiprocessing')

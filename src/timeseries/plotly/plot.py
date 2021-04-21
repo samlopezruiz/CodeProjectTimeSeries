@@ -5,6 +5,7 @@ from plotly import graph_objects as go
 from plotly.subplots import make_subplots
 from timeseries.plotly.utils import plotly_params_check, plotly_save
 import plotly.io as pio
+import plotly.express as px
 
 pio.renderers.default = "browser"
 import matplotlib.pyplot as plt
@@ -139,7 +140,7 @@ def plotly_one_series(s, title=None, save=False, legend=True, file_path=None, si
             orientation="v",
             visible=True,
             showlegend=legend,
-            name=s.name,
+            name=s.model_name,
         ),
         row=1,
         col=1
@@ -352,6 +353,36 @@ def plot_multiple_scores(scores, score_type, names, title=None, save=False, file
     fig.update_yaxes(tickfont=dict(size=14 * label_scale), title_font=dict(size=18 * label_scale))
 
     # plotly(fig)
+    fig.show()
+    time.sleep(1.5)
+
+    if file_path is not None and save is True:
+        plotly_save(fig, file_path, size)
+    return fig
+
+
+def plot_bar_summary(df, errors, title=None, save=False, file_path=None, size=(1980, 1080),
+                         label_scale=1, plot_title=True, n_cols_adj_range=0):
+    bars = []
+    fig = make_subplots(rows=1, cols=df.shape[1], shared_xaxes=True, subplot_titles=df.columns)
+    for i, col in enumerate(df.columns):
+        bars.append(
+            px.bar(df, x=df.index, y=col, color=df.index, error_y=errors.iloc[:, i] if i < errors.shape[1] else None))
+
+    for i, bar in enumerate(bars):
+        for trace in bar.data:
+            fig.add_trace(trace, 1, 1 + i)
+
+    for i, col in enumerate(df.columns[:n_cols_adj_range]):
+        p = max((max(df[col]) - min(df[col])) / 10, (max(errors.iloc[:, i]) if i < errors.shape[1] else 0))
+        f = min(df[col]) - p * 1.1
+        c = max(df[col]) + p * 1.1
+        fig.update_yaxes(range=[f, c], row=1, col=1 + i)
+
+    fig.update_layout(template="plotly_white", xaxis_rangeslider_visible=False,
+                      title=title if plot_title else None, showlegend=False, barmode="stack")
+    fig.update_xaxes(tickfont=dict(size=14 * label_scale), title_font=dict(size=18 * label_scale))
+    fig.update_yaxes(tickfont=dict(size=14 * label_scale), title_font=dict(size=18 * label_scale))
     fig.show()
     time.sleep(1.5)
 

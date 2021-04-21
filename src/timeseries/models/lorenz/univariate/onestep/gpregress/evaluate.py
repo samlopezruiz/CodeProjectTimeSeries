@@ -1,9 +1,8 @@
 from timeseries.data.lorenz.lorenz import lorenz_wrapper
 from timeseries.models.lorenz.functions.harness import repeat_evaluate, summarize_scores
 from timeseries.models.lorenz.functions.preprocessing import preprocess
-from timeseries.models.lorenz.multivariate.multistep.convlstm.func import convlstm_multi_step_mv_predict, \
-    convlstm_multi_step_mv_fit
-
+from timeseries.models.lorenz.univariate.onestep.stroganoff.func import stroganoff_one_step_uv_predict, \
+    stroganoff_one_step_uv_fit
 
 
 if __name__ == '__main__':
@@ -15,18 +14,18 @@ if __name__ == '__main__':
     verbose = 0
 
     # MODEL AND TIME SERIES INPUTS
-    name = "CONV-LSTM"
-    input_cfg = {"variate": "multi", "granularity": 5, "noise": True, 'preprocess': True,
-                 'trend': True, 'detrend': 'diff'}
-    model_cfg = {"n_seq": 3, "n_steps_in": 12, "n_steps_out": 6, "n_filters": 256,
-                 "n_kernel": 3, "n_nodes": 200, "n_epochs": 15, "n_batch": 100}
+    name = "STROGANOFF"
+    input_cfg = {"variate": "uni", "granularity": 5, "noise": False, 'preprocess': False,
+                 'trend': False, 'detrend': 'diff'}
+    model_cfg = {"n_steps_in": 10, "n_gen": 20, "n_pop": 200, "cxpb": 0.6, "mxpb": 0.1,
+                 "depth": 5, 'elitism_size': 2, 'selection': 'roullete'}
 
     lorenz_df, train, test, t_train, t_test = lorenz_wrapper(input_cfg)
     train_pp, test_pp, ss = preprocess(input_cfg, train, test)
 
     # %% EVALUATE
     metrics, preds = repeat_evaluate(train_pp, test_pp, train, test, input_cfg, model_cfg,
-                                     convlstm_multi_step_mv_predict, convlstm_multi_step_mv_fit,
+                                     stroganoff_one_step_uv_predict, stroganoff_one_step_uv_fit,
                                      ss=ss, n_repeats=n_repeats)
 
     summarize_scores(name, metrics, score_type=score_type, input_cfg=input_cfg, model_cfg=model_cfg)

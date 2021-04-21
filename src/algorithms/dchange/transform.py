@@ -1,5 +1,5 @@
 from timeseries.data.lorenz.lorenz import multivariate_lorenz
-from timeseries.dchange.func import direct_change
+from algorithms.dchange.func import direct_change
 from timeseries.plotly.plot import plotly_time_series
 import pandas as pd
 
@@ -24,7 +24,7 @@ if __name__ == '__main__':
 
     # %%
     comb = pd.DataFrame([x]+[dc['dc'] for dc in dc_dfs]).T
-    comb.columns = [x.name] + ['dc_'+str(thold) for thold in tholds]
+    comb.columns = [x.model_name] + ['dc_' + str(thold) for thold in tholds]
 
     plotly_time_series(comb[0:10], rows=[0]+[1]*len(tholds), title=name, markers='lines+markers',
                        file_path=[save_folder, name], save=save_plots, alphas=[0.3]+[0.7]*len(tholds))
