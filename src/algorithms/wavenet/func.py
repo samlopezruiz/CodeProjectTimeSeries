@@ -122,3 +122,10 @@ def wavenet_build(cfg, n_features):
     return keras.models.Model(inputs=[sequence], outputs=output)
 
 
+def get_wnet_steps_cfgs(l_range, k_range):
+    cfgs_steps_in = []
+    for l in range(*l_range):
+        for k in range(*k_range):
+            cfgs_steps_in.append((2**(l-1)*k+1, l, k))
+    x = np.array(cfgs_steps_in)
+    return {'n_steps_in': x[:, 0].tolist(), 'n_layers': x[:, 1].tolist(), "n_kernel": x[:, 2].tolist()}

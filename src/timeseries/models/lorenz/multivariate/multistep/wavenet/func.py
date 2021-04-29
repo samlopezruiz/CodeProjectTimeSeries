@@ -26,10 +26,9 @@ def wavenet_multi_step_mv_fit(train, cfg, plot_hist=False, verbose=0):
     # summarize history for accuracy
     if plot_hist:
         plot_history(history, title='D-CNN: '+str(cfg), plot_title=True)
-    return model, train_time
+    return model, train_time, history.history['loss'][-1]
 
 
-# forecast with a pre-fit model
 def wavenet_multi_step_mv_predict(model, history, cfg, steps=1):
     # unpack config
     n_steps = cfg['n_steps_in']
@@ -39,3 +38,7 @@ def wavenet_multi_step_mv_predict(model, history, cfg, steps=1):
     # forecast
     yhat = model.predict(x_input, verbose=0)
     return yhat[0]
+
+
+def wavenet_get_functions():
+    return [wavenet_multi_step_mv_predict, wavenet_multi_step_mv_fit, wavenet_build]

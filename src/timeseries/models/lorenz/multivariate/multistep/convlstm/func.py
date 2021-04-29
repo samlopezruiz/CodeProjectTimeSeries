@@ -27,7 +27,7 @@ def convlstm_multi_step_mv_fit(train, cfg, plot_hist=False, verbose=0):
     # summarize history for accuracy
     if plot_hist:
         plot_history(history, title='CONV LSTM: '+str(cfg), plot_title=True)
-    return model, train_time
+    return model, train_time, history.history['loss'][-1]
 
 
 def convlstm_multi_step_mv_build(cfg, n_features):
@@ -54,3 +54,7 @@ def convlstm_multi_step_mv_predict(model, history, cfg, steps=1):
     # forecast
     yhat = model.predict(x_input, verbose=0)
     return yhat[0]
+
+
+def convlstm_get_multi_step_mv_funcs():
+    return [convlstm_multi_step_mv_predict, convlstm_multi_step_mv_fit, convlstm_multi_step_mv_build]

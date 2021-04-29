@@ -1,5 +1,6 @@
 from timeseries.data.lorenz.lorenz import univariate_lorenz
-from timeseries.models.lorenz.functions.harness import repeat_evaluate, summarize_scores
+from timeseries.models.lorenz.functions.harness import repeat_evaluate
+from timeseries.models.lorenz.functions.summarize import summarize_scores
 from timeseries.models.lorenz.univariate.multistep.cnn.func import cnn_multi_step_uv_predict, cnn_multi_step_uv_fit
 
 if __name__ == '__main__':

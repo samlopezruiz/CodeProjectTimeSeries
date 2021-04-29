@@ -101,7 +101,8 @@ def train_gpregress(n_gen, n_terminals, primitives, depth, X, y, n_pop=100, sele
         log_size.append((gen, min_d, max_d, mean_d))
 
         if best_s == worst_s and worst_s == mean_s:
-            print('early break, constant pop')
+            if verbose > 1:
+                print('early break, constant pop')
             break
 
     log_size_df, stat = to_df(log, log_size)

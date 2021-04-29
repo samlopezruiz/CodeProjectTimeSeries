@@ -1,4 +1,7 @@
 import os
+
+import numpy as np
+
 from timeseries.plotly.plot import plot_history
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 from tensorflow.keras import Sequential
@@ -25,7 +28,7 @@ def cnnlstm_multi_step_mv_fit(train, cfg, plot_hist=False, verbose=0):
     train_time = round((time.time() - start_time), 2)
     if plot_hist:
         plot_history(history, title='CNN-LSTM: ' + str(cfg), plot_title=True)
-    return model, train_time
+    return model, train_time, history.history['loss'][-1]
 
 
 def cnnlstm_multi_step_mv_build(cfg, n_features):
@@ -54,3 +57,17 @@ def cnnlstm_multi_step_mv_predict(model, history, cfg, steps=1):
     # forecast
     yhat = model.predict(x_input, verbose=0)
     return yhat[0]
+
+
+def cnnlstm_get_multi_step_mv_funcs():
+    return [cnnlstm_multi_step_mv_predict, cnnlstm_multi_step_mv_fit, cnnlstm_multi_step_mv_build]
+
+
+def get_cnnlstm_steps_cfgs(in_steps_range, n_seq_range, k_range):
+    cfgs_steps_in = []
+    for s in range(*in_steps_range):
+        for q in range(*n_seq_range):
+            for k in range(k_range[0], min(s - 3, k_range[1])):
+                cfgs_steps_in.append((s, q, k))
+    x = np.array(cfgs_steps_in)
+    return {'n_steps_in': x[:, 0].tolist(), 'n_seq': x[:, 1].tolist(), "n_kernel": x[:, 2].tolist()}

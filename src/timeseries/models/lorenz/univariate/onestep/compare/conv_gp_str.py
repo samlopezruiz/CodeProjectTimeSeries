@@ -1,14 +1,14 @@
 from timeseries.data.lorenz.lorenz import lorenz_wrapper
 from timeseries.models.lorenz.functions.functions import walk_forward_step_forecast_werrs
-from timeseries.models.lorenz.functions.harness import repeat_evaluate, summarize_scores
+from timeseries.models.lorenz.functions.harness import repeat_evaluate
+from timeseries.models.lorenz.functions.summarize import summarize_scores
 from timeseries.models.lorenz.functions.preprocessing import preprocess
 from timeseries.models.lorenz.univariate.onestep.convlstm.func import convlstm_one_step_uv_predict, \
     convlstm_one_step_uv_fit
 from timeseries.models.lorenz.univariate.onestep.gp.func import gp_one_step_uv_predict, gp_one_step_uv_fit
 from timeseries.models.lorenz.univariate.onestep.stroganoff.func import stroganoff_one_step_uv_predict, \
     stroganoff_one_step_uv_fit
-from timeseries.models.utils.files import save_vars
-from timeseries.models.utils.models import models_strings
+from timeseries.models.utils.models import models_strings, save_vars
 from timeseries.plotly.plot import plot_multiple_scores
 import joblib
 

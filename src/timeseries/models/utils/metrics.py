@@ -35,12 +35,16 @@ def compare_forecast(models, train, test):
     return df
 
 
-def summary_results(scores_models, model_times, params, score_type='score'):
-    tt = pd.DataFrame(model_times, columns=['model', 'times', 'train_t_m', 'train_t_std', 'pred_t_m', 'pred_t_std'])
-    ss = pd.DataFrame(scores_models, columns=['model', 'scores', 'score_m', 'score_std'])
-    params = pd.DataFrame(params, columns=['model', "n_params"])
-    df = ss.merge(tt, left_on='model', right_on='model')
-    df = df.merge(params, left_on='model', right_on='model')
+def summary_results(consolidated, score_type='score', less_is_better=False):
+    df = pd.DataFrame(consolidated, columns=['model', 'scores', 'score_m', 'score_std','loss_m', 'loss_std',
+                                             'times', 'train_t_m', 'train_t_std', 'pred_t_m', 'pred_t_std',  'n_params'])
+    # tt = pd.DataFrame(model_times, columns=['model', 'times', 'train_t_m', 'train_t_std', 'pred_t_m', 'pred_t_std'])
+    # ss = pd.DataFrame(scores_models, columns=['model', 'scores', 'score_m', 'score_std'])
+    # lss = pd.DataFrame(loss, columns=['model', 'train_loss_m', 'train_loss_std'])
+    # params = pd.DataFrame(params, columns=['model', "n_params"])
+    # df = ss.merge(tt, left_on='model', right_on='model')
+    # df = df.merge(params, left_on='model', right_on='model')
+    # df = df.merge(lss, left_on='model', right_on='model')
     df.set_index(['model'], inplace=True)
     df.drop(['times', 'scores'], axis=1, inplace=True)
     normalized_df = (df - df.min()) / (df.max() - df.min())
@@ -48,16 +52,18 @@ def summary_results(scores_models, model_times, params, score_type='score'):
     normalized_df['train_t_m'] = normalized_df['train_t_m'].max() - normalized_df['train_t_m']
     normalized_df['pred_t_m'] = normalized_df['pred_t_m'].max() - normalized_df['pred_t_m']
     normalized_df['n_params'] = normalized_df['n_params'].max() - normalized_df['n_params']
+    if less_is_better:
+        normalized_df['score_m'] = normalized_df['score_m'].max() - normalized_df['score_m']
+
     df['overall'] = 3 * normalized_df['score_m'] + normalized_df['train_t_m'] + \
                     1.5 * normalized_df['pred_t_m'] + normalized_df['n_params']
     df = df.sort_values(by=['overall'], ascending=False)
     data, errors = get_data_error(df, score_type)
     return df, data, errors
 
-
 def get_data_error(summary, score_type):
     data = summary.copy()
-    errors = summary.loc[:, ['score_std', 'train_t_std', 'pred_t_std']]
-    data.drop(['score_std', 'train_t_std', 'pred_t_std'], axis=1, inplace=True)
-    data.columns = [score_type, 'train (s)', 'pred (s)', 'n params', 'overall score']
+    errors = summary.loc[:, ['score_std', 'loss_std', 'train_t_std', 'pred_t_std']]
+    data.drop(['score_std', 'loss_std', 'train_t_std', 'pred_t_std'], axis=1, inplace=True)
+    data.columns = [score_type, 'train mse', 'train (s)', 'pred (s)', 'n params', 'overall score']
     return data, errors

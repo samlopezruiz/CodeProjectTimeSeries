@@ -1,5 +1,6 @@
 from timeseries.data.lorenz.lorenz import univariate_lorenz, multivariate_lorenz
-from timeseries.models.lorenz.functions.harness import repeat_evaluate, summarize_scores
+from timeseries.models.lorenz.functions.harness import repeat_evaluate
+from timeseries.models.lorenz.functions.summarize import summarize_scores
 from timeseries.models.lorenz.multivariate.onestep.convlstm.func import convlstm_one_step_mv_predict, \
     convlstm_one_step_mv_fit
 from timeseries.models.lorenz.univariate.onestep.convlstm.func import convlstm_one_step_uv_fit, \

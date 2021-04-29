@@ -7,9 +7,10 @@ from timeseries.models.lorenz.multivariate.multistep.stroganoff.func import stro
     stroganoff_multi_step_mv_fit
 from timeseries.models.utils.metrics import summary_results
 from timeseries.data.lorenz.lorenz import lorenz_wrapper
-from timeseries.models.lorenz.functions.harness import repeat_evaluate, summarize_scores, summarize_times
+from timeseries.models.lorenz.functions.harness import repeat_evaluate
+from timeseries.models.lorenz.functions.summarize import summarize_scores, summarize_times
 from timeseries.models.lorenz.functions.preprocessing import preprocess
-from timeseries.models.utils.models import models_strings, get_params
+from timeseries.models.utils.models import models_strings, get_models_params
 from timeseries.plotly.plot import plot_multiple_scores, plot_bar_summary
 import pandas as pd
 
@@ -49,7 +50,7 @@ if __name__ == '__main__':
 
 
     # %% GET PARAMS
-    n_params = get_params(model_cfgs, functions, names, train_pp)
+    n_params = get_models_params(model_cfgs, functions, names, train_pp)
 
     # %% RUN FORECASTS
     scores_models, model_times = [], []

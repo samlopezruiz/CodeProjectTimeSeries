@@ -36,7 +36,8 @@ def gpregress_multi_step_mv_fit(train, cfg, plot_hist=False, verbose=0):
                                                           tour_size=tour_size)
         bests.append(best)
     train_time = round((time.time() - start_time), 2)
-    return bests, train_time
+    mses = [best.mses[0] for best in bests]
+    return bests, train_time, np.mean(mses)
 
 
 # forecast with a pre-fit model
@@ -69,3 +70,7 @@ def gpregress_multi_step_uv_predict_walk(model, history, cfg, steps=1):
         yhat.append(y[0])
         history.append(y[0])
     return array(yhat).ravel()
+
+
+def gpregress_get_multi_step_mv_funcs():
+    return [gpregress_multi_step_mv_predict, gpregress_multi_step_mv_fit]

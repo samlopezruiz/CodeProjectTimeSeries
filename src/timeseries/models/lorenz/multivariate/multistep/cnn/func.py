@@ -23,7 +23,7 @@ def cnn_multi_step_mv_fit(train, cfg, plot_hist=False, verbose=0):
     train_time = round((time.time() - start_time), 2)
     if plot_hist:
         plot_history(history, title='CNN: ' + str(cfg), plot_title=True)
-    return model, train_time
+    return model, train_time, history.history['loss'][-1]
 
 
 def cnn_multi_step_mv_build(cfg, n_features):
@@ -50,3 +50,7 @@ def cnn_multi_step_mv_predict(model, history, cfg, steps=1):
     # forecast
     yhat = model.predict(x_input, verbose=0)
     return yhat[0]
+
+
+def cnn_get_multi_step_mv_funcs():
+    return [cnn_multi_step_mv_predict, cnn_multi_step_mv_fit, cnn_multi_step_mv_build]

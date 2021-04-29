@@ -1,6 +1,7 @@
 import pandas as pd
 import os
 from datetime import date
+import datetime
 
 
 template = ["plotly", "plotly_white", "plotly_dark", "ggplot2", "seaborn", "none"]
@@ -50,8 +51,8 @@ def plotly_save(fig, file_path, size):
     print("saving .html and .png")
     if not os.path.exists(file_path[0]):
         os.makedirs(file_path[0])
-    image_path = file_path[:-1].copy() + [file_path[-1] + '_' + today.strftime("%Y_%m_%d") + ".png"]
-    html_path = file_path[:-1].copy() + [file_path[-1] + '_' + today.strftime("%Y_%m_%d") + ".html"]
+    image_path = file_path[:-1].copy() + [file_path[-1] + '_' + datetime.datetime.now().strftime("%Y_%m_%d_%H-%M") + ".png"]
+    html_path = file_path[:-1].copy() + [file_path[-1] + '_' + datetime.datetime.now().strftime("%Y_%m_%d_%H-%M") + ".html"]
     if size is None:
         size = (1980, 1080)
     fig.write_image(os.path.join(*image_path), width=size[0], height=size[1])

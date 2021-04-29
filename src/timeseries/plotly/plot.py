@@ -3,6 +3,7 @@ from itertools import combinations
 import numpy as np
 from plotly import graph_objects as go
 from plotly.subplots import make_subplots
+from timeseries.models.utils.models import get_suffix
 from timeseries.plotly.utils import plotly_params_check, plotly_save
 import plotly.io as pio
 import plotly.express as px
@@ -362,12 +363,15 @@ def plot_multiple_scores(scores, score_type, names, title=None, save=False, file
 
 
 def plot_bar_summary(df, errors, title=None, save=False, file_path=None, size=(1980, 1080),
-                         label_scale=1, plot_title=True, n_cols_adj_range=0):
+                         label_scale=1, plot_title=True, n_cols_adj_range=None, showlegend=False):
+    if n_cols_adj_range is None:
+        n_cols_adj_range = df.shape[1]
     bars = []
     fig = make_subplots(rows=1, cols=df.shape[1], shared_xaxes=True, subplot_titles=df.columns)
     for i, col in enumerate(df.columns):
         bars.append(
-            px.bar(df, x=df.index, y=col, color=df.index, error_y=errors.iloc[:, i] if i < errors.shape[1] else None))
+            px.bar(df, x=df.index, y=col, color=df.index,
+                   error_y=errors.iloc[:, i] if i < errors.shape[1] else None))
 
     for i, bar in enumerate(bars):
         for trace in bar.data:
@@ -375,12 +379,12 @@ def plot_bar_summary(df, errors, title=None, save=False, file_path=None, size=(1
 
     for i, col in enumerate(df.columns[:n_cols_adj_range]):
         p = max((max(df[col]) - min(df[col])) / 10, (max(errors.iloc[:, i]) if i < errors.shape[1] else 0))
-        f = min(df[col]) - p * 1.1
+        f = max(min(df[col]) - p * 1.1, 0)
         c = max(df[col]) + p * 1.1
         fig.update_yaxes(range=[f, c], row=1, col=1 + i)
 
     fig.update_layout(template="plotly_white", xaxis_rangeslider_visible=False,
-                      title=title if plot_title else None, showlegend=False, barmode="stack")
+                      title=title if plot_title else None, showlegend=showlegend, barmode="stack")
     fig.update_xaxes(tickfont=dict(size=14 * label_scale), title_font=dict(size=18 * label_scale))
     fig.update_yaxes(tickfont=dict(size=14 * label_scale), title_font=dict(size=18 * label_scale))
     fig.show()
@@ -422,3 +426,10 @@ def plot_dc_clusters(dc_df, labels, n_clusters, plot_title=True, title=None, sav
         plotly_save(fig, file_path, size)
 
     return fig
+
+
+def plot_gs_results(input_cfg, gs_cfg, model_cfg, in_cfg, data, errors):
+    file_name = '_'.join(gs_cfg.keys()) + '_' + get_suffix(input_cfg, model_cfg)
+    plot_bar_summary(data, errors, title="SERIES: " + str(input_cfg) + '<br>' + 'MODEL: ' + str(model_cfg),
+                     file_path=[in_cfg['image_folder'], file_name], plot_title=in_cfg['plot_title'],
+                     save=in_cfg['save_results'], n_cols_adj_range=1)

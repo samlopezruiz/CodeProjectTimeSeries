@@ -10,7 +10,7 @@ from statsmodels.tsa.statespace.sarimax import SARIMAXResultsWrapper
 from joblib import Parallel, delayed
 from sklearn.metrics import mean_squared_error
 
-from timeseries.models.utils.models import get_params
+from timeseries.models.utils.models import get_models_params, get_params
 from timeseries.preprocessing.func import ema
 
 
@@ -51,7 +51,7 @@ def walk_forward_step_forecast(train, test, cfg, model_forecast, model_fit, step
     predictions = list()
     history, test_bundles, y_test = get_bundles(is_mv, steps, test, train)
 
-    model, train_t = model_fit(train, cfg, plot_hist=plot_hist, verbose=verbose)
+    model, train_t, train_loss = model_fit(train, cfg, plot_hist=plot_hist, verbose=verbose)
     n_params = get_params(model, cfg)
     start_time = time.time()
     for i, bundle in enumerate(test_bundles):
@@ -64,7 +64,7 @@ def walk_forward_step_forecast(train, test, cfg, model_forecast, model_fit, step
     print_pred_time(start_time, test_bundles, verbose)
     pred_t = round((end_time - start_time) / len(test_bundles), 4)
     predictions = prep_forecast(predictions)
-    return predictions[:len(y_test)], train_t, pred_t, n_params
+    return predictions[:len(y_test)], train_t, pred_t, n_params, train_loss
 
 
 def prep_forecast(forecast):

@@ -1,21 +1,31 @@
-from timeseries.data.lorenz.lorenz import univariate_lorenz, multivariate_lorenz
-from timeseries.models.lorenz.functions.harness import repeat_evaluate, summarize_scores
-from timeseries.models.lorenz.multivariate.multistep.cnnlstm.func import cnnlstm_multi_step_mv_predict, \
-    cnnlstm_multi_step_mv_fit
-from timeseries.models.lorenz.multivariate.onestep.cnnlstm.func import cnnlstm_one_step_mv_predict, \
-    cnnlstm_one_step_mv_fit
-from timeseries.models.lorenz.univariate.onestep.cnnlstm.func import cnnlstm_one_step_uv_predict, \
-    cnnlstm_one_step_uv_fit
-from timeseries.models.lorenz.univariate.onestep.mlp.func import mlp_one_step_uv_predict, mlp_one_step_uv_fit
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+from timeseries.data.lorenz.lorenz import lorenz_wrapper
+from timeseries.models.lorenz.functions.harness import repeat_evaluate
+from timeseries.models.lorenz.functions.summarize import summarize_scores
+from timeseries.models.lorenz.functions.preprocessing import preprocess
+from timeseries.models.lorenz.multivariate.multistep.cnnlstm.func import cnnlstm_get_multi_step_mv_funcs
+#%%
 
 if __name__ == '__main__':
-    # %% INPUT
-    lorenz_df, train, test, t_train, t_test = multivariate_lorenz(granularity=5)
-    name = "CNN-LSTM"
-    cfg = {"n_seq": 3, "n_steps_in": 12, "n_steps_out": 10, "n_filters": 64,
-           "n_kernel": 3, "n_nodes": 200, "n_epochs": 100, "n_batch": 100}
+    # %% GENERAL INPUTS
+    score_type = 'minmax'
+    n_repeats = 5
+    verbose = 0
 
-    #%% EVALUATE
-    scores, preds = repeat_evaluate(train, test, cfg, cnnlstm_multi_step_mv_predict, cnnlstm_multi_step_mv_fit,
-                                    steps=cfg['n_steps_out'], n_repeats=10)
-    summarize_scores(name, scores)
+    # MODEL AND TIME SERIES INPUTS
+    model_name = "CNN-LSTM"
+    input_cfg = {"variate": "multi", "granularity": 5, "noise": True, 'preprocess': True,
+                 'trend': True, 'detrend': 'ln_return'}
+    model_cfg = {"n_steps_out": 1, "n_steps_in": 8, "n_seq": 4, "n_kernel": 2,
+                 "n_filters": 32, "n_nodes": 16, "n_batch": 32, "n_epochs": 25}
+    func_cfg = cnnlstm_get_multi_step_mv_funcs()
+
+    lorenz_df, train, test, t_train, t_test = lorenz_wrapper(input_cfg)
+    train_pp, test_pp, ss = preprocess(input_cfg, train, test)
+
+    # %% EVALUATE
+    result = repeat_evaluate(train_pp, test_pp, train, test, input_cfg, model_cfg, func_cfg[0],
+                             func_cfg[1], ss=ss, n_repeats=n_repeats, verbose=verbose)
+    metrics, predictions, times, n_params, loss = result
+    summarize_scores(model_name, metrics, score_type=score_type)

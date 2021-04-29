@@ -1,5 +1,6 @@
 from timeseries.data.lorenz.lorenz import lorenz_wrapper
-from timeseries.models.lorenz.functions.harness import repeat_evaluate, summarize_scores
+from timeseries.models.lorenz.functions.harness import repeat_evaluate
+from timeseries.models.lorenz.functions.summarize import summarize_scores
 from timeseries.models.lorenz.functions.preprocessing import preprocess
 from timeseries.models.lorenz.univariate.onestep.stroganoff.func import stroganoff_one_step_uv_predict, \
     stroganoff_one_step_uv_fit
