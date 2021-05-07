@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 
 
@@ -38,3 +39,5 @@ def sync_df(df_x, df_y, features_x=None, features_y=None, num_inst=1, index_col=
     df_synced.columns = cols_x + cols_y
     df_synced.set_index(index_col, inplace=True)
     return df_synced
+
+

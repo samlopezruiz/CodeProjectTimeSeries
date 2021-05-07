@@ -160,14 +160,14 @@ def preprocess(input_cfg, train, test):
     return train_pp, test_pp, ss
 
 
-def reconstruct(forecast, train, test, input_cfg, cfg, ss=None):
+def reconstruct(forecast, train, test, input_cfg, steps_out, ss=None):
     if input_cfg.get('preprocess', False):
         if len(train.shape) == 1:
             train = train.reshape(-1, 1)
             test = test.reshape(-1, 1)
         return reconstruct_x(train[-1, -1], forecast, train.shape[1] - 1,
                              detrend=input_cfg.get('detrend', 'ln_return'),
-                             standscaler=ss, test=test, steps=cfg.get('n_steps_out',1))
+                             standscaler=ss, test=test, steps=steps_out)
     else:
         return forecast
 

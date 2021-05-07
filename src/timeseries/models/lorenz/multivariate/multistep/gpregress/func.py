@@ -1,10 +1,7 @@
 import time
-
 from algorithms.gpregress.gp_func import train_gpregress
-from algorithms.stroganoff.gp_func import train_stroganoff, selection_roullete, selection_tournament
-from algorithms.stroganoff.plot import plot_log
-from timeseries.models.lorenz.functions.dataprep import split_uv_seq_one_step, split_uv_seq_multi_step, \
-    split_mv_seq_multi_step, multi_step_xy_from_mv
+from algorithms.gpregress.gp_func import selection_roullete, selection_tournament
+from timeseries.models.lorenz.functions.dataprep import multi_step_xy_from_mv
 from numpy import array
 import numpy as np
 

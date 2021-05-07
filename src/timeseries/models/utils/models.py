@@ -9,8 +9,11 @@ from timeseries.models.utils.config import unpack_input_cfg
 def models_strings(names, model_cfgs, suffix):
     models_info, models_name = '', ''
     for i, name in enumerate(names):
-        models_info += '<br>' + name + ': ' + str(model_cfgs[i])
-        models_name += name + '_'
+        if isinstance(model_cfgs[i], list):
+            models_info += '<br>' + name
+            models_name += 'ENSEMBLE' + '_'
+        else:
+            models_name += name + '_'
 
     return models_info, models_name+suffix
 
@@ -53,9 +56,8 @@ def save_gs_results(input_cfg, gs_cfg, model_cfg, in_cfg, vars):
     save_vars(vars, [in_cfg['results_folder'], file_name], in_cfg['save_results'])
 
 
-def get_suffix(input_cfg, model_cfg):
+def get_suffix(input_cfg, steps):
     variate, granularity, noise, trend, detrend, preprocess = unpack_input_cfg(input_cfg)
-    steps = model_cfg['n_steps_out']
     suffix = ''
     if trend:
         suffix += 'trend_'
@@ -66,9 +68,29 @@ def get_suffix(input_cfg, model_cfg):
 
 
 def get_params(model, model_cfg):
-    depth = model_cfg.get('depth', None)
-    if depth is None:
-        params = model.count_params()
+    if isinstance(model_cfg, list):
+        params = 0
+        for i, cfg in enumerate(model_cfg):
+            name, input_cfg, model_cfg, func_cfg = cfg
+            depth = model_cfg.get('depth', None)
+            if depth is None:
+                params += model[i].count_params()
+            else:
+                params += 2 ** (cfg.get('depth', 1) - 2) * 6
     else:
-        params = 2 ** (model_cfg.get('depth', 1) - 2) * 6
+        depth = model_cfg.get('depth', None)
+        if depth is None:
+            params = model.count_params()
+        else:
+            params = 2 ** (model_cfg.get('depth', 1) - 2) * 6
     return params
+
+
+def get_models_cfgs(models, steps):
+    names, model_cfgs, func_cfgs = [], [], []
+    for model in models:
+        model_name, input_cfg, model_cfg, func_cfg = model(steps)
+        names.append(model_name)
+        model_cfgs.append(model_cfg)
+        func_cfgs.append(func_cfg)
+    return names, model_cfgs, func_cfgs

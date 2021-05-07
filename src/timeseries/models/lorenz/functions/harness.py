@@ -1,9 +1,11 @@
 import time
+
+from timeseries.data.lorenz.lorenz import lorenz_wrapper
 from timeseries.models.lorenz.functions.functions import walk_forward_step_forecast
-from timeseries.models.lorenz.functions.preprocessing import reconstruct
-from timeseries.models.lorenz.functions.summarize import consolidate_summary
+from timeseries.models.lorenz.functions.preprocessing import reconstruct, preprocess
+from timeseries.models.lorenz.functions.summarize import consolidate_summary, consolidate_series_summaries
 from timeseries.models.utils.config import unpack_in_cfg
-from timeseries.models.utils.forecast import multi_step_forecast_df
+from timeseries.models.utils.forecast import multi_step_forecast_df, multi_step_forecasts_df
 from timeseries.models.utils.metrics import forecast_accuracy, summary_results
 from timeseries.models.utils.models import models_strings, save_vars, get_suffix
 from timeseries.plotly.plot import plotly_time_series, plot_bar_summary
@@ -62,10 +64,10 @@ def repeat_evaluate(train_pp, test_pp, train, test, input_cfg, cfg, model_foreca
                     walkforward=walk_forward_step_forecast, verbose=0, parallel=True, debug=False):
     results = parallel_walkforward(cfg, model_fit, model_forecast, n_repeats, parallel, test_pp, train_pp, verbose,
                                    walkforward, debug=debug)
-
+    n_steps_out = cfg[0][2].get('n_steps_out', 1) if isinstance(cfg, list) else cfg.get('n_steps_out', 1)
     metrics, predictions, times, n_params, loss = [], [], [], 0, []
     for forecast, train_t, pred_t, n_params, train_loss in results:
-        forecast_reconst = reconstruct(forecast, train, test, input_cfg, cfg, ss=ss)
+        forecast_reconst = reconstruct(forecast, train, test, input_cfg, n_steps_out, ss=ss)
         metric = forecast_accuracy(forecast_reconst, test[:, -1] if input_cfg['variate'] == 'multi' else test)
         metrics.append(metric)
         predictions.append(forecast)
@@ -76,19 +78,20 @@ def repeat_evaluate(train_pp, test_pp, train, test, input_cfg, cfg, model_foreca
 
 def parallel_walkforward(cfg, model_fit, model_forecast, n_repeats, parallel, test_pp,
                          train_pp, verbose, walkforward, debug=False):
+    n_steps_out = cfg[0][2].get('n_steps_out', 1) if isinstance(cfg, list) else cfg.get('n_steps_out', 1)
     if parallel:
         executor = Parallel(n_jobs=cpu_count(), backend='multiprocessing')
         tasks = (delayed(walkforward)(train_pp, test_pp, cfg, model_forecast,
-                                      model_fit, steps=cfg.get('n_steps_out', 1), verbose=verbose) for _ in
+                                      model_fit, steps=n_steps_out, verbose=verbose) for _ in
                  tqdm(range(n_repeats)))
         results = executor(tasks)
     else:
         if debug:
             results = [walkforward(train_pp, test_pp, cfg, model_forecast, model_fit,
-                                   steps=cfg.get('n_steps_out', 1), verbose=verbose) for _ in range(n_repeats)]
+                                   steps=n_steps_out, verbose=verbose) for _ in range(n_repeats)]
         else:
             results = [walkforward(train_pp, test_pp, cfg, model_forecast, model_fit,
-                                   steps=cfg.get('n_steps_out', 1), verbose=verbose) for _ in tqdm(range(n_repeats))]
+                                   steps=n_steps_out, verbose=verbose) for _ in tqdm(range(n_repeats))]
     return results
 
 
@@ -97,6 +100,24 @@ def evaluate_models(input_cfg, names, model_cfgs, functions, n_repeats, ss, scor
     results = parallel_repeat_eval(model_cfgs, parallel, data_in, ss, input_cfg, functions, n_repeats, debug=debug)
     consolidate = consolidate_summary(results, names, score_type)
     summary, data, errors = summary_results(consolidate, score_type)
+    return results, summary, data, errors
+
+
+def evaluate_models_series(in_cfg, input_cfg, names, model_cfgs, func_cfgs, debug=False):
+    results = []
+    for _ in range(in_cfg['n_series']):
+        lorenz_df, train, test, t_train, t_test = lorenz_wrapper(input_cfg)
+        train_pp, test_pp, ss = preprocess(input_cfg, train, test)
+
+        data_in = (train_pp, test_pp, train, test)
+        st = time.time()
+        res, _, _, _ = evaluate_models(input_cfg, names, model_cfgs, func_cfgs,
+                                       in_cfg['n_repeats'], ss, in_cfg['score_type'], data_in, debug=debug)
+        print('Evaluation Time: {}'.format(round(time.time() - st, 2)))
+        results.append(res)
+
+    consolidate = consolidate_series_summaries(results, names, in_cfg['score_type'])
+    summary, data, errors = summary_results(consolidate, in_cfg['score_type'])
     return summary, data, errors
 
 
@@ -106,8 +127,9 @@ def parallel_repeat_eval(cfgs, parallel, data_in, ss, input_cfg, functions, n_re
     if parallel:
         executor = Parallel(n_jobs=cpu_count(), backend='multiprocessing')
         tasks = (
-        delayed(repeat_evaluate)(train_pp, test_pp, train, test, input_cfg, cfg, functions[i][0], functions[i][1],
-                                 ss=ss, n_repeats=n_repeats, parallel=parallel_in) for i, cfg in tqdm(enumerate(cfgs)))
+            delayed(repeat_evaluate)(train_pp, test_pp, train, test, input_cfg, cfg, functions[i][0], functions[i][1],
+                                     ss=ss, n_repeats=n_repeats, parallel=parallel_in) for i, cfg in
+            tqdm(enumerate(cfgs)))
         results = executor(tasks)
     else:
         if debug:
@@ -119,6 +141,14 @@ def parallel_repeat_eval(cfgs, parallel, data_in, ss, input_cfg, functions, n_re
                                        ss=ss, n_repeats=n_repeats, parallel=parallel_in) for i, cfg in
                        tqdm(enumerate(cfgs))]
     return results
+
+
+def ensemble_get_names(gs_cfgs):
+    names = []
+    for mod_cfg in gs_cfgs:
+        name = str([cfg[0] for cfg in mod_cfg])
+        names.append(name)
+    return names
 
 
 def gs_get_cfgs(gs_cfg, model_cfg, comb=True):
@@ -148,9 +178,20 @@ def gs_get_cfgs(gs_cfg, model_cfg, comb=True):
     return cfgs_gs, names
 
 
+def ensemble_search(input_cfg, gs_cfg, model_cfg, function, n_repeats, score_type,
+                    ss, data_in, less_is_better=False, comb=True, debug=False):
+    names = ensemble_get_names(gs_cfg)
+    parallel = len(gs_cfg) > n_repeats and not debug
+    functions = [function for _ in range(len(gs_cfg))]
+    results = parallel_repeat_eval(gs_cfg, parallel, data_in, ss, input_cfg, functions, n_repeats, debug=debug)
+    consolidate = consolidate_summary(results, names, score_type)
+    summary, data, errors = summary_results(consolidate, score_type, less_is_better)
+    return summary, data, errors
+
+
 def grid_search(input_cfg, gs_cfg, model_cfg, function, n_repeats, score_type,
-                ss, data_in, less_is_better=False, comb=True, debug=False):
-    cfgs_gs, names = gs_get_cfgs(gs_cfg, model_cfg, comb)
+                ss, data_in, less_is_better=False, comb=True, debug=False, ensemble=False):
+    cfgs_gs, names = gs_cfg, ensemble_get_names(gs_cfg) if ensemble else gs_get_cfgs(gs_cfg, model_cfg, comb)
     parallel = len(cfgs_gs) > n_repeats and not debug
     functions = [function for _ in range(len(cfgs_gs))]
     results = parallel_repeat_eval(cfgs_gs, parallel, data_in, ss, input_cfg, functions, n_repeats, debug=debug)
@@ -164,22 +205,51 @@ def eval_multi_step_forecast(name, input_cfg, model_cfg, functions, in_cfg, data
     image_folder, plot_hist, plot_title, save_results, results_folder, verbose = unpack_in_cfg(in_cfg)
 
     forecast, _, _, _, _ = walk_forward_step_forecast(train_pp, test_pp, model_cfg, functions[0], functions[1],
-                                                      steps=model_cfg['n_steps_out'], plot_hist=plot_hist,
+                                                      steps=in_cfg['steps'], plot_hist=plot_hist,
                                                       verbose=verbose)
 
-    forecast_reconst = reconstruct(forecast, train, test, input_cfg, model_cfg, ss=ss)
+    forecast_reconst = reconstruct(forecast, train, test, input_cfg, in_cfg['steps'], ss=ss)
     metrics = forecast_accuracy(forecast_reconst, test[:, -1])
 
     df = multi_step_forecast_df(train[:, -1], test[:, -1], forecast_reconst, t_train, t_test, train_prev_steps=200)
-    suffix = get_suffix(input_cfg, model_cfg)
+    suffix = get_suffix(input_cfg, in_cfg['steps'])
+    model_title = {'n_steps_out': model_cfg[0][2]['n_steps_out']} if isinstance(model_cfg, list) else model_cfg
     plotly_time_series(df,
-                       title="SERIES: " + str(input_cfg) + '<br>' + name + ': ' + str(
-                           model_cfg) + '<br>RES: ' + str(
-                           metrics),
-                       markers='lines',
-                       file_path=[image_folder, name + "_" + suffix], plot_title=plot_title, save=save_results)
+                       title="SERIES: " + str(input_cfg) + '<br>' + name + ': ' + str(model_title) +
+                             '<br>RES: ' + str(metrics), markers='lines', plot_title=plot_title,
+                       file_path=[image_folder, name + "_" + suffix], save=save_results)
     print(metrics)
     return metrics, df
+
+
+def view_multi_step_forecasts(names, input_cfg, model_cfgs, func_cfgs, in_cfg, data_in, ss, alphas):
+    train_pp, test_pp, train, test, t_train, t_test = data_in
+    image_folder, plot_hist, plot_title, save_results, results_folder, verbose = unpack_in_cfg(in_cfg)
+    forecasts = []
+    metrics_res = []
+    for name, model_cfg, func_cfg in zip(names, model_cfgs, func_cfgs):
+        forecast, _, _, _, _ = walk_forward_step_forecast(train_pp, test_pp, model_cfg, func_cfg[0], func_cfg[1],
+                                                          steps=in_cfg['steps'], plot_hist=plot_hist,
+                                                          verbose=verbose)
+        forecast_reconst = reconstruct(forecast, train, test, input_cfg, in_cfg['steps'], ss=ss)
+        metrics = forecast_accuracy(forecast_reconst, test[:, -1])
+        forecasts.append(forecast_reconst)
+        metrics_res.append(metrics)
+
+    df = multi_step_forecasts_df(train[:, -1], test[:, -1], names, forecasts, t_train, t_test, train_prev_steps=200)
+
+    result_title = {}
+    for name, metric in zip(names, metrics_res):
+        result_title[name] = metric[in_cfg['score_type']]
+    name = '_'.join(names)
+
+    suffix = get_suffix(input_cfg, in_cfg['steps'])
+    plotly_time_series(df, title="SERIES: " + str(input_cfg) +
+                                 '<br>' + in_cfg['score_type'].upper() + ': ' + str(result_title) +
+                                 '<br>' + 'STEPS OUT: ' + str(in_cfg['steps']),
+                       markers='lines', plot_title=plot_title, save=save_results,
+                       file_path=[image_folder, name + "_" + suffix], alphas=alphas)
+    return metrics_res, df
 
 
 def run_multi_step_forecast(name, input_cfg, model_cfg, functions, in_cfg, data_in, ss):
@@ -189,24 +259,26 @@ def run_multi_step_forecast(name, input_cfg, model_cfg, functions, in_cfg, data_
     # history doesn't contain last y column
     history = train_pp[:, :-1]
     forecast = functions[0](model, history, model_cfg)
-    forecast_reconst = reconstruct(forecast, train, test, input_cfg, model_cfg, ss=ss)
-    df = multi_step_forecast_df(train[:, -1], test[:model_cfg['n_steps_out'], -1], forecast_reconst, t_train,
-                              t_test[:model_cfg['n_steps_out']], train_prev_steps=500)
-    suffix = get_suffix(input_cfg, model_cfg)
+    forecast_reconst = reconstruct(forecast, train, test, input_cfg, in_cfg['steps'], ss=ss)
+    df = multi_step_forecast_df(train[:, -1], test[:in_cfg['steps'], -1], forecast_reconst, t_train,
+                                t_test[:in_cfg['steps']], train_prev_steps=500)
+    suffix = get_suffix(input_cfg, in_cfg['steps'])
     plotly_time_series(df, title="SERIES: " + str(input_cfg) + '<br>' + name + ': ' + str(model_cfg),
-                       file_path=[image_folder, name+'_SR_'+suffix], plot_title=plot_title, save=save_results)
+                       file_path=[image_folder, name + '_SR_' + suffix], plot_title=plot_title, save=save_results)
     return model, forecast_reconst, df
 
 
-def save_plot_results(names, summary, data, errors, input_cfg, model_cfgs, in_cfg):
+def save_plot_results(names, summary, data, errors, input_cfg, model_cfgs, in_cfg, models_name=None):
     image_folder, plot_hist, plot_title, save_results, results_folder, verbose = unpack_in_cfg(in_cfg)
     #  SAVE RESULTS
-    models_info, models_name = models_strings(names, model_cfgs, get_suffix(input_cfg, model_cfgs[0]))
+    if models_name is None:
+        models_info, models_name = models_strings(names, model_cfgs, get_suffix(input_cfg, in_cfg['steps']))
     print(summary)
-    save_vars([input_cfg, model_cfgs, summary], [results_folder, models_name], save_results)
+    save_vars([in_cfg, input_cfg, names, model_cfgs, summary], [results_folder, models_name], save_results)
 
     #
-    plot_bar_summary(data, errors, title="SERIES: " + str(input_cfg) + '<br>' + 'STEPS OUT: ' + str(in_cfg['steps']),
+    cfg = {'n_steps_out': in_cfg['steps'], 'n_series': in_cfg['n_series'], 'n_repeats': in_cfg['n_repeats']}
+    plot_bar_summary(data, errors, title="SERIES: " + str(input_cfg) + '<br>' + 'CONFIG: ' + str(cfg),
                      file_path=[image_folder, models_name], plot_title=plot_title, showlegend=False,
                      save=save_results, n_cols_adj_range=data.shape[1])
 

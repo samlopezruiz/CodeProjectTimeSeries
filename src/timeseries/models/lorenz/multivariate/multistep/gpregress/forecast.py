@@ -1,72 +1,40 @@
-from algorithms.gpregress.prim import primitives1
-from timeseries.data.lorenz.lorenz import lorenz_wrapper
-from timeseries.models.lorenz.functions.dataprep import split_mv_seq_multi_step, multi_step_xy_from_mv
-from timeseries.models.lorenz.functions.functions import walk_forward_step_forecast
-from timeseries.models.lorenz.functions.preprocessing import reconstruct_x, preprocess, reconstruct
-from timeseries.models.lorenz.multivariate.multistep.gpregress.func import gpregress_multi_step_mv_fit, \
-    gpregress_multi_step_mv_predict
-from timeseries.models.lorenz.multivariate.multistep.stroganoff.func import stroganoff_multi_step_mv_fit, \
-    stroganoff_multi_step_mv_predict
-from timeseries.models.lorenz.univariate.multistep.stroganoff.func import stroganoff_multi_step_uv_fit, \
-    stroganoff_multi_step_uv_predict, stroganoff_multi_step_uv_predict_walk
+import os
 
-from timeseries.models.lorenz.univariate.onestep.stroganoff.func import stroganoff_one_step_uv_fit, \
-    stroganoff_one_step_uv_predict
-from timeseries.models.utils.forecast import multi_step_forecast_df, one_step_forecast_df
-from timeseries.models.utils.metrics import forecast_accuracy
-from timeseries.plotly.plot import plotly_time_series
-import pandas as pd
+from algorithms.gpregress.prim import primitives1
+from timeseries.models.lorenz.multivariate.multistep.cnn.func import cnn_get_multi_step_mv_funcs
+from timeseries.models.lorenz.multivariate.multistep.gpregress.func import gpregress_get_multi_step_mv_funcs
+from timeseries.models.lorenz.multivariate.multistep.stroganoff.func import stroganoff_get_multi_step_mv_funcs
+
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+from timeseries.models.lorenz.functions.harness import eval_multi_step_forecast, run_multi_step_forecast
+from timeseries.models.lorenz.functions.preprocessing import preprocess
+from timeseries.data.lorenz.lorenz import lorenz_wrapper
+from timeseries.models.lorenz.multivariate.multistep.cnnlstm.func import cnnlstm_get_multi_step_mv_funcs
+# %%
 
 if __name__ == '__main__':
     # %% GENERAL INPUTS
-    detrend_ops = ['ln_return', ('ema_diff', 5), 'ln_return']
-    save_folder = 'images'
-    plot_title = True
-    save_plots = False
-    plot_hist = False
-    verbose = 2
-    suffix = 'trend_pp_noise_1'
+    in_cfg = {'steps': 6, 'save_results': False, 'verbose': 1, 'plot_title': True, 'plot_hist': False,
+              'image_folder': 'images', 'results_folder': 'results',
+              'detrend_ops': ['ln_return', ('ema_diff', 5), 'ln_return']}
 
     # MODEL AND TIME SERIES INPUTS
-    name = "GP_REGRESS"
+    model_name = "GP_REGRESS"
     input_cfg = {"variate": "multi", "granularity": 5, "noise": True, 'preprocess': True,
                  'trend': True, 'detrend': 'ln_return'}
-    model_cfg = {"n_steps_in": 10, "n_steps_out": 6, "n_gen": 10, "n_pop": 800, "cxpb": 0.7, "mxpb": 0.1,
-                 "depth": 5, 'elitism_size': 5, 'selection': 'tournament', 'tour_size': 3,
+    model_cfg = {"n_steps_out": 6, "n_steps_in": 14, "depth": 8, "n_gen": 35, "n_pop": 300,
+                 "cxpb": 0.6, "mxpb": 0.05, 'elitism_size': 5, 'selection': 'roullete', 'tour_size': 3,
                  'primitives': primitives1()}
+    func_cfg = gpregress_get_multi_step_mv_funcs()
 
+    # %% DATA
     lorenz_df, train, test, t_train, t_test = lorenz_wrapper(input_cfg)
     train_pp, test_pp, ss = preprocess(input_cfg, train, test)
+    data_in = (train_pp, test_pp, train, test, t_train, t_test)
 
     # %% FORECAST
-    # stroganoff_one_step_uv_fit with stroganoff_multi_step_uv_predict_walk
-    # model = gpregress_multi_step_mv_fit(train_pp, model_cfg, verbose=0)
-    # for m in model:
-    #     print('---')
-    #     m.print_tree()
-    # # history doesn't contain last y column
-    # train_pp_x = train_pp[:, :-1]
-    # forecast = gpregress_multi_step_mv_predict(model, train_pp_x, model_cfg)
-    # forecast_reconst = reconstruct(forecast, train, test, input_cfg, model_cfg, ss=ss)
-    # df = multi_step_forecast_df(train[:, -1], test[:model_cfg['n_steps_out'], -1], forecast_reconst, t_train,
-    #                           t_test[:model_cfg['n_steps_out']], train_prev_steps=200)
-    # plotly_time_series(df, title="SERIES: " + str(input_cfg) + '<br>' + name + ': ' + str(model_cfg),
-    #                    file_path=[save_folder, name], plot_title=plot_title, save=save_plots)
+    model, forecast_reconst, df = run_multi_step_forecast(model_name, input_cfg, model_cfg, func_cfg, in_cfg, data_in, ss)
 
-    # %% PLOT WALK FORWARD FORECAST
-    forecast = walk_forward_step_forecast(train_pp, test_pp, model_cfg, gpregress_multi_step_mv_predict,
-                                          gpregress_multi_step_mv_fit, steps=model_cfg["n_steps_out"],
-                                          plot_hist=plot_hist, verbose=verbose)
+    # %% WALK FORWARD FORECAST
+    # metrics, forecast = eval_multi_step_forecast(model_name, input_cfg, model_cfg, func_cfg, in_cfg, data_in, ss)
 
-    # %%
-    forecast_reconst = reconstruct(forecast, train, test, input_cfg, model_cfg, ss=ss)
-    metrics = forecast_accuracy(forecast_reconst, test[:, -1])
-
-    # %%
-    df = multi_step_forecast_df(train[:, -1], test[:, -1], forecast_reconst, train_prev_steps=200)
-    plotly_time_series(df,
-                       title="SERIES: " + str(input_cfg) + '<br>' + name + ': ' + str(model_cfg) + '<br>RES: ' + str(
-                           metrics),
-                       markers='lines',
-                       file_path=[save_folder, name+"_"+suffix], plot_title=plot_title, save=save_plots)
-    print(metrics)

@@ -1,5 +1,4 @@
 import time
-
 from algorithms.stroganoff.gp_func import train_stroganoff, selection_roullete, selection_tournament
 from algorithms.stroganoff.plot import plot_log
 from timeseries.models.lorenz.functions.dataprep import split_uv_seq_one_step, split_uv_seq_multi_step, \

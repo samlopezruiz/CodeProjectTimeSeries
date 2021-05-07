@@ -1,6 +1,7 @@
 import os
-from timeseries.plotly.plot import plot_history
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+import tensorflow as tf
+from timeseries.plotly.plot import plot_history
 from timeseries.models.lorenz.functions.dataprep import row_col_multi_step_xy_from_mv
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import ConvLSTM2D, Dense, Flatten
@@ -22,6 +23,8 @@ def convlstm_multi_step_mv_fit(train, cfg, plot_hist=False, verbose=0):
         print('No. of params: {}'.format(model.count_params()))
     # fit
     start_time = time.time()
+    X = tf.convert_to_tensor(X, dtype=tf.float64)
+    y = tf.convert_to_tensor(y, dtype=tf.float64)
     history = model.fit(X, y, epochs=n_epochs, batch_size=n_batch, verbose=verbose)
     train_time = round((time.time() - start_time), 2)
     # summarize history for accuracy
@@ -51,6 +54,7 @@ def convlstm_multi_step_mv_predict(model, history, cfg, steps=1):
     n_features = history.shape[1]
     # prepare data
     x_input = array(history[-n_input:]).reshape((1, n_seq, 1, n_steps, n_features))
+    x_input = tf.convert_to_tensor(x_input, dtype=tf.float64)
     # forecast
     yhat = model.predict(x_input, verbose=0)
     return yhat[0]

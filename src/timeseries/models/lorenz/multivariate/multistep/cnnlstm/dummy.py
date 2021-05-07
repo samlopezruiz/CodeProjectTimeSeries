@@ -1,6 +1,6 @@
 import os
 from timeseries.models.lorenz.functions.dataprep import row_col_one_step_xy_from_mv, row_col_multi_step_xy_from_mv, \
-    step_feature_multi_step_xy_from_mv
+    step_feature_multi_step_xy_from_mv, split_mv_seq_multi_step
 import numpy as np
 from numpy import array
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -14,12 +14,15 @@ if __name__ == '__main__':
     out_seq = array([in_seq1[i] + in_seq2[i] for i in range(len(in_seq1))])
     seqs = [in_seq1, in_seq2, out_seq]
 
+
     # split into samples
     dataset = np.vstack(seqs).transpose()
     n_steps_in, n_steps_out = 4, 2
     n_seq = 2
     n_steps = int(n_steps_in / n_seq)
     # split into samples
+    X, y = split_mv_seq_multi_step(seqs, n_steps_in, n_steps_out)
+
     X, y = step_feature_multi_step_xy_from_mv(seqs, n_steps_in, n_steps_out, n_seq)
     n_features = X.shape[3]
     # define model

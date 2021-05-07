@@ -38,13 +38,6 @@ def compare_forecast(models, train, test):
 def summary_results(consolidated, score_type='score', less_is_better=False):
     df = pd.DataFrame(consolidated, columns=['model', 'scores', 'score_m', 'score_std','loss_m', 'loss_std',
                                              'times', 'train_t_m', 'train_t_std', 'pred_t_m', 'pred_t_std',  'n_params'])
-    # tt = pd.DataFrame(model_times, columns=['model', 'times', 'train_t_m', 'train_t_std', 'pred_t_m', 'pred_t_std'])
-    # ss = pd.DataFrame(scores_models, columns=['model', 'scores', 'score_m', 'score_std'])
-    # lss = pd.DataFrame(loss, columns=['model', 'train_loss_m', 'train_loss_std'])
-    # params = pd.DataFrame(params, columns=['model', "n_params"])
-    # df = ss.merge(tt, left_on='model', right_on='model')
-    # df = df.merge(params, left_on='model', right_on='model')
-    # df = df.merge(lss, left_on='model', right_on='model')
     df.set_index(['model'], inplace=True)
     df.drop(['times', 'scores'], axis=1, inplace=True)
     normalized_df = (df - df.min()) / (df.max() - df.min())

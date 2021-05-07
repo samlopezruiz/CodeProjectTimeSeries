@@ -24,7 +24,7 @@ def cnnlstm_mv_configs(steps=1):
     good_configs.append((model_name, input_cfg, model_cfg, func_cfg))
 
     # %% CNN-LSTM: 0.9622 minmax  (+/- 0.0009) STEPS=1
-    model_name = "D-CNN"
+    model_name = "CNN-LSTM"
     input_cfg = {"variate": "multi", "granularity": 5, "noise": True, 'preprocess': True,
                  'trend': True, 'detrend': 'ln_return'}
     model_cfg = {"n_steps_out": 1, "n_steps_in": 8, "n_seq": 4, "n_kernel": 2,
