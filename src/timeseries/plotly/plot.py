@@ -1,6 +1,9 @@
 import time
 from itertools import combinations
+
 import numpy as np
+import plotly.express as px
+import plotly.io as pio
 from plotly import graph_objects as go
 from plotly.subplots import make_subplots
 
@@ -9,11 +12,8 @@ from timeseries.models.utils.metrics import get_data_error
 from timeseries.models.utils.models import get_suffix
 from timeseries.models.utils.results import load_results, get_col_and_rename, concat_sort_results, rename_ensemble
 from timeseries.plotly.utils import plotly_params_check, plotly_save
-import plotly.io as pio
-import plotly.express as px
 
 pio.renderers.default = "browser"
-import matplotlib.pyplot as plt
 
 
 def plotly_time_series(df, title=None, save=False, legend=True, file_path=None, size=(1980, 1080), color_col=None,
@@ -168,7 +168,7 @@ def plotly_one_series(s, title=None, save=False, legend=True, file_path=None, si
 def plotly_phase_plots(df, title=None, save=False, file_path=None, size=(1980, 1080), label_scale=1, legend=True,
                        **kwargs):
     params_ok, params = plotly_params_check(df, **kwargs)
-    features, rows, cols, type_plot = params
+    features, rows, cols, type_plot, alphas = params
 
     if not params_ok:
         return
@@ -204,7 +204,7 @@ def plotly_phase_plots(df, title=None, save=False, file_path=None, size=(1980, 1
 
 def plotly_3d(df, title=None, save=False, file_path=None, size=(1980, 1080), legend=True, label_scale=1, **kwargs):
     params_ok, params = plotly_params_check(df, **kwargs)
-    features, rows, cols, type_plot = params
+    features, rows, cols, type_plot, alphas = params
 
     if not params_ok:
         return
@@ -399,6 +399,7 @@ def plot_bar_summary(df, errors, title=None, save=False, file_path=None, size=(1
                       title=title if plot_title else None, showlegend=showlegend, barmode="stack")
     fig.update_xaxes(tickfont=dict(size=14 * label_scale), title_font=dict(size=18 * label_scale))
     fig.update_yaxes(tickfont=dict(size=14 * label_scale), title_font=dict(size=18 * label_scale))
+    fig.update_annotations(font_size=14 * label_scale)
     fig.show()
     time.sleep(1.5)
 
@@ -462,6 +463,7 @@ def plot_bar_summary_2rows(df, errors, df2, errors2, title=None, save=False, fil
                       title=title if plot_title else None, showlegend=showlegend, barmode="stack")
     fig.update_xaxes(tickfont=dict(size=14 * label_scale), title_font=dict(size=18 * label_scale))
     fig.update_yaxes(tickfont=dict(size=14 * label_scale), title_font=dict(size=18 * label_scale))
+    fig.update_annotations(font_size=14 * label_scale)
     fig.show()
     time.sleep(1.5)
 
@@ -504,59 +506,46 @@ def plot_dc_clusters(dc_df, labels, n_clusters, plot_title=True, title=None, sav
 
 
 def plot_gs_results(input_cfg, gs_cfg, model_cfg, in_cfg, data, errors):
-    file_name = '_'.join(gs_cfg.keys()) + '_' + get_suffix(input_cfg, model_cfg)
+    file_name = '_'.join(gs_cfg.keys()) + '_' + get_suffix(input_cfg, in_cfg['steps'])
     plot_bar_summary(data, errors, title="SERIES: " + str(input_cfg) + '<br>' + 'MODEL: ' + str(model_cfg),
                      file_path=[in_cfg['image_folder'], file_name], plot_title=in_cfg['plot_title'],
                      save=in_cfg['save_results'], n_cols_adj_range=1)
 
 
-def plot_multiple_results(res_cfg, steps, var=None):
+def plot_multiple_results(res_cfg, compare, var=None, size=(1980, 1080), label_scale=1):
+    data, errors, input_cfg = load_data_err(res_cfg, compare)
+    models_name = res_cfg['preffix']
+    image_folder, plot_hist, plot_title, save_results, results_folder, verbose = unpack_in_cfg(res_cfg)
+
+    if var is not None:
+        data2, errors2, input_cfg = load_data_err(res_cfg, compare, var)
+        data2 = data2.loc[data.index, :]
+        errors2 = errors2.loc[errors.index, :]
+        plot_bar_summary_2rows(data, errors, data2, errors2, title="SERIES: " + str(input_cfg), plot_title=plot_title,
+                               file_path=[image_folder, models_name], showlegend=False, shared_yaxes=True,
+                               save=save_results, n_cols_adj_range=data.shape[1], size=size, label_scale=label_scale)
+    else:
+        plot_bar_summary(data, errors, title="SERIES: " + str(input_cfg), plot_title=plot_title,
+                               file_path=[image_folder, models_name], showlegend=False, shared_yaxes=True,
+                               save=save_results, n_cols_adj_range=data.shape[1], size=size, label_scale=label_scale)
+    return data, errors
+
+
+def load_data_err(res_cfg, compare, var=None):
     dat, err = [], []
-    for step in steps:
-        res_cfg['steps'] = step
-        in_cfg, input_cfg, names, model_cfgs, summary = load_results(res_cfg)
+    for op in compare[1]:
+        if compare[0] in res_cfg:
+            res_cfg[compare[0]] = op
+            suffix = None
+        else:
+            suffix = op
+        (in_cfg, input_cfg, names, model_cfgs, summary), model_name = load_results(res_cfg, suffix=suffix)
         summary = rename_ensemble(summary)
         if var is None:
             var = (in_cfg['score_type'], 'score_std')
 
         d, e = get_data_error(summary, in_cfg['score_type'])
-        d, e = get_col_and_rename(d, e, var, res_cfg)
-        dat.append(d)
-        err.append(e)
-    data, errors = concat_sort_results(dat, err)
-
-    models_name = res_cfg['suffix']
-    image_folder, plot_hist, plot_title, save_results, results_folder, verbose = unpack_in_cfg(res_cfg)
-    plot_bar_summary(data, errors, title="SERIES: " + str(input_cfg), plot_title=plot_title,
-                     file_path=[image_folder, models_name], showlegend=False, shared_yaxes=True,
-                     save=save_results, n_cols_adj_range=data.shape[1])
-
-
-def plot_multiple_results_2rows(res_cfg, steps, var2):
-    data, errors, input_cfg = load_data_err(res_cfg, steps)
-    data2, errors2, input_cfg = load_data_err(res_cfg, steps, var2)
-
-    data2 = data2.loc[data.index, :]
-    errors2 = errors2.loc[errors.index, :]
-
-    models_name = res_cfg['suffix']
-    image_folder, plot_hist, plot_title, save_results, results_folder, verbose = unpack_in_cfg(res_cfg)
-    plot_bar_summary_2rows(data, errors, data2, errors2, title="SERIES: " + str(input_cfg), plot_title=plot_title,
-                           file_path=[image_folder, models_name], showlegend=False, shared_yaxes=True,
-                           save=save_results, n_cols_adj_range=data.shape[1])
-
-
-def load_data_err(res_cfg, steps, var=None):
-    dat, err = [], []
-    for step in steps:
-        res_cfg['steps'] = step
-        in_cfg, input_cfg, names, model_cfgs, summary = load_results(res_cfg)
-        summary = rename_ensemble(summary)
-        if var is None:
-            var = (in_cfg['score_type'], 'score_std')
-
-        d, e = get_data_error(summary, in_cfg['score_type'])
-        d, e = get_col_and_rename(d, e, var, res_cfg)
+        d, e = get_col_and_rename(d, e, var, compare[0], op)
         dat.append(d)
         err.append(e)
     data, errors = concat_sort_results(dat, err)

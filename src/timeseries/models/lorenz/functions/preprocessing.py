@@ -155,8 +155,14 @@ def preprocess(input_cfg, train, test):
         test_pp = all_pp[train_pp.shape[0]:]
         # plotly_time_series(pd.DataFrame(train_pp), rows=[0, 1, 2, 3], markers='lines')
     else:
-        ss = None
-        train_pp, test_pp = train, test
+        if input_cfg.get('scale', False):
+            train_pp, ss = preprocess_x(train, scale=True, detrend='False')
+            # remove only 1 element at beginning
+            all_pp, _ = preprocess_x(np.vstack((train, test)), scale=True, detrend='False', standard_scaler=ss)
+            test_pp = all_pp[train_pp.shape[0]:]
+        else:
+            ss = None
+            train_pp, test_pp = train, test
     return train_pp, test_pp, ss
 
 
@@ -168,6 +174,12 @@ def reconstruct(forecast, train, test, input_cfg, steps_out, ss=None):
         return reconstruct_x(train[-1, -1], forecast, train.shape[1] - 1,
                              detrend=input_cfg.get('detrend', 'ln_return'),
                              standscaler=ss, test=test, steps=steps_out)
+    elif input_cfg.get('scale', False):
+        if len(train.shape) == 1:
+            train = train.reshape(-1, 1)
+            test = test.reshape(-1, 1)
+        return reconstruct_x(train[-1, -1], forecast, train.shape[1] - 1,
+                             detrend='False', standscaler=ss, test=test, steps=steps_out)
     else:
         return forecast
 

@@ -1,8 +1,6 @@
 import os
-
-from timeseries.models.lorenz.multivariate.multistep.cnn.func import cnn_get_multi_step_mv_funcs
-
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+from timeseries.models.lorenz.multivariate.multistep.cnn.func import cnn_get_multi_step_mv_funcs
 from timeseries.models.lorenz.functions.harness import eval_multi_step_forecast, run_multi_step_forecast
 from timeseries.models.lorenz.functions.preprocessing import preprocess
 from timeseries.data.lorenz.lorenz import lorenz_wrapper

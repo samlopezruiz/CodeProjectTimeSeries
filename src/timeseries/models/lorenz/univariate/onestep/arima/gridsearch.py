@@ -1,9 +1,7 @@
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 import numpy as np
+import pmdarima as pm
 
-
-# one-step sarima forecast
-from timeseries.model.univariate.explore.functions import grid_search
 
 
 def sarima_forecast(history, config):
@@ -43,6 +41,17 @@ def sarima_configs(seasonal=[0]):
                                     models.append(cfg)
     return models
 
+def auto_arima(x, max_p=8, max_q=8):
+    x = x[~np.isnan(x)]
+    smodel = pm.auto_arima(x, start_p=1, start_q=1, d=0,
+                           test='adf',
+                           max_p=max_p, max_q=max_q,
+                           start_P=0, seasonal=False, trace=True,
+                           error_action='ignore',
+                           suppress_warnings=True,
+                           stepwise=True)
+
+    return smodel
 
 if __name__ == '__main__':
     from timeseries.data.lorenz.lorenz import Lorenz, univariate_lorenz

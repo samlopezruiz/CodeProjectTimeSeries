@@ -32,8 +32,8 @@ def dcnn_1st_layer(channels, kernel_size, dilation_rate, name, reg='l2'):
         filter_padded = keras.layers.ZeroPadding1D((dilation_rate * (kernel_size - 1), 0))(filter_out)
         param_skip = keras.layers.Conv1D(channels, 1,
                                          padding='same', use_bias=False,
-                                         activation='linear', name='param_skip')(input_)
-        output = keras.layers.Add(name='parm_skip_' + name)([filter_padded, param_skip])
+                                         activation='linear', name='param_skip_'+name)(input_)
+        output = keras.layers.Add(name='add_' + name)([filter_padded, param_skip])
         return output
     return f
 
@@ -64,6 +64,69 @@ def dcnn_build(cfg, n_features):
 
     return keras.models.Model(inputs=[sequence], outputs=output)
 
+def dcnn_build2(cfg, n_features):
+    n_steps_in, n_steps_out, n_filters = cfg['n_steps_in'], cfg['n_steps_out'], cfg['n_filters']
+    n_kernel, n_epochs, n_batch = cfg['n_kernel'], cfg['n_epochs'], cfg['n_batch']
+    n_layers, reg = cfg['n_layers'], cfg['reg']
+    input_shape = (n_steps_in, n_features)
+
+    assert n_steps_in > 2 ** (n_layers - 1) * n_kernel
+
+    stddev = math.sqrt(2 / (n_kernel * n_filters))
+
+    # ARCHITECTURE
+    sequence = keras.layers.Input(shape=input_shape, name='sequence')
+    x = dcnn_1st_layer(n_filters, n_kernel, 1, '0', reg=reg)(sequence)
+    for layer in range(1, n_layers):
+        x = dcnn_layer(n_filters, n_kernel, 2**layer, str(layer), reg=reg)(x)
+    out_conv = keras.layers.Conv1D(n_filters, 1,
+                                    padding='same', use_bias=True,
+                                    activation='relu', name='conv1x1')(x)
+    # out_conv = keras.layers.Conv1D(n_filters // 2, 1,
+    #                                padding='same', use_bias=True,
+    #                                activation='relu', name='conv1x1')(out_conv)
+    preoutput = keras.layers.Flatten()(out_conv)
+    preoutput = keras.layers.Dense(n_steps_out, kernel_regularizer=reg, name='preoutput',
+                                   kernel_initializer=initializers.RandomNormal(stddev=stddev))(preoutput)
+    output = keras.layers.Dense(n_steps_out, kernel_regularizer=reg, name='output',
+                                   kernel_initializer=initializers.RandomNormal(stddev=stddev))(preoutput)
+
+    return keras.models.Model(inputs=[sequence], outputs=output)
+
+
+def dcnn_build_cond(cfg, n_features):
+    n_steps_in, n_steps_out, n_filters = cfg['n_steps_in'], cfg['n_steps_out'], cfg['n_filters']
+    n_kernel, n_epochs, n_batch = cfg['n_kernel'], cfg['n_epochs'], cfg['n_batch']
+    n_layers, reg = cfg['n_layers'], cfg['reg']
+    # input_shape = (n_steps_in, n_features)
+    input_shape = (n_steps_in, 1)
+    assert n_steps_in > 2 ** (n_layers - 1) * n_kernel
+
+    stddev = math.sqrt(2 / (n_kernel * n_filters))
+
+    # ARCHITECTURE
+    sequence = keras.layers.Input(shape=input_shape, name='sequence')
+    in_sequence = dcnn_1st_layer(n_filters, n_kernel, 1, '0', reg=reg)(sequence)
+    conditions = [keras.layers.Input(shape=input_shape, name='condition'+str(i)) for i in range(n_features-1)]
+    in_conditions = [dcnn_1st_layer(n_filters, n_kernel, 1, 'cond'+str(i), reg=reg)(cond) for i, cond in enumerate(conditions)]
+
+    if n_features > 1:
+        x = keras.layers.Add(name='input_layer')([in_sequence] + in_conditions)
+    else:
+        x = in_sequence
+
+    for layer in range(1, n_layers):
+        x = dcnn_layer(n_filters, n_kernel, 2**layer, str(layer), reg=reg)(x)
+    out_conv = keras.layers.Conv1D(n_filters, 1,
+                                    padding='same', use_bias=True,
+                                    activation='relu', name='conv1x1')(x)
+    preoutput = keras.layers.Flatten()(out_conv)
+    preoutput = keras.layers.Dense(n_steps_out*2, kernel_regularizer=reg, name='preoutput',
+                                   kernel_initializer=initializers.RandomNormal(stddev=stddev))(preoutput)
+    output = keras.layers.Dense(n_steps_out, kernel_regularizer=reg, name='output',
+                                   kernel_initializer=initializers.RandomNormal(stddev=stddev))(preoutput)
+
+    return keras.models.Model(inputs=[sequence] + conditions, outputs=output)
 
 
 def wavenet_layer(channels, hidden_channels, kernel_size, dilation_rate, name):
@@ -116,7 +179,38 @@ def wavenet_build(cfg, n_features):
                                     padding='same', use_bias=True,
                                     activation='relu', name='conv1x1')(skip_act)
     preoutput = keras.layers.Flatten()(skip_conv)
-    preoutput = keras.layers.Dense(n_steps_out*2, name='preoutput')(preoutput)
+    preoutput = keras.layers.Dense(n_steps_out, name='preoutput')(preoutput)
+    output = keras.layers.Dense(n_steps_out, name='output')(preoutput)
+
+    return keras.models.Model(inputs=[sequence], outputs=output)
+
+
+def wavenet_build2(cfg, n_features):
+    n_steps_in, n_steps_out, n_filters = cfg['n_steps_in'], cfg['n_steps_out'], cfg['n_filters']
+    hidden_channels, n_layers = cfg['hidden_channels'], cfg['n_layers']
+    n_kernel, n_epochs, n_batch = cfg['n_kernel'], cfg['n_epochs'], cfg['n_batch']
+    input_shape = (n_steps_in, n_features)
+
+    assert n_steps_in > 2**(n_layers - 1) * n_kernel
+
+    sequence = keras.layers.Input(shape=input_shape, name='sequence')
+
+    x = s0 = keras.layers.Conv1D(n_filters, 1,
+                                 padding='same', use_bias=True,
+                                 activation='linear', name='input_expanded')(sequence)
+
+    skip_layers = []
+    for layer in range(n_layers):
+        x, s = wavenet_layer(n_filters, hidden_channels, n_kernel, 2**layer, str(layer))(x)
+        skip_layers.append(s)
+    skip_overall = keras.layers.Add(name='skip_overall')([s0]+skip_layers)
+
+    skip_act = keras.activations.relu(skip_overall)
+    skip_conv = keras.layers.Conv1D(n_filters, 1,
+                                    padding='same', use_bias=True,
+                                    activation='relu', name='conv1x1')(skip_act)
+    preoutput = keras.layers.Flatten()(skip_conv)
+    preoutput = keras.layers.Dense(n_steps_out, name='preoutput')(preoutput)
     output = keras.layers.Dense(n_steps_out, name='output')(preoutput)
 
     return keras.models.Model(inputs=[sequence], outputs=output)

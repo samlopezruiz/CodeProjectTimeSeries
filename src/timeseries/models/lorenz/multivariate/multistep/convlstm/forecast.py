@@ -8,7 +8,7 @@ from timeseries.models.lorenz.functions.preprocessing import preprocess
 
 if __name__ == '__main__':
     # %% GENERAL INPUTS
-    in_cfg = {'steps': 6, 'save_results': False, 'verbose': 1, 'plot_title': True, 'plot_hist': False,
+    in_cfg = {'steps': 1, 'save_results': False, 'verbose': 1, 'plot_title': True, 'plot_hist': False,
               'image_folder': 'images', 'results_folder': 'results',
               'detrend_ops': ['ln_return', ('ema_diff', 5), 'ln_return']}
 
@@ -16,8 +16,8 @@ if __name__ == '__main__':
     name = "CONV-LSTM"
     input_cfg = {"variate": "multi", "granularity": 5, "noise": True, 'preprocess': True,
                  'trend': True, 'detrend': 'ln_return'}
-    model_cfg = {"n_seq": 3, "n_steps_in": 12, "n_steps_out": 6, "n_filters": 256,
-                 "n_kernel": 3, "n_nodes": 200, "n_epochs": 15, "n_batch": 100}
+    model_cfg = {"n_steps_out": 1, "n_steps_in": 10, "n_seq": 3, "n_kernel": 3,
+                 "n_filters": 32, "n_nodes": 64, "n_batch": 64, "n_epochs": 30}
     functions = convlstm_get_multi_step_mv_funcs()
 
     # %% DATA

@@ -9,8 +9,8 @@ from timeseries.models.lorenz.multivariate.multistep.configs.wavenet import wave
 
 if __name__ == '__main__':
     # %% GENERAL INPUTS
-    in_cfg = {'steps': 1, 'save_results': True, 'verbose': 1, 'plot_title': True, 'plot_hist': False,
-              'image_folder': 'images', 'results_folder': 'results',
+    in_cfg = {'steps': 6, 'save_results': True, 'verbose': 1, 'plot_title': False, 'plot_hist': False,
+              'image_folder': 'forecast_img', 'results_folder': 'results',
               'detrend_ops': ['ln_return', ('ema_diff', 5), 'ln_return']}
 
     # MODEL AND TIME SERIES INPUTS
@@ -20,4 +20,5 @@ if __name__ == '__main__':
 
     #%% WALK FORWARD FORECAST
     data_in = (train_pp, test_pp, train, test, t_train, t_test)
-    metrics, forecast = eval_multi_step_forecast(name, input_cfg, model_cfg, functions, in_cfg, data_in, ss)
+    metrics, forecast = eval_multi_step_forecast(name, input_cfg, model_cfg, functions, in_cfg, data_in, ss,
+                                                 label_scale=1.5, size=(1980, 1080 // 2))

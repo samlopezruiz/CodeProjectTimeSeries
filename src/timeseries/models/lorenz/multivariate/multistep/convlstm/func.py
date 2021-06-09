@@ -1,5 +1,6 @@
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+from tensorflow.python.keras.layers import Conv1D
 import tensorflow as tf
 from timeseries.plotly.plot import plot_history
 from timeseries.models.lorenz.functions.dataprep import row_col_multi_step_xy_from_mv
@@ -39,6 +40,7 @@ def convlstm_multi_step_mv_build(cfg, n_features):
 
     model = Sequential()
     model.add(ConvLSTM2D(n_filters, (1, n_kernel), activation='relu', input_shape=(n_seq, 1, n_steps, n_features)))
+    # model.add(Conv1D(n_filters // 2, 1, activation='relu'))
     model.add(Flatten())
     model.add(Dense(n_nodes, activation='relu'))
     model.add(Dense(n_steps_out))

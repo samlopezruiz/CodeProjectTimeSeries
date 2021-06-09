@@ -1,4 +1,6 @@
 import os
+import time
+
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 from algorithms.wavenet.func import dcnn_build
 from timeseries.plotly.plot import plot_history
@@ -18,11 +20,13 @@ def dcnn_multi_step_uv_fit(train, cfg, plot_hist=False, verbose=0):
     if verbose > 0:
         print('No. of params: {}'.format(model.count_params()))
     # fit
+    start_time = time.time()
     history = model.fit(X, y, epochs=n_epochs, batch_size=n_batch, verbose=verbose)
+    train_time = round((time.time() - start_time), 2)
     # summarize history for accuracy
     if plot_hist:
         plot_history(history, title='D-CNN: ' + str(cfg), plot_title=True)
-    return model
+    return model, train_time, history.history['loss'][-1]
 
 
 # forecast with a pre-fit model
@@ -51,3 +55,6 @@ def dcnn_multi_step_uv_predict_walk(model, history, cfg, steps=1):
         yhat.append(y[0])
         history.append(y[0])
     return array(yhat).ravel()
+
+def dcnn_get_multi_step_uv_funcs():
+    return [dcnn_multi_step_uv_predict, dcnn_multi_step_uv_fit, dcnn_build]

@@ -32,8 +32,8 @@ if __name__ == '__main__':
 
 #%%
     lags = 100
-    df_pacf = pacf(x, nlags=lags)
-    df_acf = acf(x, nlags=lags)
+    df_pacf = pacf(x, nlags=lags, fft=True )
+    df_acf = acf(x, nlags=lags, fft=True)
     x_diff = x.diff().diff().dropna()
     pacf_diff = pacf(x_diff, nlags=lags)
     acf_diff = acf(x_diff, nlags=lags)

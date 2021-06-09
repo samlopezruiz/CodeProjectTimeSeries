@@ -35,3 +35,7 @@ def convlstm_one_step_uv_predict(model, history, cfg, steps=1):
     # forecast
     yhat = model.predict(x_input, verbose=0)
     return yhat[0][0]
+
+
+def convlstm_get_one_step_uv_funcs():
+    return [convlstm_one_step_uv_predict, convlstm_one_step_uv_fit]

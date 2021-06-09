@@ -1,23 +1,33 @@
 
-import pmdarima as pm
-import numpy as np
-from timeseries.data.lorenz.lorenz_wrapper import lorenz_system
-from timeseries.model.univariate.explore.functions import train_test_split
 import matplotlib.pyplot as plt
+import pmdarima as pm
 
+from timeseries.data.lorenz.lorenz import lorenz_wrapper
+from timeseries.models.lorenz.functions.preprocessing import preprocess
+from timeseries.models.lorenz.univariate.onestep.arima.func import arima_get_one_step_uv_funcs
 
 if __name__ == '__main__':
-    lorenz_df, xyz, t = lorenz_system()
-    test_size = 1000
-    x = lorenz_df['x']
-    x = x[x.index > 15]
-    data = np.array(x)
-    train, test = train_test_split(data, test_size)
+    # %% GENERAL INPUTS
+    in_cfg = {'steps': 1, 'save_results': False, 'verbose': 1, 'plot_title': True, 'plot_hist': False,
+              'image_folder': 'images', 'results_folder': 'results',
+              'detrend_ops': ['ln_return', ('ema_diff', 5), 'ln_return']}
+
+    # MODEL AND TIME SERIES INPUTS
+    name = "ARIMA"
+    input_cfg = {"variate": "uni", "granularity": 5, "noise": True, 'preprocess': True,
+                 'trend': True, 'detrend': 'ln_return'}
+    model_cfg = {"n_steps_out": 1, 'order': (9, 1, 5)}
+    functions = arima_get_one_step_uv_funcs()
+
+    # %% DATA
+    lorenz_df, train, test, t_train, t_test = lorenz_wrapper(input_cfg)
+    train_pp, test_pp, ss = preprocess(input_cfg, train, test)
+
 
     # Seasonal - fit stepwise auto-ARIMA
-    smodel = pm.auto_arima(train, start_p=3, start_q=3, d=1,
+    smodel = pm.auto_arima(train_pp, start_p=3, start_q=3, d=0,
                            test='adf',
-                           max_p=8, max_q=8,
+                           max_p=12, max_q=12,
                            start_P=0, seasonal=False, trace=True,
                            error_action='ignore',
                            suppress_warnings=True,

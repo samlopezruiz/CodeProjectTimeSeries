@@ -9,6 +9,7 @@ from tensorflow.keras.layers import LSTM, Dense, TimeDistributed, Conv1D, MaxPoo
 
 
 if __name__ == '__main__':
+    #%%
     in_seq1 = array([10, 20, 30, 40, 50, 60, 70, 80, 90])
     in_seq2 = array([15, 25, 35, 45, 55, 65, 75, 85, 95])
     out_seq = array([in_seq1[i] + in_seq2[i] for i in range(len(in_seq1))])
@@ -20,11 +21,10 @@ if __name__ == '__main__':
     n_steps_in, n_steps_out = 4, 2
     n_seq = 2
     n_steps = int(n_steps_in / n_seq)
-    # split into samples
-    X, y = split_mv_seq_multi_step(seqs, n_steps_in, n_steps_out)
-
-    X, y = step_feature_multi_step_xy_from_mv(seqs, n_steps_in, n_steps_out, n_seq)
+    X, y = step_feature_multi_step_xy_from_mv(dataset, n_steps_in, n_steps_out, n_seq)
     n_features = X.shape[3]
+
+    #%%
     # define model
     model = Sequential()
     model.add(TimeDistributed(Conv1D(64, 1, activation='relu'), input_shape=(None, n_steps, n_features)))

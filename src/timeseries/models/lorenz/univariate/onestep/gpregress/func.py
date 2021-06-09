@@ -1,3 +1,5 @@
+import time
+
 from algorithms.gpregress.gp_func import train_gpregress
 from algorithms.stroganoff.gp_func import train_stroganoff, selection_roullete, selection_tournament
 from algorithms.stroganoff.plot import plot_log
@@ -19,16 +21,18 @@ def gpregress_one_step_uv_fit(train, cfg, plot_hist=False, verbose=0):
     # prepare data
     X, y = split_uv_seq_one_step(train, n_steps_in)
     # define and fit model
+    start_time = time.time()
     best, pop, log, stat, size_log = train_gpregress(n_gen, n_steps_in, primitives, depth, X, y,
                                               n_pop, selec=selection_function, cxpb=cxpb,
                                               mxpb=mxpb, elitism_size=elitism_size, verbose=verbose, tour_size=tour_size)
+    train_time = round((time.time() - start_time), 2)
     # summarize history for accuracy
     if plot_hist:
         plot_log(stat, ylabel='MDL', title='MDL vs GENERATION')
         plot_log(size_log, ylabel='DEPTH', title='DEPTH vs GENERATION')
         best.print_tree()
 
-    return best
+    return best, train_time, best.mses[0]
 
 
 # forecast with a pre-fit model
@@ -40,3 +44,7 @@ def gpregress_one_step_uv_predict(model, history, cfg, steps=1):
     # forecast
     yhat = model.predict(x_input)
     return yhat[0]
+
+
+def gpregress_get_one_step_uv_funcs():
+    return [gpregress_one_step_uv_predict, gpregress_one_step_uv_fit]

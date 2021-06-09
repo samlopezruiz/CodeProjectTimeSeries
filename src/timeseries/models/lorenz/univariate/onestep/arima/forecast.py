@@ -1,33 +1,34 @@
-import pandas as pd
-from statsmodels.tsa.statespace.sarimax import SARIMAX
-from timeseries.data.lorenz.lorenz import univariate_lorenz
-from timeseries.models.lorenz.functions.functions import walk_forward_step_forecast
-from timeseries.models.lorenz.univariate.onestep.arima.func import arima_forecast, arima_creation
-from timeseries.models.utils.forecast import multi_step_forecast_df
-from timeseries.models.utils.metrics import forecast_accuracy
-from timeseries.plot.util import plot_correlogram
-from timeseries.plotly.plot import plotly_time_series
+import os
+
+import numpy as np
+
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+from timeseries.models.lorenz.univariate.onestep.arima.func import arima_get_one_step_uv_funcs
+from timeseries.data.lorenz.lorenz import lorenz_wrapper
+from timeseries.models.lorenz.functions.harness import run_multi_step_forecast, eval_multi_step_forecast
+from timeseries.models.lorenz.functions.preprocessing import preprocess
+#%%
 
 if __name__ == '__main__':
-    lorenz_df, train, test, t_train, t_test = univariate_lorenz(granularity=5)
+    # %% GENERAL INPUTS
+    in_cfg = {'steps': 1, 'save_results': False, 'verbose': 1, 'plot_title': True, 'plot_hist': False,
+              'image_folder': 'images', 'results_folder': 'results',
+              'detrend_ops': ['ln_return', ('ema_diff', 5), 'ln_return']}
 
-    # %% FIT MODEL
-    cfg = (9, 1, 5)
-    model = SARIMAX(endog=train, order=cfg, seasonal_order=(0, 0, 0, 0), trend='n', enforce_stationarity=False)
-    model_fit = model.fit(disp=0)
-    print(model_fit.summary())
-    plot_correlogram(pd.Series(model_fit.resid[15:]), lags=10)
+    # MODEL AND TIME SERIES INPUTS
+    name = "ARIMA"
+    input_cfg = {"variate": "uni", "granularity": 5, "noise": True, 'preprocess': True,
+                 'trend': True, 'detrend': 'ln_return'}
+    model_cfg = {"n_steps_out": 1, 'order': (6, 0, 2)}
+    functions = arima_get_one_step_uv_funcs()
 
-    # %% PLOT FORECAST
-    pred_size = 1
-    pred = model_fit.forecast(steps=pred_size)
-    df = multi_step_forecast_df(train, test[:pred_size], pred, t_train, t_test[:pred_size], train_prev_steps=500)
-    plotly_time_series(df, title="ARIMA Forecast")
+    # %% DATA
+    lorenz_df, train, test, t_train, t_test = lorenz_wrapper(input_cfg)
+    train_pp, test_pp, ss = preprocess(input_cfg, train, test)
+    data_in = (train_pp, test_pp, train, test, t_train, t_test)
 
-    # %% PLOT WALK FORWARD FORECAST
-    error, forecast = walk_forward_step_forecast(train, test, cfg, arima_forecast, arima_creation, steps=pred_size, verbose=2)
-    df = multi_step_forecast_df(train, test, forecast, train_prev_steps=500)
-    plotly_time_series(df, title="ARIMA Walk-forward Forecast", markers='lines')
-    print("MSE:", error)
-    metrics = forecast_accuracy(forecast, test)
-    print(metrics)
+    # %% FORECAST
+    # model, forecast_reconst, df = run_multi_step_forecast(name, input_cfg, model_cfg, functions, in_cfg, data_in, ss)
+
+    # %% WALK FORWARD FORECAST
+    metrics, forecast = eval_multi_step_forecast(name, input_cfg, model_cfg, functions, in_cfg, data_in, ss)

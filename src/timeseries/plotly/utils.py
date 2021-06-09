@@ -3,6 +3,7 @@ import os
 from datetime import date
 import datetime
 
+from timeseries.utils.files import new_dir
 
 template = ["plotly", "plotly_white", "plotly_dark", "ggplot2", "seaborn", "none"]
 
@@ -49,11 +50,12 @@ def plotly_save(fig, file_path, size):
     today = date.today()
 
     print("saving .html and .png")
-    if not os.path.exists(file_path[0]):
-        os.makedirs(file_path[0])
+    new_dir(file_path[0])
     image_path = file_path[:-1].copy() + [file_path[-1] + '_' + datetime.datetime.now().strftime("%Y_%m_%d_%H-%M") + ".png"]
     html_path = file_path[:-1].copy() + [file_path[-1] + '_' + datetime.datetime.now().strftime("%Y_%m_%d_%H-%M") + ".html"]
     if size is None:
         size = (1980, 1080)
     fig.write_image(os.path.join(*image_path), width=size[0], height=size[1])
     fig.write_html(os.path.join(*html_path))
+
+

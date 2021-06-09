@@ -1,3 +1,5 @@
+import time
+
 from algorithms.stroganoff.gp_func import train_stroganoff, selection_roullete, selection_tournament
 from algorithms.stroganoff.plot import plot_log
 from timeseries.models.lorenz.functions.dataprep import split_uv_seq_one_step, split_uv_seq_multi_step
@@ -20,6 +22,7 @@ def stroganoff_multi_step_uv_fit(train, cfg, plot_hist=False, verbose=0):
     X, y = split_uv_seq_multi_step(train, n_steps_in, n_steps_out)
     # define and fit model
     bests = []
+    start_time = time.time()
     for step in range(n_steps_out):
         print('step: {}'.format(step))
         y_train = y[:, step].ravel()
@@ -28,8 +31,9 @@ def stroganoff_multi_step_uv_fit(train, cfg, plot_hist=False, verbose=0):
                                                           mxpb=mxpb, elitism_size=elitism_size, verbose=verbose,
                                                           tour_size=tour_size)
         bests.append(best)
-
-    return bests
+    train_time = round((time.time() - start_time), 2)
+    mses = [best.mses[0] for best in bests]
+    return bests, train_time, np.mean(mses)
 
 
 # forecast with a pre-fit model
@@ -59,3 +63,6 @@ def stroganoff_multi_step_uv_predict_walk(model, history, cfg, steps=1):
         yhat.append(y[0])
         history.append(y[0])
     return array(yhat).ravel()
+
+def stroganoff_get_multi_step_uv_funcs():
+    return [stroganoff_multi_step_uv_predict, stroganoff_multi_step_uv_fit]

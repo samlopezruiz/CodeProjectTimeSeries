@@ -54,9 +54,15 @@ def summary_results(consolidated, score_type='score', less_is_better=False):
     data, errors = get_data_error(df, score_type)
     return df, data, errors
 
-def get_data_error(summary, score_type):
+
+def get_data_error(summary, score_type, overall=True, ms=True):
+    if ms:
+        summary['pred_t_m'] = summary['pred_t_m'] * 100
+        summary['pred_t_std'] = summary['pred_t_std'] * 100
     data = summary.copy()
     errors = summary.loc[:, ['score_std', 'loss_std', 'train_t_std', 'pred_t_std']]
     data.drop(['score_std', 'loss_std', 'train_t_std', 'pred_t_std'], axis=1, inplace=True)
-    data.columns = [score_type, 'train mse', 'train (s)', 'pred (s)', 'n params', 'overall score']
+    data.columns = [score_type, 'train mse', 'train (s)', 'pred (ms)', 'n params', 'overall score']
+    if not overall:
+        data.drop(['overall score'], axis=1, inplace=True)
     return data, errors

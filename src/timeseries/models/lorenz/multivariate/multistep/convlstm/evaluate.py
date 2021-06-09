@@ -13,15 +13,15 @@ from timeseries.models.lorenz.multivariate.multistep.dcnn.func import dcnn_get_m
 if __name__ == '__main__':
     # %% GENERAL INPUTS
     score_type = 'minmax'
-    n_repeats = 8
+    n_repeats = 5
     verbose = 0
 
     # MODEL AND TIME SERIES INPUTS
     name = "CONV-LSTM"
     input_cfg = {"variate": "multi", "granularity": 5, "noise": True, 'preprocess': True,
                  'trend': True, 'detrend': 'ln_return'}
-    model_cfg = {"n_steps_out": 1, "n_steps_in": 6, "n_seq": 2, "n_kernel": 2,
-                 "n_filters": 64, "n_nodes": 64, "n_batch": 64, "n_epochs": 15}
+    model_cfg = {"n_steps_out": 6, "n_steps_in": 8, "n_seq": 2, "n_kernel": 3,
+                 "n_filters": 64, "n_nodes": 128, "n_batch": 32, "n_epochs": 35}
     func_cfg = convlstm_get_multi_step_mv_funcs()
 
     lorenz_df, train, test, t_train, t_test = lorenz_wrapper(input_cfg)

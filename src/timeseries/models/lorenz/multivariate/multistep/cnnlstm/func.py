@@ -29,6 +29,7 @@ def cnnlstm_multi_step_mv_fit(train, cfg, plot_hist=False, verbose=0):
         plot_history(history, title='CNN-LSTM: ' + str(cfg), plot_title=True)
     return model, train_time, history.history['loss'][-1]
 
+
 def cnnlstm_multi_step_mv_fit_tf(train, cfg, plot_hist=False, verbose=0):
     # unpack config
     n_seq, n_steps, n_steps_out, n_filters = cfg['n_seq'], cfg['n_steps_in'], cfg['n_steps_out'], cfg['n_filters']

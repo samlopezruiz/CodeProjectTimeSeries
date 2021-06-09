@@ -4,6 +4,7 @@ import os
 import joblib
 import datetime
 from timeseries.models.utils.config import unpack_input_cfg
+import tensorflow as tf
 
 
 def models_strings(names, model_cfgs, suffix):
@@ -52,7 +53,7 @@ def save_vars(vars, file_path=None, save_results=True):
 
 
 def save_gs_results(input_cfg, gs_cfg, model_cfg, in_cfg, vars):
-    file_name =  '_'.join(gs_cfg.keys()) + '_' + get_suffix(input_cfg, model_cfg)
+    file_name = '_'.join(gs_cfg.keys()) + '_' + get_suffix(input_cfg, model_cfg['n_steps_out'])
     save_vars(vars, [in_cfg['results_folder'], file_name], in_cfg['save_results'])
 
 
@@ -78,9 +79,13 @@ def get_params(model, model_cfg):
             else:
                 params += 2 ** (cfg.get('depth', 1) - 2) * 6
     else:
+        params = 0
         depth = model_cfg.get('depth', None)
         if depth is None:
-            params = model.count_params()
+            if hasattr(model, 'count_params'):
+                params = model.count_params()
+            if hasattr(model, 'param_names'):
+                params = len(model.param_names)
         else:
             params = 2 ** (model_cfg.get('depth', 1) - 2) * 6
     return params
@@ -94,3 +99,12 @@ def get_models_cfgs(models, steps):
         model_cfgs.append(model_cfg)
         func_cfgs.append(func_cfg)
     return names, model_cfgs, func_cfgs
+
+
+def plot_tf_model(model, folder, image_name='model', show_shapes=False):
+    if not os.path.exists(folder):
+        os.makedirs(folder)
+    tf.keras.utils.plot_model(
+        model, to_file=os.path.join(folder, image_name+'.png'), show_shapes=show_shapes, show_dtype=False,
+        show_layer_names=True, rankdir='TB', expand_nested=False, dpi=96
+    )

@@ -52,19 +52,62 @@ def walk_forward_step_forecast(train, test, cfg, model_forecast, model_fit, step
     history, test_bundles, y_test = get_bundles(is_mv, steps, test, train)
 
     model, train_t, train_loss = model_fit(train, cfg, plot_hist=plot_hist, verbose=verbose)
+    model = model.append(train) if isinstance(model, SARIMAXResultsWrapper) else model
     n_params = get_params(model, cfg)
     start_time = time.time()
     for i, bundle in enumerate(test_bundles):
         bundle = reshape_bundle(bundle, is_mv)
         print_progress(i, test_bundles, verbose+1)
         yhat = model_forecast(model, steps=steps, history=history, cfg=cfg)
-        [predictions.append(y) for y in yhat] if steps > 1 else predictions.append(yhat)
+        if isinstance(model, SARIMAXResultsWrapper):
+            yhat, model = yhat
+            # errors in MA still not set
+            if i < max(cfg['order']):
+                yhat = bundle
+        # [predictions.append(y) for y in yhat] if steps > 1 else predictions.append(yhat)
+        if steps > 1:
+            [predictions.append(y) for y in yhat]
+        elif hasattr(yhat, 'shape'): # len(yhat) > 1
+            predictions.append(yhat[0])
+        else:
+            predictions.append(yhat)
         history = np.vstack([history, bundle]) if is_mv else np.hstack([history, bundle])
+
     end_time = time.time()
     print_pred_time(start_time, test_bundles, verbose)
     pred_t = round((end_time - start_time) / len(test_bundles), 4)
     predictions = prep_forecast(predictions)
     return predictions[:len(y_test)], train_t, pred_t, n_params, train_loss
+
+
+# def walk_forward_step_forecast(train, test, cfg, model_forecast, model_fit, steps=1, verbose=0,
+#                                plot_hist=False, wo_feedback=True):
+#     is_mv = ismv(train)
+#     predictions = list()
+#     if wo_feedback:
+#         steps = 1
+#     history, test_bundles, y_test = get_bundles(is_mv, steps, test, train)
+#
+#     model, train_t, train_loss = model_fit(train, cfg, plot_hist=plot_hist, verbose=verbose)
+#     n_params = get_params(model, cfg)
+#     start_time = time.time()
+#     for i, bundle in enumerate(test_bundles):
+#         bundle = reshape_bundle(bundle, is_mv)
+#         print_progress(i, test_bundles, verbose+1)
+#         yhat = model_forecast(model, steps=steps, history=history, cfg=cfg)
+#         [predictions.append(y) for y in yhat] if steps > 1 else predictions.append(yhat)
+#         if wo_feedback:
+#             try:
+#                 y_pred = yhat[0]
+#             except:
+#                 y_pred = yhat
+#             bundle[-1] = y_pred
+#         history = np.vstack([history, bundle]) if is_mv else np.hstack([history, bundle])
+#     end_time = time.time()
+#     print_pred_time(start_time, test_bundles, verbose)
+#     pred_t = round((end_time - start_time) / len(test_bundles), 4)
+#     predictions = prep_forecast(predictions)
+#     return predictions[:len(y_test)], train_t, pred_t, n_params, train_loss
 
 
 def prep_forecast(forecast):

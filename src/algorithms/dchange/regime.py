@@ -5,7 +5,7 @@ from timeseries.plotly.plot import plotly_ts_regime, plot_dc_clusters
 if __name__ == '__main__':
     # %% INPUTS
     save_folder = 'images'
-    save_plots = True
+    save_plots = False
     lorenz_df, train, test, t_train, t_test = multivariate_lorenz(granularity=1, noise=True, end_time=200,
                                                                   positive_offset=True, trend=True)
 

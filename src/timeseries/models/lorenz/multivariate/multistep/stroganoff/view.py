@@ -12,7 +12,7 @@ from timeseries.models.lorenz.functions.preprocessing import preprocess
 
 if __name__ == '__main__':
     # %% GENERAL INPUTS
-    in_cfg = {'steps': 1, 'save_results': True, 'verbose': 1, 'plot_title': True, 'plot_hist': False,
+    in_cfg = {'steps': 6, 'save_results': True, 'verbose': 1, 'plot_title': True, 'plot_hist': False,
               'image_folder': 'images', 'results_folder': 'results',
               'detrend_ops': ['ln_return', ('ema_diff', 5), 'ln_return']}
 

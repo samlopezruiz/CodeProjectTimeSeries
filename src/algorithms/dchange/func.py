@@ -1,27 +1,26 @@
 import numpy as np
 import pandas as pd
 import decimal
-
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
-
 from timeseries.preprocessing.func import ema
 
 
 def direct_change(s, cfg):
-    thold, delta_t = cfg['thold'],  cfg['delta_t']
+    thold, delta_t, delta_y = cfg.get('thold', 0.02),  cfg['delta_t'],  cfg['delta_y']
     delta = delta_t / 10
     round_p = max(-decimal.Decimal(str(delta)).as_tuple().exponent, 0)
     ix = np.array(s.index)
-    p_h, p_l = (s[0], s[0])
+    p_h, p_l = (s.iloc[0], s.iloc[0])
     t0_dc, t1_dc, t0_os, t1_os = (ix[0], ix[0], ix[0], ix[0])
     upturn = True
     dc_events = pd.Series(dtype=np.float64, name='dc')
     tmv_events = pd.Series(dtype=np.float64, name='tmv')
     r_events = pd.Series(dtype=np.float64, name='r')
     t_events = pd.Series(dtype=np.float64, name='t')
-    t_1, p_1 = (ix[0], s[0])
+    t_1, p_1 = (ix[0], s.iloc[0])
     for t, p in s.items():
+        thold = delta_y / p
         if upturn:
             if p <= p_h * (1 - thold):
                 upturn = False
