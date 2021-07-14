@@ -8,7 +8,7 @@ from timeseries.utils.files import new_dir
 template = ["plotly", "plotly_white", "plotly_dark", "ggplot2", "seaborn", "none"]
 
 
-def plotly_params_check(df, **kwargs):
+def plotly_params_check(df, instrument=None, **kwargs):
     if not isinstance(df, pd.DataFrame):
         print("ERROR: First parameter is not pd.DataFrame")
         return False, None
@@ -38,7 +38,7 @@ def plotly_params_check(df, **kwargs):
         print("ERROR: len(type_plot) != features")
         params_ok = False
 
-    return params_ok, (features, rows, cols, type_plot, alphas)
+    return params_ok, (list(features), rows, cols, type_plot, alphas)
 
 
 def set_y_labels(f, features, fig):

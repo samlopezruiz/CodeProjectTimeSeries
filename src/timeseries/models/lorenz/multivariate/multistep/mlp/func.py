@@ -8,7 +8,7 @@ import numpy as np
 
 
 def mlp_multi_step_mv_fit(train, cfg):
-    # unpack config
+    # unpack architectures
     n_steps_in, n_steps_out = cfg['n_steps_in'], cfg['n_steps_out']
     n_nodes, n_epochs, n_batch = cfg['n_nodes'], cfg['n_epochs'], cfg['n_batch']
     # prepare data
@@ -26,7 +26,7 @@ def mlp_multi_step_mv_fit(train, cfg):
 
 # forecast with a pre-fit model
 def mlp_multi_step_mv_predict(model, history, cfg, steps=1):
-    # unpack config
+    # unpack architectures
     n_steps_in = cfg['n_steps_in']
     n_input = n_steps_in * history.shape[1]
     # prepare data

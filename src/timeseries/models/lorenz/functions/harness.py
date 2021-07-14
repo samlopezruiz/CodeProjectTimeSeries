@@ -202,7 +202,8 @@ def grid_search(input_cfg, gs_cfg, model_cfg, function, n_repeats, score_type,
     return summary, data, errors
 
 
-def eval_multi_step_forecast(name, input_cfg, model_cfg, functions, in_cfg, data_in, ss, label_scale=1, size=(1980, 1080)):
+def eval_multi_step_forecast(name, input_cfg, model_cfg, functions, in_cfg, data_in, ss, label_scale=1,
+                             size=(1980, 1080), train_prev_steps=200, plot=True):
     train_pp, test_pp, train, test, t_train, t_test = data_in
     if len(train.shape) > 1:
         if train_pp.shape[1] > 1:
@@ -221,12 +222,13 @@ def eval_multi_step_forecast(name, input_cfg, model_cfg, functions, in_cfg, data
     metrics = forecast_accuracy(forecast_reconst, test_y)
 
     df = multi_step_forecast_df(train_y, test_y, forecast_reconst, t_train, t_test, train_prev_steps=200)
-    suffix = get_suffix(input_cfg, in_cfg['steps'])
-    model_title = {'n_steps_out': model_cfg[0][2]['n_steps_out']} if isinstance(model_cfg, list) else model_cfg
-    plotly_time_series(df,
-                       title="SERIES: " + str(input_cfg) + '<br>' + name + ': ' + str(model_title) +
-                             '<br>RES: ' + str(metrics), markers='lines', plot_title=plot_title,
-                       file_path=[image_folder, name + "_" + suffix], save=save_results, size=size, label_scale=label_scale)
+    if plot:
+        suffix = get_suffix(input_cfg, in_cfg['steps'])
+        model_title = {'n_steps_out': model_cfg[0][2]['n_steps_out']} if isinstance(model_cfg, list) else model_cfg
+        plotly_time_series(df,
+                           title="SERIES: " + str(input_cfg) + '<br>' + name + ': ' + str(model_title) +
+                                 '<br>RES: ' + str(metrics), markers='lines', plot_title=plot_title,
+                           file_path=[image_folder, name + "_" + suffix], save=save_results, size=size, label_scale=label_scale)
     print(metrics)
     return metrics, df
 
@@ -287,7 +289,6 @@ def save_plot_results(names, summary, data, errors, input_cfg, model_cfgs, in_cf
     print(summary)
     save_vars([in_cfg, input_cfg, names, model_cfgs, summary], [results_folder, models_name], save_results)
 
-    #
     cfg = {'n_steps_out': in_cfg['steps'], 'n_series': in_cfg['n_series'], 'n_repeats': in_cfg['n_repeats']}
     plot_bar_summary(data, errors, title="SERIES: " + str(input_cfg) + '<br>' + 'CONFIG: ' + str(cfg),
                      file_path=[image_folder, models_name], plot_title=plot_title, showlegend=False,

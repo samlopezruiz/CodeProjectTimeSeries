@@ -173,7 +173,7 @@ def score_model(train, test, cfg, model_forecast, model_creation, steps=1, debug
     if debug:
         result, _ = walk_forward_step_forecast(train, test, cfg, model_forecast, model_creation, steps=steps)
     else:
-        # one failure during models validation suggests an unstable config
+        # one failure during models validation suggests an unstable architectures
         try:
             # never show warnings when grid searching, too noisy
             with catch_warnings():

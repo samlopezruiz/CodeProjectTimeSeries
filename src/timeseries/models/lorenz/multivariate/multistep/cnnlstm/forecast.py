@@ -8,16 +8,16 @@ from timeseries.models.lorenz.multivariate.multistep.cnnlstm.func import cnnlstm
 
 if __name__ == '__main__':
     # %% GENERAL INPUTS
-    in_cfg = {'steps': 3, 'save_results': False, 'verbose': 1, 'plot_title': True, 'plot_hist': False,
+    in_cfg = {'steps': 6, 'save_results': False, 'verbose': 1, 'plot_title': True, 'plot_hist': False,
               'image_folder': 'images', 'results_folder': 'results',
               'detrend_ops': ['ln_return', ('ema_diff', 5), 'ln_return']}
 
     # MODEL AND TIME SERIES INPUTS
     name = "CNN-LSTM"
-    input_cfg = {"variate": "multi", "granularity": 5, "noise": True, 'preprocess': True,
-                 'trend': True, 'detrend': 'ln_return'}
-    model_cfg = {"n_steps_out": 3, "n_steps_in": 8, "n_seq": 2, "n_kernel": 4,
-                 "n_filters": 64, "n_nodes": 64, "n_batch": 32, "n_epochs": 25}
+    input_cfg = {"variate": "multi", "granularity": 5, "noise": False, 'preprocess': True,
+                 'trend': False, 'detrend': 'ln_return'}
+    model_cfg = {"n_steps_out": 6, "n_steps_in": 8, "n_seq": 2, "n_kernel": 3,
+                 "n_filters": 64, "n_nodes": 128, "n_batch": 32, "n_epochs": 25} #, 'n_ensembles': 3
     func_cfg = cnnlstm_get_multi_step_mv_funcs()
 
     # %% DATA

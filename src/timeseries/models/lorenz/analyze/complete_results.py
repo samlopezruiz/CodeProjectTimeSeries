@@ -2,18 +2,22 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 from timeseries.models.utils.metrics import get_data_error
 from timeseries.models.utils.results import load_results
-from timeseries.plotly.plot import plot_multiple_results, plot_multiple_results, plot_bar_summary, load_data_err
+from timeseries.plotly.plot import plot_multiple_results, plot_multiple_results, plot_bar_summary, drop_rows
+from timeseries.utils.files import load_data_err
+
 #%%
 
 if __name__ == '__main__':
-    res_cfg = {'preffix': 'DCNN_WAVENET_CNN_CNN-LSTM_ConvLSTM_ARIMA',
-               'date': '2021_06_08', 'save_results': True, 'steps': 1,
+    #%%
+    res_cfg = {'preffix': 'DCNN_WAVENET_CNN_CNN-LSTM_ConvLSTM_STROGANOFF_GP-REGRESS_ARIMA',
+               'date': '2021_06_11', 'save_results': False, 'steps': 1,
                'plot_title': False, 'model': 'lorenz', 'stage': 'univariate',
                'image_folder': 'res_img', 'results_folder': 'results',
                'series': 'trend_noise_s', 'score_type': 'minmax'}
-
-    #%%
+    # drop = ['ENSEMBLE', 'WAVENET', 'CNN', 'CNN-LSTM', 'DCNN', 'ConvLSTM']
+    drop = ['ENSEMBLE', 'GP-REGRESS', 'STROGANOFF']
     (in_cfg, input_cfg, names, model_cfgs, summary), file_name = load_results(res_cfg)
+    drop_rows(summary, drop)
 
     data, errors = get_data_error(summary, res_cfg['score_type'], overall=False, ms=False)
     cfg = {'n_steps_out': in_cfg['steps'], 'n_series': in_cfg['n_series'], 'n_repeats': in_cfg['n_repeats']}

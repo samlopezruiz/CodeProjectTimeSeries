@@ -1,8 +1,7 @@
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 from timeseries.models.lorenz.multivariate.multistep.lstm.func import lstm_get_multi_step_mv_funcs
-from timeseries.models.utils.models import plot_tf_model
-
+from timeseries.models.utils.tf import plot_tf_model
 
 if __name__ == '__main__':
     func_cfg = lstm_get_multi_step_mv_funcs()

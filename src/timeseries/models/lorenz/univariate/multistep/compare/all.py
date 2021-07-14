@@ -14,7 +14,7 @@ if __name__ == '__main__':
                  'trend': True, 'detrend': 'ln_return'}
 
     # %%
-    names, model_cfgs, func_cfgs = all_uv_configs(in_cfg['steps'], group='NN', arima=False)
+    names, model_cfgs, func_cfgs = all_uv_configs(in_cfg['steps'], group=None, arima=True)
 
     # %% RUN EVALUATIONS
     summary, data, errors = evaluate_models_series(in_cfg, input_cfg, names, model_cfgs, func_cfgs, debug=False)

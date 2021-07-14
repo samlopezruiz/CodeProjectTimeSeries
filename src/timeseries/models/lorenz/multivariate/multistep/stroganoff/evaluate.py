@@ -1,8 +1,6 @@
 import os
-
-from timeseries.models.lorenz.multivariate.multistep.stroganoff.func import stroganoff_get_multi_step_mv_funcs
-
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+from timeseries.models.lorenz.multivariate.multistep.stroganoff.func import stroganoff_get_multi_step_mv_funcs
 from timeseries.models.lorenz.multivariate.multistep.cnn.func import cnn_get_multi_step_mv_funcs
 from timeseries.data.lorenz.lorenz import lorenz_wrapper
 from timeseries.models.lorenz.functions.harness import repeat_evaluate

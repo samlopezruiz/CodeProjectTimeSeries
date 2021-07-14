@@ -11,7 +11,7 @@ from numpy import array
 import time
 
 def cnnconvlstm_multi_step_mv_fit(train, cfg, plot_hist=False, verbose=0):
-    # unpack config
+    # unpack architectures
     n_seq, n_steps, n_steps_out, n_filters = cfg['n_seq'], cfg['n_steps_in'], cfg['n_steps_out'], cfg['n_filters']
     n_kernel, n_nodes, n_epochs, n_batch = cfg['n_kernel'], cfg['n_nodes'], cfg['n_epochs'], cfg['n_batch']
     n_input = n_seq * n_steps
@@ -30,7 +30,7 @@ def cnnconvlstm_multi_step_mv_fit(train, cfg, plot_hist=False, verbose=0):
     return model, train_time, history.history['loss'][-1]
 
 def cnnconvlstm_multi_step_mv_fit_tf(train, cfg, plot_hist=False, verbose=0):
-    # unpack config
+    # unpack architectures
     n_seq, n_steps, n_steps_out, n_filters = cfg['n_seq'], cfg['n_steps_in'], cfg['n_steps_out'], cfg['n_filters']
     n_kernel, n_nodes, n_epochs, n_batch = cfg['n_kernel'], cfg['n_nodes'], cfg['n_epochs'], cfg['n_batch']
     n_input = n_seq * n_steps
@@ -70,7 +70,7 @@ def cnnconvlstm_multi_step_mv_build(cfg, n_features):
 
 # forecast with a pre-fit model
 def cnnconvlstm_multi_step_mv_predict_tf(model, history, cfg, steps=1):
-    # unpack config
+    # unpack architectures
     n_seq, n_steps = cfg['n_seq'], cfg['n_steps_in']
     n_features = history.shape[1]
     n_input = n_seq * n_steps
@@ -83,7 +83,7 @@ def cnnconvlstm_multi_step_mv_predict_tf(model, history, cfg, steps=1):
 
 
 def cnnconvlstm_multi_step_mv_predict(model, history, cfg, steps=1):
-    # unpack config
+    # unpack architectures
     n_seq, n_steps = cfg['n_seq'], cfg['n_steps_in']
     n_features = history.shape[1]
     n_input = n_seq * n_steps

@@ -2,7 +2,7 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 from timeseries.data.lorenz.lorenz import multivariate_lorenz
 from timeseries.models.lorenz.multivariate.multistep.configs.cnnconvlstm import cnnconvlstm_mv_configs
-from timeseries.models.utils.models import plot_tf_model
+from timeseries.models.utils.tf import plot_tf_model
 
 if __name__ == '__main__':
     lorenz_df, train, test, t_train, t_test = multivariate_lorenz(granularity=5, positive_offset=False)

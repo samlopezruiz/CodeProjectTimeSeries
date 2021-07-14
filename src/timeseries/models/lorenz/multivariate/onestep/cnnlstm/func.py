@@ -8,7 +8,7 @@ from numpy import array
 
 
 def cnnlstm_one_step_mv_fit(train, cfg):
-    # unpack config
+    # unpack architectures
     n_seq, n_steps, n_filters = cfg['n_seq'], cfg['n_steps_in'], cfg['n_filters']
     n_kernel, n_nodes, n_epochs, n_batch = cfg['n_kernel'], cfg['n_nodes'], cfg['n_epochs'], cfg['n_batch']
     n_input = n_seq * n_steps
@@ -33,7 +33,7 @@ def cnnlstm_one_step_mv_fit(train, cfg):
 
 # forecast with a pre-fit model
 def cnnlstm_one_step_mv_predict(model, history, cfg, steps=1):
-    # unpack config
+    # unpack architectures
     n_seq, n_steps = cfg['n_seq'], cfg['n_steps_in']
     n_features = history.shape[1]
     n_input = n_seq * n_steps

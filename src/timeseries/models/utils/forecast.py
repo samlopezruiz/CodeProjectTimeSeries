@@ -3,6 +3,8 @@ import copy
 import numpy as np
 import pandas as pd
 
+from timeseries.utils.dataframes import trim_min_len
+
 
 def one_step_forecast_df(train, test, pred, t_train=None, t_test=None, train_prev_steps=None):
     df, t_test = prep_df(train_prev_steps, t_test, t_train, test, train)
@@ -12,12 +14,25 @@ def one_step_forecast_df(train, test, pred, t_train=None, t_test=None, train_pre
     return pd.concat([df, df_forecast], axis=0)
 
 
-def multi_step_forecast_df(train, test, pred, t_train=None, t_test=None, train_prev_steps=None):
+def multi_step_forecast_df(train, test, pred, t_train=None, t_test=None, reg_prob_train=None, reg_prob_test=None,
+                           train_prev_steps=None):
     df, t_test = prep_df(train_prev_steps, t_test, t_train, test, train)
     df_forecast = pd.DataFrame([test, pred])
     df_forecast = df_forecast.T
     df_forecast.index, df_forecast.columns = t_test, ['data', 'forecast']
     return pd.concat([df, df_forecast], axis=0)
+
+
+def merge_forecast_df(test, pred, t_test=None, reg_prob=None):
+    assert len(test) == len(pred)
+    _, t_test = trim_min_len(test, t_test)
+    if reg_prob is None:
+        df = pd.DataFrame(np.transpose([test, pred]), index=t_test, columns=['data', 'forecast'])
+    else:
+        data = np.hstack([test.reshape(-1, 1), pred.reshape(-1, 1), reg_prob])
+        columns = ['data', 'forecast'] + ['regime ' + str(i) for i in range(reg_prob.shape[1])]
+        df = pd.DataFrame(data, index=t_test, columns=columns)
+    return df
 
 
 def multi_step_forecasts_df(train, test, names, forecasts, t_train=None, t_test=None, train_prev_steps=None):

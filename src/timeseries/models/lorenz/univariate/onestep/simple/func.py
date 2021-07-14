@@ -9,7 +9,7 @@ class SimpleForecast:
 
     def forecast(self):
         n, offset, avg_type = self.config
-        # persist value, ignore other config
+        # persist value, ignore other architectures
         if avg_type == 'persist':
             return self.history[-n]
         # collect values to average

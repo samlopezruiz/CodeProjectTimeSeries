@@ -10,7 +10,7 @@ from numpy import array
 
 
 def cnn_multi_step_uv_fit(train, cfg, plot_hist=False, verbose=0):
-    # unpack config
+    # unpack architectures
     n_steps_in, n_steps_out, n_filters = cfg['n_steps_in'], cfg['n_steps_out'], cfg['n_filters']
     n_kernel, n_epochs, n_batch = cfg['n_kernel'], cfg['n_epochs'], cfg['n_batch']
     # prepare data
@@ -39,7 +39,7 @@ def cnn_get_multi_step_uv_funcs():
 
 # forecast with a pre-fit model
 def cnn_multi_step_uv_predict(model, history, cfg, steps=1):
-    # unpack config
+    # unpack architectures
     n_input = cfg['n_steps_in']
     # prepare data
     x_input = array(history[-n_input:]).reshape(1, n_input, 1)

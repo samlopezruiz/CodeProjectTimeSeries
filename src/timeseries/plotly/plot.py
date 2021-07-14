@@ -1,24 +1,38 @@
+import math
 import time
 from itertools import combinations
 
 import numpy as np
 import plotly.express as px
-import plotly.io as pio
+
 from plotly import graph_objects as go
 from plotly.subplots import make_subplots
 
 from timeseries.models.utils.config import unpack_in_cfg
-from timeseries.models.utils.metrics import get_data_error
 from timeseries.models.utils.models import get_suffix
-from timeseries.models.utils.results import load_results, get_col_and_rename, concat_sort_results, rename_ensemble
 from timeseries.plotly.utils import plotly_params_check, plotly_save
+from timeseries.utils.files import load_data_err
+import plotly.io as pio
 
 pio.renderers.default = "browser"
+
+colors = [
+    '#1f77b4',  # muted blue
+    '#2ca02c',  # cooked asparagus green
+    '#ff7f0e',  # safety orange
+    '#d62728',  # brick red
+    '#9467bd',  # muted purple
+    '#8c564b',  # chestnut brown
+    '#e377c2',  # raspberry yogurt pink
+    '#7f7f7f',  # middle gray
+    '#bcbd22',  # curry yellow-green
+    '#17becf'  # blue-teal
+]
 
 
 def plotly_time_series(df, title=None, save=False, legend=True, file_path=None, size=(1980, 1080), color_col=None,
                        markers='lines+markers', xaxis_title="time", markersize=5, plot_title=True, label_scale=1,
-                       **kwargs):
+                       adjust_height=(False, 0.6), **kwargs):
     params_ok, params = plotly_params_check(df, **kwargs)
     features, rows, cols, type_plot, alphas = params
     n_rows = len(set(rows))
@@ -27,7 +41,13 @@ def plotly_time_series(df, title=None, save=False, legend=True, file_path=None, 
         return
 
     f = len(features)
-    fig = make_subplots(rows=n_rows, cols=n_cols, shared_xaxes=True)
+    if adjust_height[0]:
+        heights = [(1 - adjust_height[1]) / (n_rows - 1) for _ in range(n_rows - 1)]
+        heights.insert(0, adjust_height[1])
+    else:
+        heights = [1 / n_rows for _ in range(n_rows)]
+
+    fig = make_subplots(rows=n_rows, cols=n_cols, shared_xaxes=True, row_heights=heights)
 
     for i in range(f):
         df_ss = df[features[i]].dropna()
@@ -71,13 +91,12 @@ def plotly_time_series(df, title=None, save=False, legend=True, file_path=None, 
 
     if file_path is not None and save is True:
         plotly_save(fig, file_path, size)
-    return fig
+    # return fig
 
 
-def plotly_ts_regime(df, title=None, save=False, legend=True, file_path=None, size=(1980, 1080), regime_col=None,
+def plotly_ts_regime(df, title=None, save=False, legend=False, file_path=None, size=(1980, 1080), regime_col=None,
                      regimes=None, markers='lines+markers', xaxis_title="time", markersize=5, plot_title=True,
-                     label_scale=1,
-                     **kwargs):
+                     template='plotly_white', adjust_height=(False, 0.6), label_scale=1, **kwargs):
     params_ok, params = plotly_params_check(df, **kwargs)
     features, rows, cols, type_plot, alphas = params
     n_rows = len(set(rows))
@@ -86,7 +105,13 @@ def plotly_ts_regime(df, title=None, save=False, legend=True, file_path=None, si
         return
 
     f = len(features)
-    fig = make_subplots(rows=n_rows, cols=n_cols, shared_xaxes=True)
+    if adjust_height[0]:
+        heights = [(1 - adjust_height[1]) / (n_rows - 1) for _ in range(n_rows - 1)]
+        heights.insert(0, adjust_height[1])
+    else:
+        heights = [1 / n_rows for _ in range(n_rows)]
+    fig = make_subplots(rows=n_rows, cols=n_cols, shared_xaxes=True, row_heights=heights)
+    reg_colors = ['lightblue', 'dodgerblue', 'darkblue', 'black']
 
     for i in range(f):
         df_ss = df[features[i]].dropna()
@@ -98,30 +123,33 @@ def plotly_ts_regime(df, title=None, save=False, legend=True, file_path=None, si
                 showlegend=legend,
                 name=features[i],
                 mode=markers,
+                line=dict(color='lightgray' if regime_col is not None else None),
                 marker=dict(size=markersize,
-                            color=None if regime_col is None else df[regime_col].values,
-                            colorscale="Bluered_r"),
+                            color=None if regime_col is None else df[regime_col].dropna().values,
+                            colorscale=None if regime_col is None else colors[:int(max(df[regime_col].dropna().values))+1]), #["red", "green", "blue"]),  # Bluered_r, Inferno
                 opacity=alphas[i]
             ),
             row=rows[i] + 1,
             col=cols[i] + 1
         )
+        for i in range(n_rows):
+            fig['layout']['yaxis' + str(i + 1)]['title'] = features[i]
+
+        if regimes is not None:
+            for r, regime in enumerate(regimes):
+                for i in range(0, len(regime), 2):
+                    fig.add_vrect(
+                        x0=regime[i], x1=regime[i + 1],
+                        fillcolor=reg_colors[r], opacity=0.3,
+                        layer="below", line_width=0,
+                    )
         if i == n_rows - 1:
             fig['layout']['xaxis' + str(i + 1)]['title'] = xaxis_title
 
-    colors = ['lightcyan', 'lightblue', 'dodgerblue', 'darkblue', 'black']
+    # 'lightcyan',
     # colors = ['beige', 'palegoldenrod', 'burlywood', 'orange', 'dodgerblue', 'teal']
 
-    if regimes is not None:
-        for r, regime in enumerate(regimes):
-            for i in range(0, len(regime), 2):
-                fig.add_vrect(
-                    x0=regime[i], x1=regime[i + 1],
-                    fillcolor=colors[r], opacity=0.5,
-                    layer="below", line_width=0,
-                ),
-
-    fig.update_layout(template="plotly_white", xaxis_rangeslider_visible=False,
+    fig.update_layout(template=template, xaxis_rangeslider_visible=False,
                       title=title if plot_title else None, legend=dict(font=dict(size=18 * label_scale)))
 
     fig.update_xaxes(tickfont=dict(size=14 * label_scale), title_font=dict(size=18 * label_scale))
@@ -133,7 +161,6 @@ def plotly_ts_regime(df, title=None, save=False, legend=True, file_path=None, si
 
     if file_path is not None and save is True:
         plotly_save(fig, file_path, size)
-    return fig
 
 
 def plotly_one_series(s, title=None, save=False, legend=True, file_path=None, size=(1980, 1080),
@@ -413,7 +440,6 @@ def plot_bar_summary_2rows(df, errors, df2, errors2, title=None, save=False, fil
     if n_cols_adj_range is None:
         n_cols_adj_range = df.shape[1]
 
-
     fig = make_subplots(rows=2, cols=df.shape[1], shared_xaxes=True,
                         shared_yaxes=shared_yaxes, subplot_titles=list(df.columns) + list(df2.columns))
 
@@ -512,8 +538,17 @@ def plot_gs_results(input_cfg, gs_cfg, model_cfg, in_cfg, data, errors):
                      save=in_cfg['save_results'], n_cols_adj_range=1)
 
 
-def plot_multiple_results(res_cfg, compare, var=None, size=(1980, 1080), label_scale=1):
+def drop_rows(df, rows):
+    if rows is not None:
+        for row in rows:
+            if row in df.index:
+                df.drop(row, axis=0, inplace=True)
+
+
+def plot_multiple_results(res_cfg, compare, var=None, size=(1980, 1080), label_scale=1, drop=None):
     data, errors, input_cfg = load_data_err(res_cfg, compare)
+    drop_rows(data, drop)
+    drop_rows(errors, drop)
     models_name = res_cfg['preffix']
     image_folder, plot_hist, plot_title, save_results, results_folder, verbose = unpack_in_cfg(res_cfg)
 
@@ -526,27 +561,323 @@ def plot_multiple_results(res_cfg, compare, var=None, size=(1980, 1080), label_s
                                save=save_results, n_cols_adj_range=data.shape[1], size=size, label_scale=label_scale)
     else:
         plot_bar_summary(data, errors, title="SERIES: " + str(input_cfg), plot_title=plot_title,
-                               file_path=[image_folder, models_name], showlegend=False, shared_yaxes=True,
-                               save=save_results, n_cols_adj_range=data.shape[1], size=size, label_scale=label_scale)
+                         file_path=[image_folder, models_name], showlegend=False, shared_yaxes=True,
+                         save=save_results, n_cols_adj_range=data.shape[1], size=size, label_scale=label_scale)
     return data, errors
 
 
-def load_data_err(res_cfg, compare, var=None):
-    dat, err = [], []
-    for op in compare[1]:
-        if compare[0] in res_cfg:
-            res_cfg[compare[0]] = op
-            suffix = None
-        else:
-            suffix = op
-        (in_cfg, input_cfg, names, model_cfgs, summary), model_name = load_results(res_cfg, suffix=suffix)
-        summary = rename_ensemble(summary)
-        if var is None:
-            var = (in_cfg['score_type'], 'score_std')
+def plotly_ts_candles(df, instrument, title=None, save=False, legend=True, file_path=None, size=(1980, 1080), color_col=None,
+                      markers='lines+markers', xaxis_title="time", markersize=5, plot_title=True, label_scale=1,
+                      template='plotly_white', adjust_height=(False, 0.6), **kwargs):
+    params_ok, params = plotly_params_check(df, instrument, **kwargs)
+    features, rows, cols, type_plot, alphas = params
+    if not params_ok:
+        return
 
-        d, e = get_data_error(summary, in_cfg['score_type'])
-        d, e = get_col_and_rename(d, e, var, compare[0], op)
-        dat.append(d)
-        err.append(e)
-    data, errors = concat_sort_results(dat, err)
-    return data, errors, input_cfg
+    n_rows = len(set(rows)) + 1
+    n_cols = 1  # len(set(cols))
+
+    if instrument + 'c' in features: features.remove(instrument + 'o')
+    if instrument + 'h' in features: features.remove(instrument + 'h')
+    if instrument + 'l' in features: features.remove(instrument + 'l')
+    if instrument + 'c' in features: features.remove(instrument + 'c')
+    f = len(features)
+
+    ts_height = adjust_height[1]
+    hist_height = 1 - adjust_height[1]
+    if adjust_height[0]:
+        heights = [ts_height] + [hist_height / (f) for _ in range(f)]
+    else:
+        heights = [1 / (f + 1) for _ in range(f + 1)]
+
+    fig = make_subplots(rows=n_rows, cols=n_cols, shared_xaxes=True, row_heights=heights)
+
+    candls = instrument is not None
+    if candls:
+        fig.append_trace(
+            go.Candlestick(
+                x=df.index,
+                open=df[instrument + 'o'],
+                high=df[instrument + 'h'],
+                low=df[instrument + 'l'],
+                close=df[instrument + 'c'],
+                visible=True,
+                showlegend=False
+            ),
+            row=1,
+            col=1
+        )
+
+    for i in range(f):
+        df_ss = df[features[i]].dropna()
+        fig.append_trace(
+            go.Bar(
+                x=df_ss.index,
+                y=df_ss,
+                orientation="v",
+                visible=True,
+                showlegend=legend,
+                name=features[i],
+                opacity=alphas[i]
+            ) if type_plot[i] == 'bar' else
+            go.Scatter(
+                x=df_ss.index,
+                y=df_ss,
+                visible=True,
+                showlegend=legend,
+                name=features[i],
+                mode=markers,
+                marker=dict(size=markersize,
+                            color=None if color_col is None else df[color_col].values,
+                            colorscale="Bluered_r"),
+                opacity=alphas[i]
+            ),
+            row=rows[i] + 2,
+            col=cols[i] + 1
+        )
+        if i == n_rows - 1:
+            fig['layout']['xaxis' + str(i + 1)]['title'] = xaxis_title
+
+    fig.update_layout(template=template, xaxis_rangeslider_visible=False,
+                      title=title if plot_title else None, legend=dict(font=dict(size=18 * label_scale)))
+
+    fig.update_xaxes(tickfont=dict(size=14 * label_scale), title_font=dict(size=18 * label_scale))
+    fig.update_yaxes(tickfont=dict(size=14 * label_scale), title_font=dict(size=18 * label_scale))
+
+    # plotly(fig)
+    fig.show()
+    time.sleep(1.5)
+
+    if file_path is not None and save is True:
+        plotly_save(fig, file_path, size)
+
+
+def plotly_cand_vol(df_ss, instrument, vol_ss, volp_ss, plot_title=True, title=None, save=False,
+                    file_path=None, size=(1980, 1080), label_scale=1, markersize=5):
+    fig = go.Figure(
+        data=[
+            go.Bar(
+                x=vol_ss,
+                y=volp_ss,
+                orientation="h",
+                xaxis="x",
+                yaxis="y",
+                visible=True,
+                showlegend=False
+            ),
+            go.Candlestick(
+                x=df_ss.index,
+                open=df_ss[instrument + 'o'],
+                high=df_ss[instrument + 'h'],
+                low=df_ss[instrument + 'l'],
+                close=df_ss[instrument + 'c'],
+                name='Price',
+                xaxis="x2",
+                yaxis="y2",
+                visible=True,
+                showlegend=False)
+        ],
+        layout=go.Layout(
+            title=go.layout.Title(text="Candlestick With Volume Profile"),
+            xaxis=go.layout.XAxis(
+                side="top",
+                rangeslider=go.layout.xaxis.Rangeslider(visible=False),
+                showticklabels=False
+            ),
+            yaxis=go.layout.YAxis(
+                side="right",
+                showticklabels=False
+            ),
+            xaxis2=go.layout.XAxis(
+                side="bottom",
+                title="Date",
+                rangeslider=go.layout.xaxis.Rangeslider(visible=False),
+                overlaying="x"
+            ),
+            yaxis2=go.layout.YAxis(
+                side="right",
+                title="Price",
+                overlaying="y"
+            )
+        )
+    )
+    fig['layout']['xaxis2']['showgrid'] = False
+    fig['layout']['yaxis2']['showgrid'] = False
+    template = ["plotly", "plotly_white", "plotly_dark", "ggplot2", "seaborn", "none"]
+    fig.update_layout(template=template[2])
+
+    fig.show()
+    time.sleep(1.5)
+
+    if file_path is not None and save is True:
+        plotly_save(fig, file_path, size)
+
+
+def plotly_merge(df_original, df, inst, ix_range=50):
+    ini_ix = df_original.index[-ix_range]
+    end_ix = df.index[df_original.shape[0] + ix_range]
+    df_ss = df.loc[ini_ix:end_ix, :]
+    plotly_ts_candles(df_ss, instrument=inst, rows=[i for i in range(df_ss.shape[1] - 4)])
+
+
+def plotly_histogram_regimes(df, color_col, n_components, title=None, save=False, file_path=None,
+                             size=(1980, 1080), plot_title=True, label_scale=1, n_bins=200, **kwargs):
+    params_ok, params = plotly_params_check(df, **kwargs)
+    features, rows, cols, type_plot, alphas = params
+    if not params_ok:
+        return
+    n_rows = len(features)
+    n_cols = 2
+    masks = [df.loc[:, color_col] == i for i in range(n_components)]
+    subtitles = [item for sublist in [[f] * 2 for f in features] for item in sublist]
+    fig = make_subplots(rows=len(features), cols=n_cols, shared_xaxes=False, subplot_titles=subtitles)
+    for r, var in enumerate(features):
+        max_val = max(df.loc[:, var])
+        min_val = min(df.loc[:, var])
+        n_bins = n_bins
+        bin_size = (max_val - min_val) / n_bins
+        for i, mask in enumerate(masks):
+            fig.append_trace(
+                go.Histogram(x=df.loc[mask, var],
+                             marker_color=colors[i],
+                             xbins=dict(start=min_val, end=max_val, size=bin_size),
+                             showlegend=False),
+                row=r + 1,
+                col=1
+            )
+            fig.append_trace(
+                go.Box(
+                    x=df.loc[masks[i], var],
+                    marker_color=colors[i],
+                    showlegend=False,
+                    notched=True,
+                    name=str(i)
+                ),
+                row=r + 1,
+                col=2
+            )
+
+    for i in range(n_rows * n_cols):
+        if i % n_cols == 0:
+            fig['layout']['yaxis' + str(i + 1)]['title'] = 'count'
+        else:
+            fig['layout']['yaxis' + str(i + 1)]['title'] = color_col
+    #barmode='overlay', opacity=0.75,
+
+    fig.update_layout(template="plotly_white", xaxis_rangeslider_visible=False, barmode='overlay',
+                      title=title if plot_title else None, legend=dict(font=dict(size=18 * label_scale)))
+    fig.update_traces(opacity=0.75)
+    fig.update_xaxes(tickfont=dict(size=14 * label_scale), title_font=dict(size=18 * label_scale))
+    fig.update_yaxes(tickfont=dict(size=14 * label_scale), title_font=dict(size=18 * label_scale))
+
+    # plotly(fig)
+    fig.show()
+    time.sleep(1.5)
+
+    if file_path is not None and save is True:
+        plotly_save(fig, file_path, size)
+
+
+def plotly_ts_regime_hist_vars(df, price_col, regime_col, n_bins=200, title=None, save=False, legend=False,
+                               file_path=None, size=(1980, 1080), markers='lines+markers', markersize=5, plot_title=True,
+                               adjust_height=(False, 0.5), label_scale=1, **kwargs):
+    params_ok, params = plotly_params_check(df, **kwargs)
+    features, rows, cols, type_plot, alphas = params
+    n_rows = len(features) + 2
+    n_cols = 2
+    if not params_ok:
+        return
+
+    ts_cols = [price_col, regime_col]
+    f = len(features)
+    ts_height = adjust_height[1]
+    hist_height = 1 - adjust_height[1]
+    if adjust_height[0]:
+        heights = [0.9*ts_height, 0.1*ts_height] + [hist_height / (f) for _ in range(f)]
+    else:
+        heights = [1 / (f+2) for _ in range(f+2)]
+    subtitles = ['Regime Change', None] + [item for sublist in [[f] * 2 for f in features] for item in sublist]
+    for i in range(len(subtitles)):
+        if subtitles[i] is not None:
+            subtitles[i] = '<b>'+subtitles[i]+'</b>'
+
+    fig = make_subplots(rows=n_rows,
+                        cols=n_cols,
+                        specs=[[{"colspan": 2}, None], [{"colspan": 2}, None]] + [[{}, {}]]*f,
+                        shared_xaxes=False,
+                        row_heights=heights,
+                        subplot_titles=subtitles)
+
+    n_states = int(max(df[regime_col].dropna().values))+1
+
+    for i in range(len(ts_cols)):
+        df_ss = df[ts_cols[i]].dropna()
+        fig.append_trace(
+            go.Scatter(
+                x=df_ss.index,
+                y=df_ss,
+                visible=True,
+                showlegend=legend,
+                name=ts_cols[i],
+                mode=markers,
+                line=dict(color='lightgray' if regime_col is not None else None),
+                marker=dict(size=markersize,
+                            color=None if regime_col is None else df[regime_col].dropna().values,
+                            colorscale=None if regime_col is None else colors[:n_states]),
+                opacity=alphas[i]
+            ),
+            row=i + 1,
+            col=1
+        )
+        masks = [df.loc[:, regime_col] == i for i in range(n_states)]
+        for r, var in enumerate(features):
+            max_val = max(df.loc[:, var])
+            min_val = min(df.loc[:, var])
+            n_bins = n_bins
+            bin_size = (max_val - min_val) / n_bins
+            for i, mask in enumerate(masks):
+                fig.append_trace(
+                    go.Histogram(x=df.loc[mask, var],
+                                 marker_color=colors[i],
+                                 xbins=dict(start=min_val, end=max_val, size=bin_size),
+                                 showlegend=False),
+                    row=r + 3,
+                    col=1
+                )
+                fig.append_trace(
+                    go.Box(
+                        x=df.loc[masks[i], var],
+                        marker_color=colors[i],
+                        showlegend=False,
+                        notched=True,
+                        name=str(i)
+                    ),
+                    row=r + 3,
+                    col=2
+                )
+
+    for i, name in enumerate(ts_cols):
+        fig['layout']['yaxis' + str(i + 1)]['title'] = name
+
+    for i in range((n_rows -2)* n_cols):
+        if i % n_cols == 0:
+            fig['layout']['yaxis' + str(i + 3)]['title'] = 'count'
+        else:
+            fig['layout']['yaxis' + str(i + 3)]['title'] = regime_col
+
+    fig.update_layout(template="plotly_white", xaxis_rangeslider_visible=False, barmode='overlay',
+                      title=title if plot_title else None, legend=dict(font=dict(size=18 * label_scale)))
+    # fig.update_traces(opacity=0.9)
+    fig.update_xaxes(matches='x')
+    fig.update_xaxes(tickfont=dict(size=14 * label_scale), title_font=dict(size=18 * label_scale))
+    fig.update_yaxes(tickfont=dict(size=14 * label_scale), title_font=dict(size=14 * label_scale))
+
+    fig.show()
+    time.sleep(1.5)
+
+    if file_path is not None and save is True:
+        plotly_save(fig, file_path, size)
+
+
+def plotly_ts_regime2():
+    return None

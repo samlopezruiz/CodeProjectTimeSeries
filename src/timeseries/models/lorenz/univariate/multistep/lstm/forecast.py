@@ -12,7 +12,7 @@ if __name__ == '__main__':
 
     # %% FIT MODEL
     name = "LSTM"
-    # n_nput, n_nodes, n_epochs, n_batch = config
+    # n_nput, n_nodes, n_epochs, n_batch = architectures
     cfg = (36, 7, 50, 100, 100)
     model = lstm_multi_step_uv_fit(train,cfg)
     pred = lstm_multi_step_uv_predict(model,train,cfg)

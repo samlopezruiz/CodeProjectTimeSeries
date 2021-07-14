@@ -1,8 +1,10 @@
 import numpy as np
+from hmmlearn import hmm
 from scipy.integrate import odeint
 import pandas as pd
 
 from algorithms.dchange.func import direct_change
+from algorithms.hmm.func import fitHMM
 from timeseries.models.lorenz.functions.functions import train_test_split
 from timeseries.plotly.plot import plotly_3d, plotly_phase_plots, plotly_time_series
 
@@ -71,7 +73,6 @@ class Lorenz:
             self.y = offset_series(self.y) + np.array(self.time_points)
             self.z = offset_series(self.z) + np.array(self.time_points)
 
-
         df = pd.DataFrame(data=np.array([self.x, self.y, self.z]).transpose(), index=self.time_points,
                           columns=['x', 'y', 'z'])
         self.df = df.iloc[::self.granularity, :]
@@ -111,9 +112,10 @@ class Lorenz:
         return self.df
 
 
-def lorenz_system(start_time=0, end_time=100, granularity=1, positive_offset=False, noise=False, sigma=0.15, trend=False):
+def lorenz_system(start_time=0, end_time=100, granularity=1, positive_offset=False,
+                  noise=False, sigma=0.15, trend=False, beta=8. / 3.):
     t = np.arange(start_time, end_time * 100 + 1) / 100
-    lorenz_sys = Lorenz(sigma=10., rho=28., beta=8. / 3., granularity=granularity)
+    lorenz_sys = Lorenz(sigma=10., rho=28., beta=beta, granularity=granularity)
     lorenz_sys.solve(t, positive_offset=positive_offset, noise=noise, sigma=sigma, trend=trend)
     xyz = np.array(lorenz_sys.get_time_series())
     df = lorenz_sys.get_dataframe()
@@ -129,14 +131,12 @@ def lorenz_wrapper(cfg):
     sigma = cfg.get('sigma', 1)
     trend = cfg.get('trend', False)
 
-
     if variate == 'multi':
         res = multivariate_lorenz(test_perc=30, t_ini=15, granularity=granularity, end_time=130,
                                   y_col=0, positive_offset=positive_offset, noise=noise, sigma=sigma, trend=trend)
     else:
         res = univariate_lorenz(test_perc=30, t_ini=15, granularity=granularity, end_time=130,
                                 positive_offset=positive_offset, noise=noise, sigma=sigma, trend=trend)
-
 
     lorenz_df, train, test, t_train, t_test = res
 
@@ -153,14 +153,12 @@ def dc_lorenz_wrapper(cfg):
     trend = cfg.get('trend', False)
     dc_cfg = {'delta_y': (cfg.get('delta_y', 5)), 'delta_t': (cfg.get('delta_t', 0.01))}
 
-
     if variate == 'multi':
         res = multivariate_lorenz(test_perc=25, t_ini=15, granularity=granularity, end_time=1000,
                                   y_col=0, positive_offset=positive_offset, noise=noise, sigma=sigma, trend=trend)
     else:
         res = univariate_lorenz(test_perc=25, t_ini=15, granularity=granularity, end_time=1000,
                                 positive_offset=positive_offset, noise=noise, sigma=sigma, trend=trend)
-
 
     lorenz_df, train, test, t_train, t_test = res
     # lorenz_df = lorenz_df[lorenz_df.index > 15]
@@ -184,6 +182,7 @@ def univariate_lorenz(test_perc=20, t_ini=15, granularity=1, end_time=100, posit
 
 def multivariate_lorenz(test_perc=20, t_ini=15, granularity=1, end_time=100, y_col=0, positive_offset=False,
                         noise=False, sigma=1.5, trend=False):
+
     lorenz_df, xyz, t, _ = lorenz_system(end_time=end_time, granularity=granularity,
                                          positive_offset=positive_offset, noise=noise, sigma=sigma, trend=trend)
     df = lorenz_df[lorenz_df.index > t_ini]
@@ -201,15 +200,60 @@ def multivariate_lorenz(test_perc=20, t_ini=15, granularity=1, end_time=100, y_c
     return lorenz_df, np.vstack(train).transpose(), np.vstack(test).transpose(), t_train, t_test
 
 
+def regime_multivariate_lorenz(cfg, test_perc=25, t_ini=15, y_col=0):
+
+    granularity = cfg.get('granularity', 1)
+    preproc = cfg.get('preprocess', False)
+    positive_offset = True if preproc else cfg.get('positive_offset', True)
+    noise = cfg.get('noise', False)
+    sigma = cfg.get('sigma', 1)
+    trend = cfg.get('trend', False)
+
+    df1, xyz, t, lorenz_sys1 = lorenz_system(end_time=130, granularity=granularity,
+                                             positive_offset=positive_offset,
+                                             noise=noise, sigma=sigma, trend=trend, beta=8. / 3.)
+    df2, xyz, t, lorenz_sys2 = lorenz_system(end_time=130, granularity=granularity,
+                                             positive_offset=positive_offset,
+                                             noise=noise, sigma=sigma, trend=trend, beta=1. / 3.)
+
+    Z = ((np.array((range(df1.shape[0]))) % 500) > 250).astype(int)
+    lorenz_df = pd.DataFrame()
+    vars = ['x', 'y', 'z']
+    for var in vars:
+        lorenz_df[var] = (Z == 0) * df1[var] + (Z == 1) * df2[var]
+    X = lorenz_df.loc[:, vars].to_numpy()
+    hidden_states, mus, sigmas, P, logProb, model, hidden_proba = fitHMM(X, 100, n_components=2)
+
+    df_reg = pd.DataFrame(hidden_proba, index=lorenz_df.index)
+    df_reg = df_reg[df_reg.index > t_ini]
+    df = lorenz_df[lorenz_df.index > t_ini]
+    data = np.array(df)
+    test_size = int(data.shape[0] * test_perc // 100)
+    train, test = ([], [])
+    test_col = df.columns[y_col]
+    for col in list(lorenz_df.columns) + [test_col]:
+        train1, test1 = train_test_split(np.array(df[col]), test_size)
+        train.append(train1)
+        test.append(test1)
+
+    t_train, t_test = train_test_split(np.array(df.index), test_size)
+    train_, test_ = np.vstack(train).transpose(), np.vstack(test).transpose()
+
+    reg_prob_train = df_reg.iloc[:-test_size, :].to_numpy()
+    reg_prob_test = df_reg.iloc[-test_size:, :].to_numpy()
+    return lorenz_df, (train_, reg_prob_train), (test_, reg_prob_test), t_train, t_test, hidden_states
+
+
 if __name__ == '__main__':
     save_folder = 'images'
-    save_plots = True
+    save_plots = False
     plot_titles = True
-    df, xyz, t, lorenz_sys = lorenz_system(positive_offset=True, noise=True, granularity=5, sigma=1,
-                                           end_time=130, trend=True)
+    # df, xyz, t, lorenz_sys = lorenz_system(positive_offset=True, noise=True, granularity=5, sigma=1,
+    #                                        end_time=130, trend=True)
     # lorenz_df, train, test, t_train, t_test = multivariate_lorenz(granularity=5, positive_offset=True, noise=True)
 
-
+    df, xyz, t, lorenz_sys = lorenz_system(end_time=130, granularity=5, positive_offset=True,
+                                           noise=True, sigma=1, trend=True, beta=8. / 3.)
     # lorenz_sys.plot3d(file_path=[save_folder, 'lorenz-attractor-3d'], save=save_plots, title_bool=plot_titles)
     # lorenz_sys.plot2d(file_path=[save_folder, 'lorenz-attractor-phase-plane'], save=save_plots, title_bool=plot_titles)
     lorenz_sys.plot_time_series(file_path=[save_folder, 'lorenz-attractor-time-series'], save=save_plots,

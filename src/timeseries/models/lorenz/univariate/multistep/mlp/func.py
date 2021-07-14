@@ -7,7 +7,7 @@ from numpy import array
 
 
 def mlp_multi_step_uv_fit(train, cfg):
-    # unpack config
+    # unpack architectures
     n_steps_in, n_steps_out = cfg['n_steps_in'], cfg['n_steps_out']
     n_nodes, n_epochs, n_batch = cfg['n_nodes'], cfg['n_epochs'], cfg['n_batch']
     # prepare data
@@ -24,7 +24,7 @@ def mlp_multi_step_uv_fit(train, cfg):
 
 # forecast with a pre-fit model
 def mlp_multi_step_uv_predict(model, history, cfg, steps=1):
-    # unpack config
+    # unpack architectures
     n_input = cfg['n_steps_in']
     # prepare data
     x_input = array(history[-n_input:]).reshape(1, n_input)

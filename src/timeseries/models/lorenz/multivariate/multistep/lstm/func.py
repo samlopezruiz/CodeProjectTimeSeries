@@ -41,7 +41,7 @@ def lstm_multi_step_mv_fit(train, cfg, plot_hist=False, verbose=0):
 
 # forecast with a pre-fit model
 def lstm_multi_step_mv_predict(model, history, cfg, steps=1):
-    # unpack config
+    # unpack architectures
     n_input = cfg['n_steps_in']
     n_features = history.shape[1]
     # prepare data

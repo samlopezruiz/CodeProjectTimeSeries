@@ -2,7 +2,7 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 from timeseries.models.lorenz.multivariate.multistep.dcnn.func import dcnn_get_multi_step_mv_funcs2
 from timeseries.models.lorenz.multivariate.multistep.configs.dcnn import dcnn_mv_configs
-from timeseries.models.utils.models import plot_tf_model
+from timeseries.models.utils.tf import plot_tf_model
 
 if __name__ == '__main__':
     name, input_cfg, model_cfg, func_cfg = dcnn_mv_configs(steps=3)

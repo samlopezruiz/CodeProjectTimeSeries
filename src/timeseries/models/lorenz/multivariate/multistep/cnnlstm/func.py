@@ -14,16 +14,24 @@ def cnnlstm_multi_step_mv_fit(train, cfg, plot_hist=False, verbose=0):
     # unpack config
     n_seq, n_steps, n_steps_out, n_filters = cfg['n_seq'], cfg['n_steps_in'], cfg['n_steps_out'], cfg['n_filters']
     n_kernel, n_nodes, n_epochs, n_batch = cfg['n_kernel'], cfg['n_nodes'], cfg['n_epochs'], cfg['n_batch']
+    n_ensembles = cfg.get('n_ensembles', 1)
     n_input = n_seq * n_steps
+
 
     # prepare data
     X, y = step_feature_multi_step_xy_from_mv(train, n_input, n_steps_out, n_seq)
     n_features = X.shape[3]
     # define model
-    model = cnnlstm_multi_step_mv_build(cfg, n_features)
-    # fit
     start_time = time.time()
-    history = model.fit(X, y, epochs=n_epochs, batch_size=n_batch, verbose=verbose)
+    if n_ensembles > 1:
+        model = []
+        for _ in range(n_ensembles):
+            model0 = cnnlstm_multi_step_mv_build(cfg, n_features)
+            history = model0.fit(X, y, epochs=n_epochs, batch_size=n_batch, verbose=verbose)
+            model.append(model0)
+    else:
+        model = cnnlstm_multi_step_mv_build(cfg, n_features)
+        history = model.fit(X, y, epochs=n_epochs, batch_size=n_batch, verbose=verbose)
     train_time = round((time.time() - start_time), 2)
     if plot_hist:
         plot_history(history, title='CNN-LSTM: ' + str(cfg), plot_title=True)
@@ -90,8 +98,13 @@ def cnnlstm_multi_step_mv_predict(model, history, cfg, steps=1):
     x_input = array(history[-n_input:]).reshape((1, n_seq, n_steps, n_features))
     # x_input = tf.convert_to_tensor(x_input, dtype=tf.float64)
     # forecast
-    yhat = model.predict(x_input, verbose=0)
-    return yhat[0]
+
+    if isinstance(model, list):
+        yhat = [m.predict(x_input, verbose=0)[0] for m in model]
+        yhat = np.array(yhat).mean(axis=0)
+    else:
+        yhat = model.predict(x_input, verbose=0)[0]
+    return yhat
 
 
 def cnnlstm_get_multi_step_mv_funcs():

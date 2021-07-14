@@ -11,7 +11,7 @@ import time
 
 
 def cnn_multi_step_mv_fit(train, cfg, plot_hist=False, verbose=0):
-    # unpack config
+    # unpack architectures
     n_steps_in, n_steps_out = cfg['n_steps_in'], cfg['n_steps_out']
     n_epochs, n_batch = cfg['n_epochs'], cfg['n_batch']
     # prepare data
@@ -46,7 +46,7 @@ def cnn_multi_step_mv_build(cfg, n_features):
 
 # forecast with a pre-fit model
 def cnn_multi_step_mv_predict(model, history, cfg, steps=1):
-    # unpack config
+    # unpack architectures
     n_steps = cfg['n_steps_in']
     n_features = history.shape[1]
     # prepare data

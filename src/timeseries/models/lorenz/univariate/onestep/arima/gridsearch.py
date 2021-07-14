@@ -19,7 +19,7 @@ def sarima_forecast(history, config):
 # create a set of sarima configs to try
 def sarima_configs(seasonal=[0]):
     models = list()
-    # define config lists
+    # define architectures lists
     p_params = [0, 1, 2]
     d_params = [0, 1]
     q_params = [0, 1, 2]
@@ -28,7 +28,7 @@ def sarima_configs(seasonal=[0]):
     D_params = [0, 1]
     Q_params = [0, 1, 2]
     m_params = seasonal
-    # create config instances
+    # create architectures instances
     for p in p_params:
         for d in d_params:
             for q in q_params:

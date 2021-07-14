@@ -7,7 +7,7 @@ from numpy import array
 
 
 def lstm_multi_step_uv_fit(train, config):
-    # unpack config
+    # unpack architectures
     n_input, n_output, n_nodes, n_epochs, n_batch = config
     # prepare data
     X, y = feature_multi_step_xy_from_uv(train, n_input, n_output)
@@ -26,7 +26,7 @@ def lstm_multi_step_uv_fit(train, config):
 
 # forecast with a pre-fit model
 def lstm_multi_step_uv_predict(model, history, cfg, steps=1):
-    # unpack config
+    # unpack architectures
     n_input, _, _, _, _ = cfg
     # prepare data
     x_input = array(history[-n_input:]).reshape((1, n_input, 1))

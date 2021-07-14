@@ -5,7 +5,7 @@ from numpy import array
 
 
 def stroganoff_one_step_uv_fit(train, cfg, plot_hist=False, verbose=0):
-    # unpack config
+    # unpack architectures
     n_steps_in, n_gen, elitism_size = cfg['n_steps_in'], cfg['n_gen'], cfg['elitism_size']
     depth, n_pop, mxpb, cxpb, selec = cfg['depth'], cfg['n_pop'], cfg['mxpb'], cfg['cxpb'], cfg['selection']
 
@@ -32,7 +32,7 @@ def stroganoff_one_step_uv_fit(train, cfg, plot_hist=False, verbose=0):
 
 # forecast with a pre-fit model
 def stroganoff_one_step_uv_predict(model, history, cfg, steps=1):
-    # unpack config
+    # unpack architectures
     n_steps_in = cfg['n_steps_in']
     # prepare data
     x_input = array(history[-n_steps_in:]).reshape(1, -1)

@@ -7,7 +7,7 @@ from numpy import array
 
 
 def cnn_one_step_mv_fit(train, cfg):
-    # unpack config
+    # unpack architectures
     n_steps_in, n_filters = cfg['n_steps_in'], cfg['n_filters']
     n_kernel, n_epochs, n_batch = cfg['n_kernel'], cfg['n_epochs'], cfg['n_batch']
     # prepare data
@@ -29,7 +29,7 @@ def cnn_one_step_mv_fit(train, cfg):
 
 # forecast with a pre-fit model
 def cnn_one_step_mv_predict(model, history, cfg, steps=1):
-    # unpack config
+    # unpack architectures
     n_steps = cfg['n_steps_in']
     n_features = history.shape[1]
     # prepare data

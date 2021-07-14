@@ -20,3 +20,4 @@ boto3~=1.17.44
 tqdm~=4.59.0
 hurst~=0.0.5
 arch~=4.19
+hmmlearn~=0.2.5

@@ -148,7 +148,7 @@ def step_feature_one_step_xy_from_mv(seqs, n_steps, n_seq):
     return X, y
 
 
-def step_feature_multi_step_xy_from_mv(seqs, n_steps_in, n_steps_out, n_seq):
+def step_feature_multi_step_xy_from_mv(seqs, n_steps_in, n_steps_out, n_seq, reg_prob=None):
     # dataset = np.vstack(seqs).transpose()
     if n_steps_in % n_seq != 0:
         print('ERROR: n_steps is not divisible by n_seq')
@@ -158,7 +158,16 @@ def step_feature_multi_step_xy_from_mv(seqs, n_steps_in, n_steps_out, n_seq):
     n_features = X.shape[2]
     # reshape from [samples, timesteps] into [samples, subsequences, timesteps, features]
     X = X.reshape((X.shape[0], n_seq, int(n_steps_in/n_seq), n_features))
-    return X, y
+    if reg_prob is None:
+        return X, y
+    else:
+        assert seqs.shape[0] == reg_prob.shape[0]
+        reg_prob_train_in = np.hstack([reg_prob, np.zeros((reg_prob.shape[0], 1))])
+        X_reg, _ = split_mv_seq_multi_step(reg_prob_train_in, 16, 6)
+        # take last regime to predict next steps
+        X_reg_new = [x[-1, :] for x in X_reg]
+        X_reg_new = np.vstack(X_reg_new)
+        return X, y, X_reg_new
 
 
 def row_col_one_step_xy_from_uv(seq, n_steps, n_features, n_seq):
