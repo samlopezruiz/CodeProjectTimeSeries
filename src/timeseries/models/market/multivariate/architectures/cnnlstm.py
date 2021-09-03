@@ -1,7 +1,8 @@
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+from timeseries.models.utils.tf import np_to_tf
 import numpy as np
-from timeseries.models.market.multivariate.architectures.func import n_features_3, seq_steps
+from timeseries.models.market.multivariate.architectures.func import n_features_3, lookback_seq_steps
 from timeseries.models.market.utils.dataprep import step_feature_multi_step_xy_from_mv
 from tensorflow.keras.layers import LSTM, Dense, TimeDistributed, Conv1D, MaxPooling1D, Flatten
 from numpy import array
@@ -51,7 +52,7 @@ def cnnlstm_func():
         'n_features': n_features_3,
         'prep_data': cnnlstm_prep_data,
         'predict': cnnlstm_predict,
-        'lookback': seq_steps,
+        'lookback': lookback_seq_steps,
     }
 
 
@@ -63,10 +64,10 @@ def cnnlstm_predict(model, history, cfg, use_regimes, reg_prob=None):
     # prepare data
     x_input = array(history[-n_input:]).reshape((1, n_seq, n_steps, n_features))
     if use_regimes:
-        model_input = [x_input, np.expand_dims(reg_prob, axis=0)]
+        model_input = [np_to_tf(x_input), np_to_tf(np.expand_dims(reg_prob, axis=0))]
         # model_input = [x_input, reg_prob]
     else:
-        model_input = x_input
+        model_input = np_to_tf(x_input)
     # forecast
     if isinstance(model, list):
         yhat = [m.predict(model_input, verbose=0)[0] for m in model]

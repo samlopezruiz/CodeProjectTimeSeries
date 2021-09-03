@@ -1,39 +1,38 @@
 from timeseries.data.market.files.utils import load_market
-from timeseries.models.market.plot.plot import plot_train_test_groups
-from timeseries.models.market.split.func import subset, set_subsets_and_test
+from timeseries.models.market.plot.plot import plot_train_test_groups, plot_mkt_candles
+from timeseries.models.market.preprocess.func import append_timediff_subsets
+from timeseries.models.market.split.func import time_subset, set_subsets_and_test
+from timeseries.models.market.utils.preprocessing import downsample_df
 from timeseries.models.market.utils.save import save_subsets_and_test
 import numpy as np
+
 np.random.seed(42)
 
 if __name__ == '__main__':
     # %%
     in_cfg = {'save_results': True, 'verbose': 1, 'plot_title': True,
               'image_folder': 'img', 'results_folder': 'res'}
-    data_cfg = {'inst': "ES", 'sampling': 'day', 'suffix': "2012_5-2021_6", 'market': 'cme',
-                'src_folder': "data", 'data_from': '2011-12', 'data_to': '2021-12'}
+    data_cfg = {'inst': "ES", 'sampling': 'minute', 'suffix': "2012_1-2021_6", 'market': 'cme',
+                'src_folder': "data", 'data_from': '2018-01', 'data_to': '2021-06',
+                'downsample': True, 'downsample_p': '60T'}
     df, features = load_market(data_cfg)
-    df = subset(df, data_cfg)
-    # plot_mkt_candles(df, data_cfg['inst'], resample=True, period='90T', template='plotly_dark')
+    df = time_subset(df, data_cfg)
+    # plot_mkt_candles(df, data_cfg['inst'], template='plotly_dark')
+
+    # %%
+    if data_cfg['downsample']:
+        df = downsample_df(df, data_cfg['downsample_p'], ohlc_features=False, inst=data_cfg['inst'])
+    # plot_mkt_candles(df.iloc[-30000:, :], data_cfg['inst'], resample=False, period='90T', template='plotly_dark')
+
 
     # %%
     split_cfg = {'group': 'week', 'groups_of': 12, 'test_ratio': 0.25, 'random': True,
-                 'test_time_start': (8, 30), 'test_time_end': (15, 0), 'time_delta_split': False, 'time_thold': 1000}
-
+                 'time_thold': {'hours': 3, 'seconds': None, 'days': None},
+                 'test_time_start': (8, 30), 'test_time_end': (15, 0), 'time_delta_split': True, }
     df_subsets = set_subsets_and_test(df, split_cfg)
+    append_timediff_subsets(df_subsets, split_cfg['time_thold'])
     plot_train_test_groups(df_subsets, split_cfg, plot_last=30000, features=['ESc', 'subset'],
                            resample=False, period='90T', template='plotly_dark')
 
     save_subsets_and_test([df_subsets, split_cfg, data_cfg], in_cfg, data_cfg, split_cfg)
 
-    # #%% PREPROCESSING FIRST
-    # df_pp = df_subsets.copy()
-    # subsets = get_subsets(df_pp)
-    #
-    # #%% SPLIT
-    # training_cfg = {'inst': data_cfg['inst'], 'y_var': 'ESc', 'features': ['volume', 'atr'],
-    #                 "append_train_to_test": True}
-    # model_cfg = {"n_steps_out": 6, "n_steps_in": 8, "n_seq": 2}
-    # model_func = cnnlstm_func()
-    # lookback = model_func['lookback'](model_cfg)
-    #
-    # train_X, test_X, features = get_xy(subsets, training_cfg, lookback, dim_f=1)

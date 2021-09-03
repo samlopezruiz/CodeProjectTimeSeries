@@ -1,9 +1,13 @@
+import numpy as np
 
-def append_to_df(df, serie, col_name):
-    df[col_name] = serie
+
+def append_to_df(df, new_x_values, col_name):
+    # must have same indices
+    df[col_name] = new_x_values
     df[col_name].fillna(method='ffill', inplace=True)
-    mask = ~df[col_name].isna()
-    return df.iloc[mask.values, :].copy()
+    # mask = ~df[col_name].isna()
+    # return df.iloc[mask.values, :].copy()
+
 
 def trim_min_len(a, b):
     min_len = min(len(a), len(b))
@@ -33,3 +37,14 @@ def relabel_col(df, col, map):
     labels = df[col].to_numpy()
     relabel(labels, map=map)
     df[col] = labels
+
+
+def check_col_exists(df, col):
+    if col not in list(df.columns):
+        print('{} column not found'.format(col))
+        return False
+    return True
+
+
+def check_cols_exists(df, cols):
+    return np.all([check_col_exists(df, col) for col in cols])

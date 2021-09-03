@@ -5,6 +5,7 @@ from timeseries.models.lorenz.functions.functions import walk_forward_step_forec
 
 
 def forecast_accuracy(forecast, test):
+    forecast, test = forecast.reshape(1, -1), test.reshape(1, -1)
     omin = -np.min(np.hstack([forecast, test]))
     forecast = np.array(forecast) + omin + 1
     test = np.array(test) + omin + 1

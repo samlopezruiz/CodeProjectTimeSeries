@@ -5,8 +5,56 @@
       <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/venv" />
       <excludeFolder url="file://$MODULE_DIR$/venv64" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/data/lorenz/images" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/data/market/samp_img" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/models/lorenz/analyze/csv" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/models/lorenz/analyze/images" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/models/lorenz/analyze/res_img" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/models/lorenz/functions/images" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/models/lorenz/multivariate/multistep/cnn/images" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/models/lorenz/multivariate/multistep/cnn/results" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/models/lorenz/multivariate/multistep/cnnconvlstm/model_img" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/models/lorenz/multivariate/multistep/cnnlstm/forecast_img" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/models/lorenz/multivariate/multistep/cnnlstm/images" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/models/lorenz/multivariate/multistep/cnnlstm/model_img" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/models/lorenz/multivariate/multistep/cnnlstm/results" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/models/lorenz/multivariate/multistep/cnnlstm/samp_img" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/models/lorenz/multivariate/multistep/compare/images" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/models/lorenz/multivariate/multistep/compare/results" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/models/lorenz/multivariate/multistep/convlstm/images" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/models/lorenz/multivariate/multistep/convlstm/model_img" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/models/lorenz/multivariate/multistep/convlstm/results" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/models/lorenz/multivariate/multistep/dcnn/forecast_img" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/models/lorenz/multivariate/multistep/dcnn/images" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/models/lorenz/multivariate/multistep/dcnn/model_img" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/models/lorenz/multivariate/multistep/dcnn/results" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/models/lorenz/multivariate/multistep/dcnnlstm/model_img" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/models/lorenz/multivariate/multistep/ensemble/forecast_img" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/models/lorenz/multivariate/multistep/ensemble/images" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/models/lorenz/multivariate/multistep/ensemble/results" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/models/lorenz/multivariate/multistep/gpregress/forecast_img" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/models/lorenz/multivariate/multistep/gpregress/images" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/models/lorenz/multivariate/multistep/gpregress/results" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/models/lorenz/multivariate/multistep/lstm/model_img" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/models/lorenz/multivariate/multistep/stroganoff/images" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/models/lorenz/multivariate/multistep/stroganoff/results" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/models/lorenz/multivariate/multistep/wavenet/images" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/models/lorenz/multivariate/multistep/wavenet/results" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/models/lorenz/univariate/multistep/compare/images" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/models/lorenz/univariate/multistep/compare/results" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/models/lorenz/univariate/multistep/dcnn/images" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/models/lorenz/univariate/multistep/dcnn/results" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/models/lorenz/univariate/onestep/compare/images" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/models/lorenz/univariate/onestep/compare/results" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/models/lorenz/univariate/onestep/gp/images" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/models/market/regime/img" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/models/market/regime/res" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/models/market/split/res" />
+      <excludeFolder url="file://$MODULE_DIR$/src/algorithms/dchange/images" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/data/market/regime/regime_img" />
+      <excludeFolder url="file://$MODULE_DIR$/src/timeseries/models/market/additional_data/res" />
     </content>
-    <orderEntry type="jdk" jdkName="Python 3.7 (CodeProjectTimeSeries)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.8 (machine_learning)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
   <component name="PyDocumentationSettings">

@@ -1,11 +1,13 @@
 import os
+
+from timeseries.data.market.files.utils import load_market
+
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import numpy as np
 import pandas as pd
 from timeseries.data.market.utils.time import insert_weekend
 from algorithms.dchange.func import direct_change_ts, unpack_k_cfg, get_clusters, relabel, \
     ema_cluster, get_regimes, new_ix_clusters
-from timeseries.data.market.load_market import load_market
 from timeseries.plotly.plot import plot_dc_clusters, plotly_ts_regime, plotly_time_series
 #%%
 

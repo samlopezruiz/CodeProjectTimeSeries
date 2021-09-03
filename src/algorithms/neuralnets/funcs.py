@@ -9,6 +9,6 @@ def progress_bar(iteration, total, size=30):
 
 def print_status_bar(iteration, total, loss, metrics=None, size=30):
     metrics = " - ".join(["{}: {:.4f}".format(m.name, m.result())
-                         for m in [loss] + (metrics or [])])
+                          for m in [loss] + (metrics or [])])
     end = "" if iteration < total else "\n"
     print("\r{} - {}".format(progress_bar(iteration, total), metrics), end=end)

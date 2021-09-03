@@ -1,17 +1,38 @@
 import time
-
+from multiprocessing import cpu_count
+import multiprocessing
+from functools import partial
+from contextlib import contextmanager
 import numpy as np
+import pandas as pd
 import tensorflow as tf
+from joblib import Parallel, delayed
+from tqdm import tqdm
 from algorithms.nnhmm.func import nnhmm_fit, nnhmm_predict
-from timeseries.models.market.utils.console import print_progress, print_pred_time
+from timeseries.models.market.utils.console import print_progress, print_pred_time, print_progress_loop
+from timeseries.models.market.utils.dataprep import to_np
 from timeseries.models.market.utils.models import get_params
-from timeseries.models.market.utils.preprocessing import reconstruct_pred
+from timeseries.models.market.utils.preprocessing import reconstruct_pred, prep_forecast
 from timeseries.models.utils.config import unpack_in_cfg
 from timeseries.models.utils.forecast import multi_step_forecast_df, merge_forecast_df
 from timeseries.models.utils.metrics import forecast_accuracy
 from timeseries.models.utils.models import get_suffix
 from timeseries.plotly.plot import plotly_time_series
 from timeseries.preprocessing.func import ismv
+
+@contextmanager
+def poolcontext(*args, **kwargs):
+    pool = multiprocessing.pool.ThreadPool(*args, **kwargs)
+    yield pool
+    pool.terminate()
+'''
+EXAMPLE CODE TO USE MULTIPROCESSING
+partial_model_pred = partial(model_pred, model, model_cfg, model_func, model_n_steps_out, ss,
+                             test_x_pp, training_cfg, unscaled_test_y, use_regimes, verbose)
+with poolcontext(processes=cpu_count()) as pool:
+    result = pool.map(partial_model_pred, range(len(test_x_pp)))
+'''
+
 
 
 def reshape_bundle(bundle, is_mv=True):
@@ -20,15 +41,6 @@ def reshape_bundle(bundle, is_mv=True):
     if not is_mv and len(bundle.shape) > 1:
         return bundle.ravel()
     return bundle
-
-
-def prep_forecast(forecast):
-    forecast = np.array(forecast)
-    if len(forecast.shape) == 2:
-        if forecast.shape[1] == 1:
-            # case of an array of arrays
-            forecast = forecast.ravel()
-    return forecast
 
 
 def walk_forward_forecast(train, test, reg_prob_train, reg_prob_test, cfg, model_funcs, n_states, steps=1, verbose=0,
@@ -62,14 +74,16 @@ def walk_forward_forecast(train, test, reg_prob_train, reg_prob_test, cfg, model
     return predictions[:len(y_test)], train_t, pred_t, n_params, train_loss
 
 
-def train_model(model_cfg, model_func, data_in, verbose=1, summary=False, use_regimes=False, plot_hist=False):
-    t_train, train_x, train_pp, train_reg_prob, train_reg_prob_pp = unpack_data_in(data_in)
+def train_model(model_cfg, model_func, train_data, summary=False,
+                plot_hist=False, model=None):
+    # t_train, train_x, train_pp, train_reg_prob, train_reg_prob_pp = unpack_data_in(data_in)
+    # train_x, train_prob = train_data
+    verbose, use_regimes = model_cfg['verbose'], model_cfg['use_regimes']
+    n_states = get_n_states(train_data[2])
 
-    n_states = get_n_states(train_reg_prob)
-
-    model, train_time, train_loss = nnhmm_fit(train_pp, train_reg_prob_pp, model_cfg, n_states, model_func,
+    model, train_time, train_loss = nnhmm_fit(train_data, model_cfg, n_states, model_func, model=model,
                                               verbose=verbose, use_regimes=use_regimes, plot_hist=plot_hist)
-    n_params = get_params(model, model_cfg)
+    # n_params = get_params(model, model_cfg)
     if summary:
         model.summary()
         tf.keras.utils.plot_model(
@@ -77,47 +91,104 @@ def train_model(model_cfg, model_func, data_in, verbose=1, summary=False, use_re
             show_layer_names=True, rankdir='TB', expand_nested=False, dpi=96
         )
 
-    return model, train_time, train_loss, n_params
+    return model, train_time, train_loss
 
 
-def test_model(model, input_cfg, model_cfg, model_func, in_cfg, data_in, ss, label_scale=1,
-               size=(1980, 1080), plot=True, use_regimes=False):
-    t_test, test_x, test_pp, test_reg_prob, test_reg_prob_pp = unpack_data_in(data_in)
-    image_folder, plot_hist, plot_title, save_results, results_folder, verbose = unpack_in_cfg(in_cfg)
+def test_model(model, model_cfg, training_cfg, model_func, test_data, ss, parallel=True):
+    """
+    test data consists on a tuple of two lists
+    the first element is the preprocessed X test bundles
+    the second element is the unscaled test y variable
+    """
+    test_x_pp, unscaled_test_y = test_data
+    model_n_steps_out = model_cfg['n_steps_out']
+    use_regimes, verbose = model_cfg['use_regimes'], model_cfg['verbose']
+    assert len(test_x_pp) == len(unscaled_test_y)
+    forecast_dfs, metrics, pred_times = [], [], []
+    if parallel:
+        executor = Parallel(n_jobs=cpu_count(), backend='multiprocessing')
+        tasks = (
+            delayed(model_pred)(model, model_cfg, model_func, model_n_steps_out, ss,
+                                test_x_pp, training_cfg, unscaled_test_y, use_regimes, verbose, i)
+            for i in tqdm(range(len(test_x_pp)))
+        )
+        result = executor(tasks)
+        for df, metric, pred_t in result:
+            forecast_dfs.append(df)
+            metrics.append(metric)
+            pred_times.append(pred_t)
+    else:
+        for i in range(len(test_x_pp)):
+            print_progress_loop(i, len(test_x_pp), process_text='test bundles')
+            df, metric, pred_t = model_pred(model, model_cfg, model_func, model_n_steps_out, ss,
+                                            test_x_pp, training_cfg, unscaled_test_y, use_regimes, verbose, i)
 
-    model_n_steps_out = model_cfg['n_steps_out']  # same as xy_args
-
-    predictions, pred_t = walkforward_test_model(model, model_cfg, model_func, model_n_steps_out,
-                                                 test_pp, test_reg_prob_pp, use_regimes, verbose)
-
-    forecast_reconst, test_y = reconstruct_forecast(input_cfg, model_n_steps_out,
-                                                    predictions, ss, test_pp, test_x)
-    metrics = forecast_accuracy(forecast_reconst, test_y)
-    print(metrics)
-
-    df = merge_forecast_df(test_y, forecast_reconst, t_test, test_reg_prob)
-
-    if plot:
-        plot_forecast(df, input_cfg, label_scale, metrics, model_cfg,
-                      plot_title, size, test_reg_prob, use_regimes)
-    return metrics, df, pred_t
+            forecast_dfs.append(df)
+            metrics.append(metric)
+            pred_times.append(pred_t)
+    return forecast_dfs, metrics, pred_times
 
 
-def plot_forecast(df, input_cfg, label_scale, metrics, model_cfg, plot_title, size, test_reg_prob, use_regimes):
+def model_pred(model, model_cfg, model_func, model_n_steps_out, ss, test_x_pp, training_cfg, unscaled_test_y,
+               use_regimes, verbose, i):
+    test_pp, test_reg_prob_pp, unscaled_y = unpack_test_vars(i, test_x_pp, unscaled_test_y)
+    assert test_pp.index.equals(unscaled_y.index)
+    test_ix = test_pp.index
+    test_pp, test_reg_prob_pp, unscaled_y = to_np([test_pp, test_reg_prob_pp, unscaled_y])
+    assert len(test_pp) == len(unscaled_y) and \
+           (True if test_reg_prob_pp is None else len(unscaled_y) == len(test_reg_prob_pp))
+    scaled_pred_y, pred_t = walkforward_test_model(model, model_cfg, model_func, model_n_steps_out,
+                                                   test_pp, test_reg_prob_pp, use_regimes, verbose - 1)
+    forecast_reconst = reconstruct_pred(scaled_pred_y, model_n_steps_out, unscaled_y, ss=ss,
+                                        preprocess=training_cfg.get('preprocess', True))
+    metric = forecast_accuracy(forecast_reconst, unscaled_y)
+    df = merge_forecast_df(unscaled_y, forecast_reconst, reg_prob=test_reg_prob_pp,
+                           ix=test_ix, use_regimes=use_regimes)
+    if training_cfg['append_train_to_test']:
+        # first 'predictions' are only train data
+        lookback = model_func['lookback'](model_cfg)
+        # one train step included
+        df = df.iloc[lookback - 1:, :]
+    return df, metric, pred_t
+
+
+def unpack_test_vars(i, test_x_pp, unscaled_test_y):
+    test_pp, test_reg_prob_pp = test_x_pp[i][0], test_x_pp[i][1]
+    unscaled_y = unscaled_test_y[i][0]
+    return test_pp, test_reg_prob_pp, unscaled_y
+
+
+def plot_forecast(df, model_cfg=None, n_states=0, metrics=None, features=None, use_regimes=False, size=(1980, 1080),
+                  plot_title=True, label_scale=1, markers='lines', adjust_height=(False, 0.6), color_col=None):
     name = model_cfg.get('name', 'model')
-    model_title = {'n_steps_out': model_cfg[0][2]['n_steps_out']} if isinstance(model_cfg, list) else model_cfg
-    rows = [0, 0] + [1 for _ in range(test_reg_prob.shape[1])] if use_regimes else None
-    plotly_time_series(df, rows=rows, size=size, label_scale=label_scale,
-                       title="SERIES: " + str(input_cfg) + '<br>' + name + ': ' + str(model_title) +
-                             '<br>RES: ' + str(metrics), markers='lines', plot_title=plot_title)
+    if model_cfg is not None:
+        model_str = {'n_steps_out': model_cfg[0][2]['n_steps_out']} if isinstance(model_cfg, list) else model_cfg
+        model_title = name + ': ' + str(model_str)
+    else:
+        model_title = ''
+
+    res_title = '<br>RES: ' + str(metrics) if metrics is not None else ''
+    if features is None:
+        features = list(df.columns)
+    if n_states > 0 and use_regimes:
+        for i in range(n_states):
+            if 'regime ' + str(i) in features:
+                features.remove('regime ' + str(i))
+        for i in range(n_states):
+            features.append('regime ' + str(i))
+
+    rows = [0] * (len(features) - n_states) + [1 for _ in range(n_states)] if use_regimes else None
+    plotly_time_series(df, features=features, rows=rows, size=size, label_scale=label_scale,
+                       adjust_height=adjust_height,
+                       color_col=color_col, title=model_title + res_title, markers=markers, plot_title=plot_title)
 
 
-def reconstruct_forecast(input_cfg, model_n_steps_out, predictions, ss, test_pp, test_x):
+def reconstruct_forecast(model_n_steps_out, predictions, ss, test_y):
     forecast = prep_forecast(predictions)
     # forecast can be larger than test subset
-    forecast = forecast[:test_pp.shape[0]]
-    test_y = test_x[:, -1]
-    forecast_reconst = reconstruct_pred(forecast, input_cfg, model_n_steps_out, test=test_y, ss=ss)
+    # forecast = forecast[:test_pp.shape[0]]
+    # test_y = test_x[:, -1]
+    forecast_reconst = reconstruct_pred(forecast, model_n_steps_out, test=test_y, ss=ss)
     return forecast_reconst, test_y
 
 
@@ -125,35 +196,44 @@ def walkforward_test_model(model, model_cfg, model_func, model_n_steps_out, test
                            verbose):
     lookback = model_func['lookback'](model_cfg)
     x_test_pp_bundles = step_out_bundles(test_pp, model_n_steps_out, lookback)
-    reg_prob_test_bundles = step_out_bundles(test_reg_prob_pp, model_n_steps_out, lookback, all=True)
+    if use_regimes:
+        reg_prob_test_bundles = step_out_bundles(test_reg_prob_pp, model_n_steps_out, lookback, all=True)
+    else:
+        reg_prob_test_bundles = [None for _ in range(len(test_pp))]
     # history starts with lookback data from test
     x_history = test_pp[:lookback, :-1]
     # predictions start with preprocessed lookback test data
     predictions = list(test_pp[:lookback, -1])
     # last hmm state available
-    reg_prob = test_reg_prob_pp[lookback, :]
+    reg_prob = None if test_reg_prob_pp is None else test_reg_prob_pp[lookback, :]
     start_time = time.time()
+
     for i, (x_bundle, reg_prob_bundle) in enumerate(zip(x_test_pp_bundles, reg_prob_test_bundles)):
         print_progress(i, x_test_pp_bundles, verbose + 1)
         yhat = model_func['predict'](model, x_history, model_cfg, use_regimes, reg_prob)[:model_n_steps_out]
         [predictions.append(y) for y in yhat]
         # update next information available
-        reg_prob = reg_prob_bundle[-1, :]
+        reg_prob = reg_prob_bundle[-1, :] if use_regimes else None
         x_history = np.vstack([x_history, reshape_bundle(x_bundle)])
+
     end_time = time.time()
     print_pred_time(start_time, x_test_pp_bundles, verbose)
     pred_t = round((end_time - start_time) / len(x_test_pp_bundles), 4)
+    predictions = np.array(predictions)[:test_pp.shape[0]]
     return predictions, pred_t
 
 
 def step_out_bundles(data, n_steps_out, lookback=0, y_col=-1, all=False):
-    if all:
-        bundles = [data[i:i + n_steps_out, :] for i in
-                   range(lookback, data.shape[0], n_steps_out)]
+    if data is not None:
+        if all:
+            bundles = [data[i:i + n_steps_out, :] for i in
+                       range(lookback, data.shape[0], n_steps_out)]
+        else:
+            bundles = [data[i:i + n_steps_out, :y_col] for i in
+                       range(lookback, data.shape[0], n_steps_out)]
+        return bundles
     else:
-        bundles = [data[i:i + n_steps_out, :y_col] for i in
-                   range(lookback, data.shape[0], n_steps_out)]
-    return bundles
+        return None
 
 
 def get_n_states(reg_prob):

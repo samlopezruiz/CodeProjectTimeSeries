@@ -14,14 +14,13 @@ np.random.seed(42)
 tf.random.set_seed(42)
 
 
-
 def random_batch(X, y, batch_size=32):
     idx = np.random.randint(len(X), size=batch_size)
     return X[idx], y[idx]
 
 
 if __name__ == '__main__':
-    #%% DATA
+    # %% DATA
     housing = fetch_california_housing()
     X_train_full, X_test, y_train_full, y_test = train_test_split(
         housing.data, housing.target.reshape(-1, 1), random_state=42)
@@ -33,7 +32,7 @@ if __name__ == '__main__':
     X_valid_scaled = scaler.transform(X_valid)
     X_test_scaled = scaler.transform(X_test)
 
-    #%% MODEL
+    # %% MODEL
     n_epochs = 5
     batch_size = 32
     n_steps = len(X_train) // batch_size
@@ -49,7 +48,7 @@ if __name__ == '__main__':
         keras.layers.Dense(1, kernel_regularizer=l2_reg)
     ])
 
-    #%% TRAINING
+    # %% TRAINING
     for epoch in range(1, n_epochs + 1):
         print("Epoch {}/{}".format(epoch, n_epochs))
         for step in range(1, n_steps + 1):
@@ -70,8 +69,3 @@ if __name__ == '__main__':
         print_status_bar(len(y_train), len(y_train), mean_loss, metrics)
         for metric in [mean_loss] + metrics:
             metric.reset_states()
-
-
-
-
-

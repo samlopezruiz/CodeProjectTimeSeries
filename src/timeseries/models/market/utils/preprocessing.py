@@ -1,7 +1,9 @@
 import numpy as np
+import pandas as pd
 from sklearn.preprocessing import StandardScaler
 
-from timeseries.preprocessing.func import ln_returns, ema, ismv, macd
+from timeseries.data.market.utils.names import get_inst_ohlc_names
+from timeseries.preprocessing.func import ln_returns, ema, ismv
 
 
 def preprocess_x(x, detrend=None, scale=True, standard_scaler=None, ema_period=0):
@@ -36,6 +38,7 @@ def reconstruct_x(forecast, y_col, steps=1, test=None, standscaler=None, a_1=Non
     elif test is not None:
         a_1 = test[0]
         test_ = test[1:]
+        forecast = forecast[1:]
     if len(detrend) == 2:
         detrend, period = detrend  # ('ema_diff', 14)
     elif detrend == 'ema_diff':
@@ -163,24 +166,59 @@ def preprocess(input_cfg, train, test, reg_prob_train=None, reg_prob_test=None, 
         return train, test, reg_prob_train, reg_prob_test, ss
 
 
-def reconstruct_pred(forecast, input_cfg, model_n_steps_out, test=None, ss=None, a_1=None):
-    if input_cfg.get('preprocess', False):
-        assert len(test) == len(forecast) + 1
-        if len(test.shape) == 1:
-            test = test.reshape(-1, 1)
+def reconstruct_pred(scaled_pred_y, model_n_steps_out, unscaled_y=None, ss=None,
+                     preprocess=True):
+    if preprocess:
+        scaled_pred_y = prep_forecast(scaled_pred_y)
+        unscaled_y = prep_forecast(unscaled_y)
+        assert len(unscaled_y) == len(scaled_pred_y)
+
         y_col = ss.n_features_in_ - 1 if ss is not None else None
-        return reconstruct_x(forecast, y_col, a_1=a_1,
-                             detrend=input_cfg.get('detrend', 'ln_return'),
-                             standscaler=ss, test=test, steps=model_n_steps_out)
+        return reconstruct_x(scaled_pred_y, y_col, steps=model_n_steps_out,
+                                      detrend='ln_return', standscaler=ss, test=unscaled_y)
     else:
-        return forecast
+        return scaled_pred_y
 
 
-def add_features(df, macds=None, returns=None):
-    if returns is not None:
-        for var in returns:
-            df[var+'_r'] = ln_returns(df[var])
-    if macds is not None:
-        for var in macds:
-            df[var+'_macd'] = macd(df[var])
-    df.dropna(inplace=True)
+
+
+def prep_forecast(forecast):
+    forecast = np.array(forecast)
+    if len(forecast.shape) == 2:
+        if forecast.shape[1] == 1:
+            # case of an array of arrays
+            forecast = forecast.ravel()
+    return forecast
+
+
+def downsample_df(df, resample_period, ohlc_features=False, inst=None):
+    df_new = pd.DataFrame()
+    df_resampled = df.resample(resample_period)
+
+    if inst is not None:
+        inst_cols = get_inst_ohlc_names(inst)
+        if np.all([col in list(df.columns) for col in inst_cols]):
+            df_new[inst + 'c'] = df_resampled[inst + 'c'].last()
+            df_new[inst + 'o'] = df_resampled[inst + 'o'].first()
+            df_new[inst + 'l'] = df_resampled[inst + 'l'].min()
+            df_new[inst + 'h'] = df_resampled[inst + 'h'].max()
+            other_features = [col for col in df.columns if col not in inst_cols]
+        else:
+            other_features = list(df.columns)
+    else:
+        other_features = list(df.columns)
+
+    for feature in other_features:
+        if ohlc_features:
+            df_new[feature + 'c'] = df_resampled[feature].last()
+            df_new[feature + 'o'] = df_resampled[feature].first()
+            df_new[feature + 'l'] = df_resampled[feature].min()
+            df_new[feature + 'h'] = df_resampled[feature].max()
+        else:
+            df_new[feature] = df_resampled[feature].last()
+
+    # in trading the bar is created with past data
+    # whereas pandas original index suggests it is created with future data
+    df_new.index = df_new.index.shift(1)
+    df_new.dropna(inplace=True)
+    return df_new

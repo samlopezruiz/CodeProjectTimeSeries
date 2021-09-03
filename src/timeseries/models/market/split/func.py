@@ -4,6 +4,14 @@ import pandas as pd
 from timeseries.data.market.files.utils import describe
 from timeseries.data.market.utils.names import get_inst_ohlc_names
 
+def s_threshold(time_diff_cfg):
+    hour_s = 60 * 60
+    day_s = hour_s * 24
+    hour_thold = 0 if time_diff_cfg.get('hours', 0) is None else time_diff_cfg.get('hours', 0)
+    day_thold = 0 if time_diff_cfg.get('days', 0) is None else time_diff_cfg.get('days', 0)
+    second_thold = 0 if time_diff_cfg.get('seconds', 0) is None else time_diff_cfg.get('seconds', 0)
+    s_thold = hour_thold * hour_s + day_thold * day_s + second_thold
+    return s_thold
 
 def set_subsets_and_test(df, split_cfg):
     df_subsets = group_by(df, split_cfg)
@@ -14,7 +22,8 @@ def set_subsets_and_test(df, split_cfg):
         print('simple test split')
         simple_test_split(df_subsets, test_ratio=split_cfg['test_ratio'])
     if split_cfg['time_delta_split']:
-        update_subset_time_delta(df_subsets, time_thold=split_cfg.get('time_thold', 1000))
+        s_thold = s_threshold(split_cfg['time_thold'])
+        update_subset_time_delta(df_subsets, time_thold=s_thold)
     df_subsets.drop(['year', 'week', 'day', 'hour'], axis=1, inplace=True)
     return df_subsets
 
@@ -49,7 +58,7 @@ def random_test_split(df, split_cfg):
     shift_subsets(df)
 
 
-def subset(df, cfg, describe_=True):
+def time_subset(df, cfg, describe_=True):
     df_ss = df.loc[cfg.get('data_from', None):cfg.get('data_to', None)].copy()
     if describe_:
         describe(df_ss)
@@ -147,7 +156,7 @@ def update_subset_time_delta(df, time_thold=1000):
         print('subset column not found')
 
 
-def get_subsets(df_pp):
+def get_subsets(df_pp, n_states=None, features=None):
     if 'subset' not in df_pp.columns or 'test' not in df_pp.columns:
         print('subset or test column not found')
         return None
@@ -160,7 +169,14 @@ def get_subsets(df_pp):
                 train_lens.append(subset.shape[0])
             else:
                 test_lens.append(subset.shape[0])
-            subsets.append((n_ss, test, subset))
+            drop_cols = ['subset', 'test'] + ([] if n_states is None else ['p_'+str(i) for i in range(n_states)])
+            data = subset.drop(drop_cols, axis=1)
+            if features is not None:
+                if 'time_subset' in df_pp.columns and 'time_subset' not in features:
+                    features.append('time_subset')
+                data = data.loc[:, features]
+            prob = subset.loc[:, ['p_'+str(i) for i in range(n_states)]] if n_states is not None else None
+            subsets.append({'subset': n_ss, 'test': test, 'data': data, 'prob': prob})
 
         print('Total subsets: train={}, test={:.0f}'.format(len(train_lens), len(test_lens)))
         print('Average lengths: train={:.0f}, test={:.0f}'.format(np.mean(train_lens),
@@ -168,25 +184,47 @@ def get_subsets(df_pp):
         return subsets
 
 
-def get_xy_from_subsets(subsets, features, min_dim, look_back=0):
+def get_xy_from_subsets(subsets, min_dim, look_back=0):
     train_X, test_X = [], []
-    for i, (n_ss, test, df_ss) in enumerate(subsets):
-        # print(n_ss)
+    split_timediff = []
+    for i, subset in enumerate(subsets):
+        if len(test_X) > 46:
+            a = 1
+        if i == 247:
+            a = 1
+        test, df_ss, df_p = subset['test'], subset['data'], subset['prob']
+        # delete time_subset column
+        if 'time_subset' in df_ss.columns:
+            if i + 1 < len(subsets):
+                t_subset = subsets[i + 1]['data']['time_subset'][0]
+            else:
+                t_subset = subsets[i]['data']['time_subset'][0]
+            # print(np.mean(df_ss['time_subset']), df_ss['time_subset'][0])
+            split_timediff.append(abs(t_subset - np.mean(df_ss['time_subset'])) < 0.0001)
+            df_ss.drop('time_subset', inplace=True, axis=1)
+        else:
+            split_timediff.append(True)
+
         if df_ss.shape[0] > min_dim and test == 0:
-            dataset = df_ss[features].to_numpy()
-            # X, y = model_func['xy_from_train'](dataset, *model_func['xy_args'])
-            # train_XY.append((X, y))
-            train_X.append(dataset)
+            train_X.append((df_ss, df_p if df_p is not None else None))
         elif test == 1:
             # append look_back from last test subset
             if look_back > 0 and i > 0:
-                _, t, df_ss_test = subsets[i - 1]
-                if t == 0:
-                    df_ss = pd.concat([df_ss_test.iloc[-look_back:, :], df_ss], axis=0)
+                subs_1 = subsets[i - 1]
+                test_1, df_ss_1, df_p_1 = subs_1['test'], subs_1['data'], subs_1['prob']
+                # check if there is no time-diff subset change in previous subset
+                if test_1 == 0 and split_timediff[-2]:
+                    df_ss = pd.concat([df_ss_1.iloc[-look_back:, :], df_ss], axis=0)
+                    if df_p is not None:
+                        df_p = pd.concat([df_p_1.iloc[-look_back:, :], df_p], axis=0)
             if df_ss.shape[0] > min_dim:
-                dataset = df_ss[features[:-1]].to_numpy()
-                test_X.append(dataset)
+                test_X.append((df_ss, df_p if df_p is not None else None))
 
+    # to check continuous time comment line:
+    # df_ss.drop('time_subset', inplace=True, axis=1)
+    # import numpy as np
+    # for x, p in test_X:
+    #     print(np.mean(x[:, -1]))
     return train_X, test_X
 
 
@@ -199,12 +237,33 @@ def get_xy(subsets, training_cfg, lookback=0, dim_f=1):
     :return: list of train and test subsets
     '''
 
-    inst, y_var = training_cfg.get('inst', None), training_cfg['y_var']
-    features = ([] if inst is None else get_inst_ohlc_names(inst)) + training_cfg['features']
+    features = get_train_features(training_cfg)
     append_train_to_test = training_cfg.get('append_train_to_test', False)
     # n_seq, n_steps_in, n_steps_out = model_cfg.get('n_seq', 1), model_cfg['n_steps_in'], model_cfg['n_steps_out']
-    dim_limit = lookback * dim_f #model_func['lookback'](model_cfg) * dim_f
-    features = features + [y_var]
+    dim_limit = int(lookback * dim_f) #model_func['lookback'](model_cfg) * dim_f
+
     look_back = dim_limit if append_train_to_test else 0
-    train_X, test_X = get_xy_from_subsets(subsets, features, dim_limit, look_back)
+    train_X, test_X = get_xy_from_subsets(subsets, dim_limit, look_back)
     return train_X, test_X, features
+
+
+def get_train_features(training_cfg):
+    inst, y_var = training_cfg.get('inst', None), training_cfg.get('y_train_var', None)
+    if training_cfg.get('include_ohlc', False) and inst is not None:
+        if y_var is not None:
+            return get_inst_ohlc_names(inst) + training_cfg['features'] + [y_var]
+        else:
+            return get_inst_ohlc_names(inst) + training_cfg['features']
+    else:
+        if y_var is not None:
+            return training_cfg['features'] + [y_var]
+        else:
+            return training_cfg['features']
+    return features
+
+def append_subset_cols(df, orig_df, timediff=False):
+    if 'subset' in orig_df.columns and 'test' in orig_df.columns:
+        df['subset'] = orig_df['subset']
+        df['test'] = orig_df['test']
+    if timediff and 'time_subset' in orig_df.columns:
+        df['time_subset'] = orig_df['time_subset']

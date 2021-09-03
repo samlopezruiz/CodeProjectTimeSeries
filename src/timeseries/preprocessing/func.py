@@ -11,8 +11,10 @@ def ismv(train):
 def ln_returns(x):
     ln_r = np.log(x) - np.log(np.roll(x, 1, axis=0))
     # first row has no returns
-    return ln_r[1:]
-
+    if isinstance(ln_r, pd.Series):
+        return ln_r.iloc[1:]
+    else:
+        return ln_r[1:]
 
 def ema(x, period, last_ema=None):
     c1 = 2 / (1 + period)

@@ -1,5 +1,6 @@
 from multiprocessing import cpu_count
 
+import pandas as pd
 from hmmlearn.hmm import GaussianHMM, GMMHMM
 import numpy as np
 from pomegranate import HiddenMarkovModel, NormalDistribution
@@ -95,9 +96,18 @@ def get_regimes(states, print_=False):
 def append_hmm_states(df, hmm_vars, n_states, label_cfg=None, regime_col='state'):
     X = df.loc[:, hmm_vars]
     hidden_states, mus, sigmas, P, logProb, model, hidden_proba = fitHMM(X, 100, n_components=n_states)
-    df_reg = append_to_df(df, hidden_states, regime_col)
-    n_regimes = get_regimes(df_reg[regime_col], print_=True)
+    append_to_df(df, hidden_states, regime_col)
+
+    for i in range(n_states):
+        append_to_df(df, hidden_proba[:, i], 'p_'+str(i))
+    n_regimes = get_regimes(df[regime_col], print_=True)
     if label_cfg is not None:
         map = relabel_sort_var(label_cfg, hmm_vars, mus)
-        relabel_col(df_reg, regime_col, map=map)
-    return df_reg, n_regimes
+        relabel_col(df, regime_col, map=map)
+    df_proba = df.loc[:, ['p_'+str(i) for i in range(n_states)]].copy()
+    return df, n_regimes, df_proba
+
+
+def resample_dfs(df, df_proba):
+    df_state = pd.concat([df.iloc[:, 0], df_proba], axis=1)
+    return df_state.loc[:, df_proba.columns].ffill().loc[df.index, :].fillna(0)

@@ -9,31 +9,36 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 def dcnn_layer(channels, kernel_size, dilation_rate, name, reg='l2'):
     stddev = math.sqrt(2 / (kernel_size * channels))
+    filter_name = 'filter_' + name if name is not None else None
+    resid_name = 'resid_' + name if name is not None else None
     def f(input_):
         filter_out = keras.layers.Conv1D(channels, kernel_size,
                                          strides=1, dilation_rate=dilation_rate,
                                          kernel_initializer=initializers.RandomNormal(stddev=stddev),
                                          padding='valid', use_bias=True, kernel_regularizer=reg,
-                                         activation='relu', name='filter_' + name)(input_)
+                                         activation='relu', name=filter_name)(input_)
         filter_padded = keras.layers.ZeroPadding1D((dilation_rate * (kernel_size - 1), 0))(filter_out)
-        output = keras.layers.Add(name='resid_' + name)([filter_padded, input_])
+        output = keras.layers.Add(name=resid_name)([filter_padded, input_])
         return output
     return f
 
 
 def dcnn_1st_layer(channels, kernel_size, dilation_rate, name, reg='l2'):
     stddev = math.sqrt(2 / (kernel_size * channels))
+    conv1_name = 'filter_' + name if name is not None else None
+    skip_name = 'param_skip_' + name if name is not None else None
+    add_name = 'add_' + name if name is not None else None
     def f(input_):
         filter_out = keras.layers.Conv1D(channels, kernel_size,
                                          strides=1, dilation_rate=dilation_rate,
                                          padding='valid', use_bias=True, kernel_regularizer=reg,
                                          kernel_initializer=initializers.RandomNormal(stddev=stddev),
-                                         activation='relu', name='filter_' + name)(input_)
+                                         activation='relu', name=conv1_name)(input_)
         filter_padded = keras.layers.ZeroPadding1D((dilation_rate * (kernel_size - 1), 0))(filter_out)
         param_skip = keras.layers.Conv1D(channels, 1,
                                          padding='same', use_bias=False,
-                                         activation='linear', name='param_skip_'+name)(input_)
-        output = keras.layers.Add(name='add_' + name)([filter_padded, param_skip])
+                                         activation='linear', name=skip_name)(input_)
+        output = keras.layers.Add(name=add_name)([filter_padded, param_skip])
         return output
     return f
 

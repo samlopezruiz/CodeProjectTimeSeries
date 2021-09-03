@@ -6,21 +6,46 @@ import pandas as pd
 
 from timeseries.utils.dataframes import renamer
 
-ROOT = 'D:\\MEGA\\Proyectos\\Trading\\Algo_Trading\\Historical_Data'
+DATA_ROOT = 'D:\\MEGA\\Proyectos\\Trading\\Algo_Trading\\Historical_Data'
+PROJECT_ROOT = 'D:\\MEGA\\CienciasDeLaComputacion\\Tesis\\CodeProjectTimeSeries\\src\\timeseries'
 
 
-def get_root():
-    return ROOT
+def get_data_root():
+    return DATA_ROOT
 
 
-def get_path(data_cfg, last_folder='src_folder'):
+def get_project_root():
+    return PROJECT_ROOT
+
+
+def load_files(data_cfg, subfolder, last_folder='src_folder', end=".z"):
+    path = get_model_market_path(data_cfg, subfolder=subfolder, last_folder=last_folder)
+    filename = data_cfg.get('filename', None)
+    if filename is not None:
+        filename = filename + end
+        print("\nLoading", filename)
+        if filename.endswith(".csv") or filename.endswith(".txt"):
+            data = read_csv(os.path.join(path, filename))
+        else:
+            data = joblib.load(os.path.join(path, filename))
+        return data
+    else:
+        raise Exception('filename not found in data_cfg')
+
+
+def get_model_market_path(data_cfg, subfolder='split', last_folder='src_folder'):
+    src_folder = data_cfg.get(last_folder, 'res')
+    return os.path.join(PROJECT_ROOT, 'models', 'market', subfolder, src_folder)
+
+
+def get_market_path(data_cfg, last_folder='src_folder'):
     sampling, src_folder = data_cfg['sampling'], data_cfg[last_folder]
     inst, market = data_cfg['inst'], data_cfg['market']
-    return os.path.join(ROOT, market, sampling, inst, src_folder)
+    return os.path.join(DATA_ROOT, market, sampling, inst, src_folder)
 
 
 def list_files(data_cfg, suffix=".txt", last_folder='src_folder', include_substring=''):
-    path = get_path(data_cfg, last_folder=last_folder)
+    path = get_market_path(data_cfg, last_folder=last_folder)
     files = find_filenames(path, suffix=suffix, include_substring=include_substring)
     return files
 
@@ -31,10 +56,10 @@ def find_filenames(path_to_dir, suffix=".txt", include_substring=''):
 
 
 def load_market(data_cfg, end=".csv", last_folder='src_folder'):
-    path = get_path(data_cfg, last_folder=last_folder)
+    path = get_market_path(data_cfg, last_folder=last_folder)
     filename = data_cfg.get('filename', None)
-    inst, suffix = data_cfg['inst'], data_cfg['suffix']
     if filename is None:
+        inst, suffix = data_cfg['inst'], data_cfg['suffix']
         filename = inst + "_" + suffix + end
     dataset, features = load_data(filename, path)
     return dataset, features
@@ -77,7 +102,7 @@ def save_df(df, data_cfg, timestamp=True, last_folder='src_folder', end='.csv', 
             end_date = str(df.index[-1].year) + '_' + str(df.index[-1].month)
         sufx = ('_' + suffix) if len(suffix) > 1 else ''
         filename = inst + "_" + ini_date + "-" + end_date + sufx + end
-    path = get_path(data_cfg, last_folder=last_folder)
+    path = get_market_path(data_cfg, last_folder=last_folder)
     df.to_csv(os.path.join(path, filename), index=True)
     print("File {} saved".format(filename))
 

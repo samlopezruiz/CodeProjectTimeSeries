@@ -23,15 +23,17 @@ def multi_step_forecast_df(train, test, pred, t_train=None, t_test=None, reg_pro
     return pd.concat([df, df_forecast], axis=0)
 
 
-def merge_forecast_df(test, pred, t_test=None, reg_prob=None):
+def merge_forecast_df(test, pred, reg_prob=None, ix=None, use_regimes=True):
     assert len(test) == len(pred)
-    _, t_test = trim_min_len(test, t_test)
-    if reg_prob is None:
-        df = pd.DataFrame(np.transpose([test, pred]), index=t_test, columns=['data', 'forecast'])
+    if ix is not None:
+        _, t_test = trim_min_len(test, ix)
+    if reg_prob is None or not use_regimes:
+        data = np.hstack([test.reshape(-1, 1), pred.reshape(-1, 1)])
+        df = pd.DataFrame(data, index=ix, columns=['data', 'forecast'])
     else:
         data = np.hstack([test.reshape(-1, 1), pred.reshape(-1, 1), reg_prob])
         columns = ['data', 'forecast'] + ['regime ' + str(i) for i in range(reg_prob.shape[1])]
-        df = pd.DataFrame(data, index=t_test, columns=columns)
+        df = pd.DataFrame(data, index=ix, columns=columns)
     return df
 
 
