@@ -1,3 +1,4 @@
+import datetime
 import time
 
 import numpy as np
@@ -48,7 +49,7 @@ def build_nnhmm_model(cfg, n_states, n_features, model_funcs, use_regimes=False)
     intermediate_layers, input_fn = model_funcs['intermediate_layers'], model_funcs['input_shape']
     input_shape = input_fn(cfg, n_features)
     input_ = keras.layers.Input(shape=input_shape, name='input')
-    # input_ = TimeDistributed(input_)
+
     if use_regimes:
         probs_ = keras.layers.Input(shape=n_states, name='regime_prob')
         mul = []
@@ -66,15 +67,26 @@ def build_nnhmm_model(cfg, n_states, n_features, model_funcs, use_regimes=False)
     return model
 
 
-def nnhmm_fit(train, cfg, n_states, model_func, model=None, plot_hist=False, verbose=0, use_regimes=False):
+def nnhmm_fit(train_data, cfg, n_states, model_func, model=None, test_data=None, plot_hist=False, verbose=0, use_regimes=False,
+              callbacks=False):
     # X, y, X_reg = model_func['xy_from_train'](train, *model_func['xy_args'](cfg, reg_prob))
-    X, y, X_reg = train
+    X, y, X_reg = train_data
+    X_train = [X, X_reg] if use_regimes else X
+    print('Train Shape:', X.shape, y.shape)
+    if test_data is not None:
+        print('Test Shape:', test_data[0].shape, test_data[1].shape)
+        X_test = (test_data[0], test_data[2]) if use_regimes else test_data[0]
+        y_test = test_data[1]
+        test_data = (X_test, y_test)
+
     n_features = model_func['n_features'](X)
     start_time = time.time()
     if model is None:
         model = build_nnhmm_model(cfg, n_states, n_features, model_func, use_regimes=use_regimes)
-    model_input = [X, X_reg] if use_regimes else X
-    history = model.fit(model_input, y, epochs=cfg['n_epochs'], batch_size=cfg['n_batch'], verbose=verbose)
+    log_dir = "logs/fit/" + model_func['name'] + '-' + datetime.datetime.now().strftime("%Y%m%d-%H%M")[2:]
+    tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=0)
+    history = model.fit(X_train, y, validation_data=test_data, epochs=cfg['n_epochs'], batch_size=cfg['n_batch'],
+                        verbose=verbose, callbacks=([tensorboard_callback] if callbacks else None))
 
     train_time = round((time.time() - start_time), 2)
     if plot_hist:

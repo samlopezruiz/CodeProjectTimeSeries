@@ -246,7 +246,7 @@ def regime_multivariate_lorenz(cfg, test_perc=25, t_ini=15, y_col=0):
 
 if __name__ == '__main__':
     save_folder = 'images'
-    save_plots = False
+    save_plots = True
     plot_titles = True
     # df, xyz, t, lorenz_sys = lorenz_system(positive_offset=True, noise=True, granularity=5, sigma=1,
     #                                        end_time=130, trend=True)

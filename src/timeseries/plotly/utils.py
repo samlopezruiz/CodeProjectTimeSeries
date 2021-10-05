@@ -2,7 +2,6 @@ import pandas as pd
 import os
 from datetime import date
 import datetime
-
 from timeseries.utils.files import new_dir
 
 template = ["plotly", "plotly_white", "plotly_dark", "ggplot2", "seaborn", "none"]
@@ -55,7 +54,8 @@ def plotly_save(fig, file_path, size):
     html_path = file_path[:-1].copy() + [file_path[-1] + '_' + datetime.datetime.now().strftime("%Y_%m_%d_%H-%M") + ".html"]
     if size is None:
         size = (1980, 1080)
-    fig.write_image(os.path.join(*image_path), width=size[0], height=size[1])
+
+    fig.write_image(os.path.join(*image_path), width=size[0], height=size[1], engine='orca')
     fig.write_html(os.path.join(*html_path))
 
 

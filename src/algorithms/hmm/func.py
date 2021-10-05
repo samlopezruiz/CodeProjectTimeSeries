@@ -3,22 +3,22 @@ from multiprocessing import cpu_count
 import pandas as pd
 from hmmlearn.hmm import GaussianHMM, GMMHMM
 import numpy as np
-from pomegranate import HiddenMarkovModel, NormalDistribution
+# from pomegranate import HiddenMarkovModel, NormalDistribution
 
 from timeseries.utils.dataframes import append_to_df, relabel_col
 
 
-def fitHMM_p(X, n_iter, n_components=2, algorithm='baum-welch'):
-    Q = X.to_numpy()
-    model = HiddenMarkovModel.from_samples(NormalDistribution, n_components=n_components, X=Q)
-    model.fit(Q, algorithm=algorithm, max_iterations=n_iter, n_jobs=cpu_count())
-    # classify each observation as state 0 or 1
-    hidden_states = model.predict(Q)  # np.reshape(Q, [len(Q), 1])
-    hidden_proba = model.predict_proba(Q)
-    P = model.dense_transition_matrix()
-    mus, sigmas, logProb = None, None, None
-
-    return hidden_states, mus, sigmas, P, logProb, model, hidden_proba
+# def fitHMM_p(X, n_iter, n_components=2, algorithm='baum-welch'):
+#     Q = X.to_numpy()
+#     model = HiddenMarkovModel.from_samples(NormalDistribution, n_components=n_components, X=Q)
+#     model.fit(Q, algorithm=algorithm, max_iterations=n_iter, n_jobs=cpu_count())
+#     # classify each observation as state 0 or 1
+#     hidden_states = model.predict(Q)  # np.reshape(Q, [len(Q), 1])
+#     hidden_proba = model.predict_proba(Q)
+#     P = model.dense_transition_matrix()
+#     mus, sigmas, logProb = None, None, None
+#
+#     return hidden_states, mus, sigmas, P, logProb, model, hidden_proba
 
 
 def fitHMM(Q, n_iter, n_components=2):

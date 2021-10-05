@@ -188,10 +188,10 @@ def get_xy_from_subsets(subsets, min_dim, look_back=0):
     train_X, test_X = [], []
     split_timediff = []
     for i, subset in enumerate(subsets):
-        if len(test_X) > 46:
-            a = 1
-        if i == 247:
-            a = 1
+        # if len(test_X) > 46:
+        #     a = 1
+        # if i == 247:
+        #     a = 1
         test, df_ss, df_p = subset['test'], subset['data'], subset['prob']
         # delete time_subset column
         if 'time_subset' in df_ss.columns:

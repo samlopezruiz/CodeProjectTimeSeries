@@ -1,17 +1,15 @@
+import time
+
 import numpy as np
 import pandas as pd
-
-from algorithms.hmm.func import resample_dfs
 from timeseries.data.lorenz.lorenz import lorenz_wrapper
-from timeseries.data.market.files.utils import load_files
-from timeseries.data.market.utils.names import get_inst_ohlc_names
-from timeseries.models.market.multivariate.architectures.cnnlstm import cnnlstm_func
 from timeseries.models.market.multivariate.architectures.dcnn import dcnn_func
 from timeseries.models.market.preprocess.func import add_features, scale_df
 from timeseries.models.market.split.func import get_subsets, get_xy, append_subset_cols
 from timeseries.models.market.utils.dataprep import reshape_xy_prob
 from timeseries.models.market.utils.harness import train_model, test_model, plot_forecast
 from timeseries.models.market.utils.results import subset_results
+from timeseries.models.market.utils.tf_models import save_tf_model, load_tf_model
 from timeseries.plotly.plot import plotly_time_series
 
 
@@ -27,6 +25,8 @@ def add_subset_test(df, n_subsets=10, train_ratio=0.7):
 
 if __name__ == '__main__':
     # %%
+    res_cfg = {'save_results': False, 'save_plots': True, 'plot_title': True, 'plot_forecast': True,
+               'plot_hist': False, 'image_folder': 'img', 'results_folder': 'res', 'models_folder': "my_models"}
     input_cfg = {"variate": "multi", "granularity": 5, "noise": True, 'trend': True}
 
     df, _, _, _, _ = lorenz_wrapper(input_cfg)
@@ -38,7 +38,7 @@ if __name__ == '__main__':
                     'include_ohlc': False, "append_train_to_test": True, 'scale': True}
     # append additional features
     add_features(df, returns=['x', 'y', 'z'])
-    df_scaled, ss = scale_df(df, training_cfg)
+    df_scaled, ss, _ = scale_df(df, training_cfg)
     # scaled data does not contain subset and test columns
     # append subset and test columns to scaled data
     append_subset_cols(df_scaled, df, timediff=True)
@@ -63,10 +63,18 @@ if __name__ == '__main__':
     stacked_x, stacked_y, stacked_prob = train_data
     model, train_time, train_loss = train_model(model_cfg, model_func, train_data)
 
+    #%%
+    # model_path = save_tf_model(model, [res_cfg['models_folder'], model_cfg['name']], model_version="0001")
+    # saved_model = load_tf_model(model_path)
+
     # %% TEST
+    print('TEST MODEL')
     _, unscaled_test_y, _ = get_xy(unscaled_y_subsets, training_cfg, lookback, dim_f=1)
     test_data = test_x_pp, unscaled_test_y
-    metrics, forecast_dfs, pred_times = test_model(model, model_cfg, training_cfg, model_func, test_data, ss)
+    t0 = time.time()
+    forecast_dfs, metrics, pred_times = test_model(model, model_cfg, training_cfg, model_func, test_data, ss,
+                                                   parallel=False)
+    print('pred time: {}s'.format(round(time.time() - t0, 4)))
 
     # %%
     metric_names = ['rmse', 'minmax']
@@ -99,4 +107,4 @@ if __name__ == '__main__':
     # %%
     all_forecast_df = pd.concat(forecast_dfs, axis=0)
     plot_forecast(all_forecast_df, model_cfg, n_states=0, use_regimes=model_cfg['use_regimes'],
-                  markers='markers+lines')
+                  markers='markers+lines', save=True, file_path=['img', 'lorenz'])

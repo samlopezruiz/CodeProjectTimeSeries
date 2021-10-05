@@ -1,5 +1,5 @@
-import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+# import os
+# os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 from timeseries.models.utils.tf import np_to_tf
 import numpy as np
 from timeseries.models.market.multivariate.architectures.func import n_features_3, lookback_seq_steps
@@ -73,5 +73,8 @@ def cnnlstm_predict(model, history, cfg, use_regimes, reg_prob=None):
         yhat = [m.predict(model_input, verbose=0)[0] for m in model]
         yhat = np.array(yhat).mean(axis=0)
     else:
-        yhat = model.predict(model_input, verbose=0)[0]
+        if hasattr(model, 'predict'):
+            yhat = model.predict(model_input, verbose=0)[0]
+        else:
+            yhat = model(model_input)[0]
     return yhat

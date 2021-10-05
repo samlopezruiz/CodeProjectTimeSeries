@@ -1,3 +1,5 @@
+from copy import copy
+
 import numpy as np
 import pandas as pd
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
@@ -45,10 +47,14 @@ def results_by_state(all_forecast_df):
     return score_states
 
 
-def plot_multiple_results_forecast(all_forecast_df, forecast_dfs, use_regimes, results, max_subplots=15, n_plots=2):
+def plot_multiple_results_forecast(all_forecast_df, forecast_dfs, use_regimes, results, max_subplots=15, n_plots=2,
+                                   save=False, file_path=None):
+
     if use_regimes:
+        file_path0 = copy(file_path)
+        file_path0[-1] = file_path0[-1] + '_hist'
         plotly_time_series_bars_hist(all_forecast_df, features=['data', 'forecast', 'rse', 'state'],
-                                     color_col='state', bars_cols=['rse'])
+                                     color_col='state', bars_cols=['rse'], save=save, file_path=file_path0)
         results_state = results_by_state(all_forecast_df).round(decimals=3)
 
         n_states = len(pd.unique(all_forecast_df['state']))
@@ -56,18 +62,22 @@ def plot_multiple_results_forecast(all_forecast_df, forecast_dfs, use_regimes, r
         for i in range(n_states):
             subsets_state.append(list(results.loc[results['reg_round'] == i, 'reg_round'].index))
 
+        file_path[-1] = file_path[-1] + '_plt' + str(0)
         for r, subsets in enumerate(subsets_state):
             chosen = sorted(np.random.choice(subsets, size=min(max_subplots, len(subsets))))
             dfs = [forecast_dfs[i] for i in chosen]
             title = 'Regime {}: {}'.format(r, str(results_state.iloc[r, :].to_dict()))
-            plotly_multiple(dfs, features=['data', 'forecast'], title=title)
+            file_path[-1] = file_path[-1][:-1] + str(r)
+            plotly_multiple(dfs, features=['data', 'forecast'], title=title, save=save, file_path=file_path)
     else:
+        file_path[-1] = file_path[-1] + '_plt' + str(0)
         chosen = sorted(np.random.choice(list(range(len(results))), size=min(max_subplots * n_plots, len(results))))
         for i in range(n_plots):
             chosen_plot = chosen[i * max_subplots:i * max_subplots + max_subplots]
             dfs = [forecast_dfs[i] for i in chosen_plot]
             title = 'Randomly selected forecasts'
-            plotly_multiple(dfs, features=['data', 'forecast'], title=title)
+            file_path[-1] = file_path[-1][:-1] + str(i)
+            plotly_multiple(dfs, features=['data', 'forecast'], title=title, save=save, file_path=file_path)
 
 
 def confusion_mat(all_forecast_df, plot_=True):

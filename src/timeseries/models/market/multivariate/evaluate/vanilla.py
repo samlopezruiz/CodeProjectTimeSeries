@@ -30,7 +30,7 @@ if __name__ == '__main__':
                     'include_ohlc': True, "append_train_to_test": True, 'scale': True}
     # append additional features
     add_features(df, macds=['ESc'], returns=get_inst_ohlc_names('ES'))
-    df_scaled, ss = scale_df(df, training_cfg)
+    df_scaled, ss, _ = scale_df(df, training_cfg)
     # scaled data does not contain subset and test columns
     # append subset and test columns to scaled data
     append_subset_cols(df_scaled, df, timediff=True)
@@ -59,7 +59,7 @@ if __name__ == '__main__':
     # %% TEST
     _, unscaled_test_y, _ = get_xy(unscaled_y_subsets, training_cfg, lookback, dim_f=1)
     test_data = test_x_pp, unscaled_test_y
-    metrics, forecast_dfs, pred_times = test_model(model, model_cfg, training_cfg, model_func, test_data, ss)
+    forecast_dfs, metrics, pred_times = test_model(model, model_cfg, training_cfg, model_func, test_data, ss, parallel=False)
     all_forecast_df = pd.concat(forecast_dfs, axis=0)
 
     # %% RESULTS

@@ -1,24 +1,24 @@
-import time
-from multiprocessing import cpu_count
 import multiprocessing
-from functools import partial
+import time
 from contextlib import contextmanager
+from multiprocessing import cpu_count
+
 import numpy as np
-import pandas as pd
 import tensorflow as tf
 from joblib import Parallel, delayed
+from tensorflow import keras
 from tqdm import tqdm
+
 from algorithms.nnhmm.func import nnhmm_fit, nnhmm_predict
 from timeseries.models.market.utils.console import print_progress, print_pred_time, print_progress_loop
 from timeseries.models.market.utils.dataprep import to_np
 from timeseries.models.market.utils.models import get_params
 from timeseries.models.market.utils.preprocessing import reconstruct_pred, prep_forecast
-from timeseries.models.utils.config import unpack_in_cfg
-from timeseries.models.utils.forecast import multi_step_forecast_df, merge_forecast_df
+from timeseries.models.utils.forecast import merge_forecast_df
 from timeseries.models.utils.metrics import forecast_accuracy
-from timeseries.models.utils.models import get_suffix
 from timeseries.plotly.plot import plotly_time_series
 from timeseries.preprocessing.func import ismv
+
 
 @contextmanager
 def poolcontext(*args, **kwargs):
@@ -74,15 +74,17 @@ def walk_forward_forecast(train, test, reg_prob_train, reg_prob_test, cfg, model
     return predictions[:len(y_test)], train_t, pred_t, n_params, train_loss
 
 
-def train_model(model_cfg, model_func, train_data, summary=False,
-                plot_hist=False, model=None):
+def train_model(model_cfg, model_func, train_data, test_data=None, summary=False,
+                plot_hist=False, model=None, callbacks=False):
     # t_train, train_x, train_pp, train_reg_prob, train_reg_prob_pp = unpack_data_in(data_in)
     # train_x, train_prob = train_data
     verbose, use_regimes = model_cfg['verbose'], model_cfg['use_regimes']
     n_states = get_n_states(train_data[2])
-
+    t0 = time.time()
     model, train_time, train_loss = nnhmm_fit(train_data, model_cfg, n_states, model_func, model=model,
-                                              verbose=verbose, use_regimes=use_regimes, plot_hist=plot_hist)
+                                              test_data=test_data, verbose=verbose, use_regimes=use_regimes,
+                                              plot_hist=plot_hist, callbacks=callbacks)
+    print('Train Time: {}s'.format(round(time.time() - t0, 4)))
     # n_params = get_params(model, model_cfg)
     if summary:
         model.summary()
@@ -105,6 +107,7 @@ def test_model(model, model_cfg, training_cfg, model_func, test_data, ss, parall
     use_regimes, verbose = model_cfg['use_regimes'], model_cfg['verbose']
     assert len(test_x_pp) == len(unscaled_test_y)
     forecast_dfs, metrics, pred_times = [], [], []
+    t0 = time.time()
     if parallel:
         executor = Parallel(n_jobs=cpu_count(), backend='multiprocessing')
         tasks = (
@@ -126,11 +129,13 @@ def test_model(model, model_cfg, training_cfg, model_func, test_data, ss, parall
             forecast_dfs.append(df)
             metrics.append(metric)
             pred_times.append(pred_t)
+    print('Pred Time: {}s'.format(round(time.time() - t0, 4)))
     return forecast_dfs, metrics, pred_times
 
 
 def model_pred(model, model_cfg, model_func, model_n_steps_out, ss, test_x_pp, training_cfg, unscaled_test_y,
                use_regimes, verbose, i):
+    # model = tf.saved_model.load(model_path)
     test_pp, test_reg_prob_pp, unscaled_y = unpack_test_vars(i, test_x_pp, unscaled_test_y)
     assert test_pp.index.equals(unscaled_y.index)
     test_ix = test_pp.index
@@ -159,7 +164,8 @@ def unpack_test_vars(i, test_x_pp, unscaled_test_y):
 
 
 def plot_forecast(df, model_cfg=None, n_states=0, metrics=None, features=None, use_regimes=False, size=(1980, 1080),
-                  plot_title=True, label_scale=1, markers='lines', adjust_height=(False, 0.6), color_col=None):
+                  plot_title=True, label_scale=1, markers='lines', adjust_height=(False, 0.6), color_col=None,
+                  save=False, file_path=None):
     name = model_cfg.get('name', 'model')
     if model_cfg is not None:
         model_str = {'n_steps_out': model_cfg[0][2]['n_steps_out']} if isinstance(model_cfg, list) else model_cfg
@@ -179,7 +185,7 @@ def plot_forecast(df, model_cfg=None, n_states=0, metrics=None, features=None, u
 
     rows = [0] * (len(features) - n_states) + [1 for _ in range(n_states)] if use_regimes else None
     plotly_time_series(df, features=features, rows=rows, size=size, label_scale=label_scale,
-                       adjust_height=adjust_height,
+                       adjust_height=adjust_height, save=save, file_path=file_path,
                        color_col=color_col, title=model_title + res_title, markers=markers, plot_title=plot_title)
 
 

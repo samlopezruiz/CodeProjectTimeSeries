@@ -57,7 +57,10 @@ def dcnn_predict(model, history, cfg, use_regimes, reg_prob=None):
         yhat = [m.predict(model_input, verbose=0)[0] for m in model]
         yhat = np.array(yhat).mean(axis=0)
     else:
-        yhat = model.predict(model_input, verbose=0)[0]
+        if hasattr(model, 'predict'):
+            yhat = model.predict(model_input, verbose=0)[0]
+        else:
+            yhat = model(model_input)[0]
     return yhat
 
 

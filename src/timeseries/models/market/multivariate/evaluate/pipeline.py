@@ -1,7 +1,7 @@
 from timeseries.data.market.files.utils import load_market
 from timeseries.models.market.multivariate.architectures.cnnlstm import cnnlstm_func
 from timeseries.models.market.plot.plot import plot_train_test_groups
-from timeseries.models.market.split.func import subset, set_subsets_and_test, get_subsets, get_xy
+from timeseries.models.market.split.func import time_subset, set_subsets_and_test, get_subsets, get_xy
 
 if __name__ == '__main__':
     # %%
@@ -10,7 +10,7 @@ if __name__ == '__main__':
     data_cfg = {'inst': "ES", 'sampling': 'day', 'suffix': "2012_5-2021_6", 'market': 'cme',
                 'src_folder': "data", 'data_from': '2011-12', 'data_to': '2021-12'}
     df, features = load_market(data_cfg)
-    df = subset(df, data_cfg)
+    df = time_subset(df, data_cfg)
 
     # %% Training-Test Subsets
     split_cfg = {'group': 'week', 'groups_of': 12, 'test_ratio': 0.25, 'random': True, 'time_thold': 1000,

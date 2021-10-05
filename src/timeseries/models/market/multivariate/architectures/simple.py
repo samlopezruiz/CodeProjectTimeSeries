@@ -1,5 +1,3 @@
-import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 from timeseries.models.market.multivariate.architectures.func import arg_in_out, \
     lookback_in_steps, n_features_2
 from timeseries.models.market.utils.dataprep import feature_multi_step_xy_from_mv
