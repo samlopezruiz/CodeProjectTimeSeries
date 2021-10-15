@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 from algorithms.stroganoff.classes import Individual
 from algorithms.stroganoff.gp_func import train_stroganoff, selection_tournament
-from timeseries.models.lorenz.functions.dataprep import split_uv_seq_multi_step
+from timeseries.experiments.lorenz.functions.dataprep import split_uv_seq_multi_step
 
 
 def func_ts(x):

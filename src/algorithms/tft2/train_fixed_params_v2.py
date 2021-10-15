@@ -70,19 +70,6 @@ def train_test_tft(expt_name,
 
     num_repeats = 1
 
-    # if not isinstance(data_formatter, data_formatters.GenericDataFormatter):
-    #     raise ValueError(
-    #         "Data formatters should inherit from" +
-    #         "AbstractDataFormatter! Type={}".format(type(data_formatter)))
-
-    # Tensorflow setup
-    # default_keras_session = tf.compat.v1.keras.backend.get_session()
-    #
-    # if use_gpu:
-    #     tf_config = utils.get_default_tensorflow_config(tf_device="gpu", gpu_id=1)
-    # else:
-    #     tf_config = utils.get_default_tensorflow_config(tf_device="cpu")
-
     print("*** Training from defined parameters for {} ***".format(expt_name))
 
     print("Loading & splitting data...")
@@ -114,33 +101,24 @@ def train_test_tft(expt_name,
     best_loss = np.Inf
     for _ in range(num_repeats):
 
-        # tf.compat.v1.reset_default_graph()
-        # with tf.Graph().as_default(), tf.compat.v1.Session(config=tf_config) as sess:
+        with tf.device('/device:GPU:0'):
 
-            # tf.compat.v1.keras.backend.set_session(sess)
+            params = opt_manager.get_next_parameters()
+            model = ModelClass(params, use_cudnn=use_gpu)
 
-        params = opt_manager.get_next_parameters()
-        model = ModelClass(params, use_cudnn=use_gpu)
+            if not model.training_data_cached():
+                model.cache_batched_data(train, "train", num_samples=train_samples)
+                model.cache_batched_data(valid, "valid", num_samples=valid_samples)
 
-        if not model.training_data_cached():
-            model.cache_batched_data(train, "train", num_samples=train_samples)
-            model.cache_batched_data(valid, "valid", num_samples=valid_samples)
+            model.fit()
 
-            # sess.run(tf.compat.v1.global_variables_initializer())
-        model.fit()
+            val_loss = model.evaluate()
 
-        val_loss = model.evaluate()
-
-        if val_loss < best_loss:
-            opt_manager.update_score(params, val_loss, model)
-            best_loss = val_loss
-
-            # tf.compat.v1.keras.backend.set_session(default_keras_session)
+            if val_loss < best_loss:
+                opt_manager.update_score(params, val_loss, model)
+                best_loss = val_loss
 
     print("*** Running tests ***")
-    # tf.compat.v1.reset_default_graph()
-    # with tf.Graph().as_default(), tf.compat.v1.Session(config=tf_config) as sess:
-    #     tf.compat.v1.keras.backend.set_session(sess)
     best_params = opt_manager.get_best_params()
     model = ModelClass(best_params, use_cudnn=use_gpu)
 
@@ -168,8 +146,6 @@ def train_test_tft(expt_name,
     p90_loss = utils.numpy_normalised_quantile_loss(
         extract_numerical_data(targets), extract_numerical_data(p90_forecast), 0.9)
 
-        # tf.compat.v1.keras.backend.set_session(default_keras_session)
-
     print("Training completed @ {}".format(dte.datetime.now()))
     print("Best validation loss = {}".format(val_loss))
     print("Params:")
@@ -188,15 +164,19 @@ def train_test_tft(expt_name,
     return results
 
 
-# tensorboard --logdir src/algorithms/tft/outputs/saved_models/volatility/fixed/logs/fit
+# tensorboard --logdir src/algorithms/tft2/outputs/saved_models/volatility/fixed/logs/fit
 if __name__ == "__main__":
+    print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
+    print("Is Cuda Gpu Available: ", tf.test.is_gpu_available(cuda_only=True))
+    print("Device Name: ", tf.test.gpu_device_name())
     print('TF eager execution: {}'.format(tf.executing_eagerly()))
-    name = 'volatility'
-    experiment_name = 'fixed_complete'
+
+    name = 'electricity'
+    experiment_name = 'fixed'
     config = ExperimentConfig(name, None)
     formatter = config.make_data_formatter()
-    save_forecast = False
-    results = train_test_tft(expt_name='volatility',
+    save_forecast = True
+    results = train_test_tft(expt_name=name,
                              use_gpu='yes',
                              model_folder=os.path.join(config.model_folder, experiment_name),
                              data_csv_path=config.data_csv_path,

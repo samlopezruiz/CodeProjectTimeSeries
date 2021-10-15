@@ -3,7 +3,7 @@ from algorithms.gpregress.gp_func import initialize_pop, evaluate_pop
 from algorithms.gpregress.math import protected_div, protected_sqrt
 from algorithms.gpregress.standalone import print_tree
 from algorithms.stroganoff.tests.multi import func_ts
-from timeseries.models.lorenz.functions.dataprep import split_uv_seq_one_step
+from timeseries.experiments.lorenz.functions.dataprep import split_uv_seq_one_step
 import operator
 import numpy as np
 

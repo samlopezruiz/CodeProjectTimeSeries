@@ -117,3 +117,17 @@ def read_csv(file_path, datetime_col='datetime'):
     return pd.read_csv(file_path, header=0, infer_datetime_format=True,
                        parse_dates=[datetime_col], index_col=[datetime_col],
                        converters={'vol': eval, 'volp': eval})
+
+
+def load_file(file_path, end=".z"):
+    file_path[-1] = file_path[-1] + end
+    path = os.path.join(*file_path)
+    if os.path.exists(path):
+        print("\nLoading", file_path[-1])
+        if file_path[-1].endswith(".csv") or file_path[-1].endswith(".txt"):
+            data = read_csv(path)
+        else:
+            data = joblib.load(path)
+        return data
+    else:
+        raise Exception("file {} doesn't exist".format(path))

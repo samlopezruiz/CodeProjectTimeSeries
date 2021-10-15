@@ -5,7 +5,7 @@ import pandas as pd
 
 from algorithms.dchange.func import direct_change
 from algorithms.hmm.func import fitHMM
-from timeseries.models.lorenz.functions.functions import train_test_split
+from timeseries.experiments.lorenz.functions.functions import train_test_split
 from timeseries.plotly.plot import plotly_3d, plotly_phase_plots, plotly_time_series
 
 

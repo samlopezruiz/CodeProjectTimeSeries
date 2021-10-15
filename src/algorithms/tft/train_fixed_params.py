@@ -201,7 +201,7 @@ if __name__ == "__main__":
                              model_folder=os.path.join(config.model_folder, experiment_name),
                              data_csv_path=config.data_csv_path,
                              data_formatter=formatter,
-                             use_testing_mode=True)
+                             use_testing_mode=False)
 
     if save_forecast:
         save_forecasts(config, experiment_name, results)

@@ -7,7 +7,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 from timeseries.data.lorenz.lorenz import lorenz_wrapper
-from timeseries.models.lorenz.functions.preprocessing import preprocess
+from timeseries.experiments.lorenz.functions.preprocessing import preprocess
 from timeseries.utils.files import new_dir
 
 # sns.set_theme(style="white")

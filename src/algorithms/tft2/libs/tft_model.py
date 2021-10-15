@@ -13,6 +13,9 @@ import gc
 import json
 import os
 import shutil
+import time
+
+from tqdm import tqdm
 
 import src.algorithms.tft2.data_formatters.base
 import src.algorithms.tft2.libs.utils as utils
@@ -422,8 +425,8 @@ class TemporalFusionTransformer(object):
         self.column_definition = params['column_definition']
 
         # Network params
-        self.quantiles = [0.1, 0.5, 0.9]
-        self.use_cudnn = False  # Whether to use GPU optimised LSTM
+        self.quantiles = params.get('quantiles', [0.1, 0.5, 0.9])
+        self.use_cudnn = use_cudnn  # Whether to use GPU optimised LSTM
         self.hidden_layer_size = int(params['hidden_layer_size'])
         self.dropout_rate = float(params['dropout_rate'])
         self.max_gradient_norm = float(params['max_gradient_norm'])
@@ -728,7 +731,8 @@ class TemporalFusionTransformer(object):
 
         # Combine all data
         for k in data_map:
-            data_map[k] = np.concatenate(data_map[k], axis=0)
+            non_empty_map = [batch for batch in data_map[k] if batch is not None]
+            data_map[k] = np.concatenate(non_empty_map, axis=0)
 
         # Shorten target so we only get decoder steps
         data_map['outputs'] = data_map['outputs'][:, self.num_encoder_steps:, :]
@@ -896,26 +900,18 @@ class TemporalFusionTransformer(object):
         # LSTM layer
         def get_lstm(return_state):
             """Returns LSTM cell initialized with default parameters."""
-            if self.use_cudnn:
-                lstm = tf.compat.v1.keras.layers.CuDNNLSTM(
-                    self.hidden_layer_size,
-                    return_sequences=True,
-                    return_state=return_state,
-                    stateful=False,
-                )
-            else:
-                lstm = tf.keras.layers.LSTM(
-                    self.hidden_layer_size,
-                    return_sequences=True,
-                    return_state=return_state,
-                    stateful=False,
-                    # Additional params to ensure LSTM matches CuDNN, See TF 2.0 :
-                    # (https://www.tensorflow.org/api_docs/python/tf/keras/layers/LSTM)
-                    activation='tanh',
-                    recurrent_activation='sigmoid',
-                    recurrent_dropout=0,
-                    unroll=False,
-                    use_bias=True)
+            lstm = tf.keras.layers.LSTM(
+                self.hidden_layer_size,
+                return_sequences=True,
+                return_state=return_state,
+                stateful=False,
+                # Additional params to ensure LSTM matches CuDNN, See TF 2.0 :
+                # (https://www.tensorflow.org/api_docs/python/tf/keras/layers/LSTM)
+                activation='tanh',
+                recurrent_activation='sigmoid',
+                recurrent_dropout=0,
+                unroll=False,
+                use_bias=True)
             return lstm
 
         history_lstm, state_h, state_c \
@@ -996,9 +992,10 @@ class TemporalFusionTransformer(object):
 
         transformer_layer, all_inputs, attention_components = self._build_base_graph()
 
-        outputs = tf.keras.layers.TimeDistributed(
-            tf.keras.layers.Dense(self.output_size * len(self.quantiles))) \
+        quantile_dense = tf.keras.layers.Dense(self.output_size * len(self.quantiles), name="dense_quantiles")
+        outputs = tf.keras.layers.TimeDistributed(quantile_dense, name="td_quantiles")\
             (transformer_layer[Ellipsis, self.num_encoder_steps:, :])
+
 
         self._attention_components = attention_components
 
@@ -1053,12 +1050,13 @@ class TemporalFusionTransformer(object):
 
         return model
 
-    def fit(self, train_df=None, valid_df=None):
+    def fit(self, prefetch_data=True, train_df=None, valid_df=None):
         """Fits deep neural network for given training and validation data.
 
     Args:
       train_df: DataFrame for training data
       valid_df: DataFrame for validation data
+      :param prefetch_data: prefetch training and validation data
     """
 
         print('*** Fitting {} ***'.format(self.name))
@@ -1107,19 +1105,37 @@ class TemporalFusionTransformer(object):
 
         all_callbacks = callbacks
 
-        self.model.fit(
-            x=data,
-            y=np.concatenate([labels, labels, labels], axis=-1),
-            sample_weight=active_flags,
-            epochs=self.num_epochs,
-            batch_size=self.minibatch_size,
-            validation_data=(val_data,
-                             np.concatenate([val_labels, val_labels, val_labels], axis=-1),
-                             val_flags),
-            callbacks=all_callbacks,
-            shuffle=True,
-            use_multiprocessing=True,
-            workers=self.n_multiprocessing_workers)
+        t0 = time.time()
+        if prefetch_data:
+            train_dataset = tf.data.Dataset.from_tensor_slices((data,
+                                                                np.concatenate([labels, labels, labels], axis=-1))
+                                                               ).prefetch(tf.data.AUTOTUNE)
+            val_dataset = tf.data.Dataset.from_tensor_slices((val_data,
+                                                              np.concatenate([val_labels, val_labels, val_labels], axis=-1),
+                                                              val_flags)
+                                                             ).prefetch(tf.data.AUTOTUNE)
+            self.model.fit(
+                x=train_dataset.shuffle(data.shape[0]).batch(self.minibatch_size),
+                epochs=self.num_epochs,
+                validation_data=val_dataset.shuffle(val_data.shape[0]).batch(self.minibatch_size),
+                callbacks=all_callbacks,
+                use_multiprocessing=True)
+        else:
+            self.model.fit(
+                x=data,
+                y=np.concatenate([labels, labels, labels], axis=-1),
+                sample_weight=active_flags,
+                epochs=self.num_epochs,
+                batch_size=self.minibatch_size,
+                validation_data=(val_data,
+                                 np.concatenate([val_labels, val_labels, val_labels], axis=-1),
+                                 val_flags),
+                callbacks=all_callbacks,
+                shuffle=True,
+                use_multiprocessing=True,
+                workers=self.n_multiprocessing_workers)
+
+        print('Training finished in {}s'.format(round(time.time() - t0, 0)))
 
         # Load best checkpoint again
         tmp_checkpont = self.get_keras_saved_path(self._temp_folder)
@@ -1199,7 +1215,7 @@ class TemporalFusionTransformer(object):
             flat_prediction = pd.DataFrame(
                 prediction[:, :, 0],
                 columns=[
-                    't+{}'.format(i)
+                    't+{}'.format(i + 1)
                     for i in range(self.time_steps - self.num_encoder_steps)
                 ])
             cols = list(flat_prediction.columns)
@@ -1222,7 +1238,7 @@ class TemporalFusionTransformer(object):
 
         return {k: format_outputs(process_map[k]) for k in process_map}
 
-    def get_attention(self, df):
+    def get_attention(self, df=None):
         """Computes TFT attention weights for a given dataset.
 
     Args:
@@ -1232,8 +1248,12 @@ class TemporalFusionTransformer(object):
         Dictionary of numpy arrays for temporal attention weights and variable
           selection weights, along with their identifiers and time indices
     """
+        if df is None:
+            print('Using cached data')
+            data = TFTDataCache.get('valid')
+        else:
+            data = self._batch_data(df)
 
-        data = self._batch_data(df)
         inputs = data['inputs']
         identifiers = data['identifier']
         time = data['time']
@@ -1266,8 +1286,9 @@ class TemporalFusionTransformer(object):
         ]
 
         # Get attention weights, while avoiding large memory increases
+        print('Computing Attention Weights')
         attention_by_batch = [
-            get_batch_attention_weights(batch) for batch in batched_inputs
+            get_batch_attention_weights(batch) for batch in tqdm(batched_inputs)
         ]
         attention_weights = {}
         for k in self._attention_components:

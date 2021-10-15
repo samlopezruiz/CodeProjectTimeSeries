@@ -2,6 +2,8 @@ import pandas as pd
 import os
 from datetime import date
 import datetime
+
+from timeseries.experiments.utils.files import create_dir, get_new_file_path
 from timeseries.utils.files import new_dir
 
 template = ["plotly", "plotly_white", "plotly_dark", "ggplot2", "seaborn", "none"]
@@ -45,13 +47,13 @@ def set_y_labels(f, features, fig):
         fig['layout']['yaxis' + str(i + 1)]['title'] = features[i]
 
 
-def plotly_save(fig, file_path, size):
+def plotly_save(fig, file_path, size, use_date_suffix=False):
     today = date.today()
 
     print("saving .html and .png")
-    new_dir(file_path[0])
-    image_path = file_path[:-1].copy() + [file_path[-1] + '_' + datetime.datetime.now().strftime("%Y_%m_%d_%H-%M") + ".png"]
-    html_path = file_path[:-1].copy() + [file_path[-1] + '_' + datetime.datetime.now().strftime("%Y_%m_%d_%H-%M") + ".html"]
+    create_dir(file_path)
+    image_path = get_new_file_path(file_path, '.png', use_date_suffix)
+    html_path = get_new_file_path(file_path, '.html', use_date_suffix)
     if size is None:
         size = (1980, 1080)
 

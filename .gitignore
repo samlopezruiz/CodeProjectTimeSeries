@@ -208,6 +208,7 @@ fabric.properties
 /src/timeseries/models/lorenz/multivariate/onestep/wavenet/results/
 /src/timeseries/models/lorenz/multivariate/onestep/wavenet/images/
 
+/src/timeseries/models/lorenz/univariate/onestep/gp/images/
 /src/timeseries/models/lorenz/univariate/onestep/cnn/images/
 /src/timeseries/models/lorenz/univariate/onestep/cnn/results/
 /src/timeseries/models/lorenz/univariate/onestep/compare/results/
@@ -222,3 +223,9 @@ fabric.properties
 /src/timeseries/models/lorenz/univariate/onestep/stroganoff/images/
 /src/timeseries/models/lorenz/univariate/onestep/wavenet/results/
 /src/timeseries/models/lorenz/univariate/onestep/wavenet/images/
+/src/timeseries/models/market/split/img/
+/src/timeseries/models/market/split/res/
+/src/timeseries/models/market/regime/img/
+/src/timeseries/models/market/regime/res/
+/src/timeseries/models/market/outputs/
+/src/timeseries/models/market/additional_data/res/

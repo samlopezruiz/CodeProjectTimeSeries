@@ -4,8 +4,8 @@ import os
 import joblib
 import pandas as pd
 
-from timeseries.models.utils.metrics import get_data_error
-from timeseries.models.utils.results import load_results, rename_ensemble, get_col_and_rename, concat_sort_results
+from timeseries.experiments.utils.metrics import get_data_error
+from timeseries.experiments.utils.results import load_results, rename_ensemble, get_col_and_rename, concat_sort_results
 
 
 def new_dir(file_path):

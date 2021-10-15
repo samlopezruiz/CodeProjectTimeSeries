@@ -113,6 +113,35 @@ def numpy_normalised_quantile_loss(y, y_pred, quantile):
   return 2 * quantile_loss / normaliser
 
 
+def numpy_normalised_quantile_loss_moo(y, y_pred, quantile):
+  """Computes normalised quantile loss for numpy arrays.
+
+  Uses the q-Risk metric as defined in the "Training Procedure" section of the
+  main TFT paper.
+
+  Args:
+    y: Targets
+    y_pred: Predictions
+    quantile: Quantile to use for loss calculations (between 0 & 1)
+
+  Returns:
+    Float for normalised quantile loss.
+  """
+  prediction_underflow = y - y_pred
+  gamma = int(quantile >= 0.5)
+  weighted_errors_1 = gamma * quantile * np.maximum(prediction_underflow, 0.) \
+      + (1. - gamma) * (1. - quantile) * np.maximum(-prediction_underflow, 0.)
+
+  weighted_errors_2 = (1. - gamma) * quantile * np.maximum(prediction_underflow, 0.) \
+                      + gamma * (1. - quantile) * np.maximum(-prediction_underflow, 0.)
+
+  quantile_loss_1 = weighted_errors_1.mean()
+  quantile_loss_2 = weighted_errors_2.mean()
+  normaliser = y.abs().mean()
+
+  return [2 * quantile_loss_1 / normaliser, 2 * quantile_loss_2 / normaliser]
+
+
 # OS related functions.
 def create_folder_if_not_exist(directory):
   """Creates folder if it doesn't exist.

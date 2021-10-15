@@ -1,8 +1,8 @@
 from timeseries.data.lorenz.lorenz import regime_multivariate_lorenz
-from timeseries.models.lorenz.multivariate.multistep.cnnlstm.func import cnnlstm_get_multi_step_mv_funcs
-from timeseries.models.market.multivariate.architectures.cnnlstm import cnnlstm_func
-from timeseries.models.market.utils.harness import eval_forecast
-from timeseries.models.market.utils.preprocessing import preprocess
+from timeseries.experiments.lorenz.multivariate.multistep.cnnlstm.func import cnnlstm_get_multi_step_mv_funcs
+from timeseries.experiments.market.multivariate.architectures.cnnlstm import cnnlstm_func
+from timeseries.experiments.market.utils.harness import eval_forecast
+from timeseries.experiments.market.utils.preprocessing import preprocess
 
 if __name__ == '__main__':
     in_cfg = {'steps': 6, 'save_results': False, 'verbose': 1, 'plot_title': True, 'plot_hist': False,

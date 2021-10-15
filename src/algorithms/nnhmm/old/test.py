@@ -1,15 +1,15 @@
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-from timeseries.models.utils.forecast import merge_forecast_df
-from timeseries.models.utils.metrics import forecast_accuracy
+from timeseries.experiments.utils.forecast import merge_forecast_df
+from timeseries.experiments.utils.metrics import forecast_accuracy
 from timeseries.plotly.plot import plotly_time_series
 
-from timeseries.models.market.utils.harness import reshape_bundle, prep_forecast
+from timeseries.experiments.market.utils.harness import reshape_bundle, prep_forecast
 import tensorflow as tf
 from algorithms.nnhmm.func import nnhmm_fit
 from timeseries.data.lorenz.lorenz import regime_multivariate_lorenz
-from timeseries.models.market.multivariate.architectures.cnnlstm import cnnlstm_func
-from timeseries.models.market.utils.preprocessing import preprocess, reconstruct_pred
+from timeseries.experiments.market.multivariate.architectures.cnnlstm import cnnlstm_func
+from timeseries.experiments.market.utils.preprocessing import preprocess, reconstruct_pred
 import numpy as np
 
 

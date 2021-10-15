@@ -6,7 +6,7 @@ from timeseries.data.market.market_files import load_market
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
-from timeseries.models.utils.config import unpack_in_cfg
+from timeseries.experiments.utils.config import unpack_in_cfg
 from timeseries.plotly.plot import plotly_ts_candles
 
 if __name__ == '__main__':

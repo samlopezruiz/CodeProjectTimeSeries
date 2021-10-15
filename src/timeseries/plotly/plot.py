@@ -9,8 +9,9 @@ from matplotlib import pyplot as plt
 from plotly import graph_objects as go
 from plotly.subplots import make_subplots
 
-from timeseries.models.utils.config import unpack_in_cfg
-from timeseries.models.utils.models import get_suffix
+from algorithms.moo.utils.plot import plot_multiple_pop
+from timeseries.experiments.utils.config import unpack_in_cfg
+from timeseries.experiments.utils.models import get_suffix
 from timeseries.plotly.utils import plotly_params_check, plotly_save
 from timeseries.utils.dataframes import check_cols_exists, check_col_exists
 from timeseries.utils.files import load_data_err
@@ -158,9 +159,23 @@ def plotly_time_series(df, title=None, save=False, legend=True, file_path=None, 
     # return fig
 
 
-def plotly_ts_regime(df, title=None, save=False, legend=False, file_path=None, size=(1980, 1080), regime_col=None,
-                     regimes=None, markers='lines+markers', xaxis_title="time", markersize=5, plot_title=True,
-                     template='plotly_white', adjust_height=(False, 0.6), label_scale=1, **kwargs):
+def plotly_ts_regime(df,
+                     title=None,
+                     save=False,
+                     legend=False,
+                     file_path=None,
+                     size=(1980, 1080),
+                     regime_col=None,
+                     regimes=None,
+                     markers='lines+markers',
+                     xaxis_title="time",
+                     markersize=5,
+                     plot_title=True,
+                     template='plotly_white',
+                     adjust_height=(False, 0.6),
+                     label_scale=1,
+                     use_date_suffix=False,
+                     **kwargs):
     params_ok, params = plotly_params_check(df, **kwargs)
     features, rows, cols, type_plot, alphas = params
     n_rows = len(set(rows))
@@ -226,7 +241,7 @@ def plotly_ts_regime(df, title=None, save=False, legend=False, file_path=None, s
     time.sleep(1.5)
 
     if file_path is not None and save is True:
-        plotly_save(fig, file_path, size)
+        plotly_save(fig, file_path, size, use_date_suffix)
 
 
 def plotly_one_series(s, title=None, save=False, legend=True, file_path=None, size=(1980, 1080),
@@ -961,7 +976,6 @@ def plotly_ts_regime2():
 def plotly_time_series_bars_hist(df, color_col, bars_cols, features=None, title=None, save=False, legend=True,
                                  n_bins=200, file_path=None, size=(1980, 1080), markers='lines+markers', markersize=5,
                                  plot_title=True, label_scale=1):
-
     features = df.columns if features is None else features
     col_exist = [check_cols_exists(df, features), check_cols_exists(df, bars_cols), check_col_exists(df, color_col)]
     if not np.all(col_exist):
@@ -1038,7 +1052,6 @@ def plotly_time_series_bars_hist(df, color_col, bars_cols, features=None, title=
         else:
             fig['layout']['yaxis' + str(i + 2)]['title'] = color_col
 
-
     fig.update_layout(template="plotly_white", xaxis_rangeslider_visible=False, barmode='overlay',
                       title=title if plot_title else None, legend=dict(font=dict(size=18 * label_scale)))
     fig.update_traces(opacity=0.9)
@@ -1051,3 +1064,27 @@ def plotly_time_series_bars_hist(df, color_col, bars_cols, features=None, title=
 
     if file_path is not None and save is True:
         plotly_save(fig, file_path, size)
+
+def plot_results_moo(res, file_path=None, title=None, save_plots=False, use_date=False):
+    # Plotting hypervolume
+    plot_hist_hv(res, save=save_plots)
+
+    # Plot Optimum Solutions
+    pop_hist = [gen.pop.get('F') for gen in res.history]
+    if res.opt.get('F').shape[1] > 3:
+        pop = pop_hist[-1][:, :3]
+        opt = res.opt.get('F')[:, :3]
+    elif res.opt.get('F').shape[1] == 3:
+        pop = pop_hist[-1]
+        opt = res.opt.get('F')
+    else:
+        print('Objective space: dim < 3. Shape={}'.format(res.opt.get('F').shape[1]))
+
+    plot_multiple_pop([pop, opt],
+                      labels=['population', 'optimum'],
+                      save=save_plots,
+                      opacities=[.2, 1],
+                      plot_border=True,
+                      file_path=file_path,
+                      title=title,
+                      use_date=use_date)

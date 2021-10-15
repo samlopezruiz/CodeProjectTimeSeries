@@ -26,6 +26,10 @@ import os
 # import src.algorithms.tft.data_formatters.favorita
 # import src.algorithms.tft.data_formatters.traffic
 import src.algorithms.tft.data_formatters.volatility
+from algorithms.tft2.data_formatters.electricity import ElectricityFormatter
+from algorithms.tft2.data_formatters.favorita import FavoritaFormatter
+from algorithms.tft2.data_formatters.traffic import TrafficFormatter
+from algorithms.tft2.data_formatters.volatility import VolatilityFormatter
 
 
 class ExperimentConfig(object):
@@ -99,10 +103,10 @@ class ExperimentConfig(object):
     """
 
     data_formatter_class = {
-        'volatility': src.algorithms.tft.data_formatters.volatility.VolatilityFormatter,
-        # 'electricity': src.algorithms.tft.data_formatters.electricity.ElectricityFormatter,
-        # 'traffic': src.algorithms.tft.data_formatters.traffic.TrafficFormatter,
-        # 'favorita': src.algorithms.tft.data_formatters.favorita.FavoritaFormatter
+        'volatility': VolatilityFormatter,
+        'electricity': ElectricityFormatter,
+        'traffic': TrafficFormatter,
+        'favorita': FavoritaFormatter
     }
 
     return data_formatter_class[self.experiment]()

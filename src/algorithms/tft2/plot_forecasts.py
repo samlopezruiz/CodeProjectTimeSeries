@@ -43,8 +43,9 @@ def append_scatter_trace(fig, df_ss, feature, opacity, color_ix=None, name=None)
 
 
 if __name__ == "__main__":
-    base_path = 'outputs/results/volatility/fixed_complete/'
-    suffix = '211006-0928'
+    base_path = 'outputs/results/electricity/fixed_complete/'
+    # base_path = 'outputs/results/volatility/fixed_complete/'
+    suffix = '_211012-1710'
     targets = pd.read_csv(join(base_path, 'targets'+suffix+'.csv'), index_col=0)
     p10_forecast = pd.read_csv(join(base_path, 'p10_forecast'+suffix+'.csv'), index_col=0)
     p50_forecast = pd.read_csv(join(base_path, 'p50_forecast'+suffix+'.csv'), index_col=0)
@@ -77,7 +78,7 @@ if __name__ == "__main__":
         forecasts_grouped[key] = identifiers_forecasts
 
     # %%
-    id = identifiers[25]
+    id = identifiers[5]
 
     color_counter = 0
     fig = make_subplots(rows=1, cols=1, shared_xaxes=True)

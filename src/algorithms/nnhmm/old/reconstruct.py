@@ -8,8 +8,8 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf
 from algorithms.nnhmm.func import nnhmm_fit
 from timeseries.data.lorenz.lorenz import regime_multivariate_lorenz
-from timeseries.models.market.multivariate.architectures.cnnlstm import cnnlstm_func
-from timeseries.models.market.utils.preprocessing import preprocess, reconstruct
+from timeseries.experiments.market.multivariate.architectures.cnnlstm import cnnlstm_func
+from timeseries.experiments.market.utils.preprocessing import preprocess, reconstruct
 import numpy as np
 
 if __name__ == '__main__':

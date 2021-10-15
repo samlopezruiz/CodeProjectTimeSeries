@@ -1,19 +1,19 @@
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 from algorithms.nnhmm.func import nnhmm_fit
-from timeseries.models.market.multivariate.architectures.cnnlstm import cnnlstm_func
+from timeseries.experiments.market.multivariate.architectures.cnnlstm import cnnlstm_func
 
 
 import tensorflow as tf
 import numpy as np
-from timeseries.models.lorenz.functions.functions import get_bundles, ismv, reshape_bundle, \
+from timeseries.experiments.lorenz.functions.functions import get_bundles, ismv, reshape_bundle, \
     prep_forecast
-from timeseries.models.utils.forecast import merge_forecast_df
-from timeseries.models.utils.metrics import forecast_accuracy
+from timeseries.experiments.utils.forecast import merge_forecast_df
+from timeseries.experiments.utils.metrics import forecast_accuracy
 from timeseries.plotly.plot import plotly_time_series
-from timeseries.models.lorenz.functions.preprocessing import preprocess, reconstruct
+from timeseries.experiments.lorenz.functions.preprocessing import preprocess, reconstruct
 from timeseries.data.lorenz.lorenz import lorenz_wrapper
-from timeseries.models.lorenz.multivariate.multistep.cnnlstm.func import cnnlstm_get_multi_step_mv_funcs
+from timeseries.experiments.lorenz.multivariate.multistep.cnnlstm.func import cnnlstm_get_multi_step_mv_funcs
 # %%
 
 if __name__ == '__main__':

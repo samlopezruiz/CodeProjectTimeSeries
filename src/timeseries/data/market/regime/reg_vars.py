@@ -1,8 +1,8 @@
 from algorithms.hmm.func import append_hmm_states
 from algorithms.hmm.plot import plot_hmm
 from timeseries.data.market.files.utils import load_multiple_markets
-from timeseries.models.market.split.func import subset
-from timeseries.models.market.utils.preprocessing import add_features
+from timeseries.experiments.market.split.func import subset
+from timeseries.experiments.market.utils.preprocessing import add_features
 from timeseries.plotly.plot import plotly_ts_candles
 
 if __name__ == '__main__':

@@ -6,7 +6,7 @@ import pandas as pd
 import libs.hyperparam_opt as hyperparam_opt
 import libs.tft_model
 from algorithms.tft2.expt_settings.configs import ExperimentConfig
-
+import tensorflow as tf
 ModelClass = libs.tft_model.TemporalFusionTransformer
 
 
@@ -14,7 +14,8 @@ def get_attention_tft_model(use_gpu,
                             model_folder,
                             data_csv_path,
                             data_formatter,
-                            get_attentions=False):
+                            get_attentions=False,
+                            samples=None):
     """Trains tft based on defined model params.
 
   Args:
@@ -38,6 +39,9 @@ def get_attention_tft_model(use_gpu,
     params = data_formatter.get_default_model_params()
     params["model_folder"] = model_folder
 
+    if samples is not None:
+        valid_samples = samples
+
     # Sets up hyperparam manager
     print("*** Loading hyperparm manager ***")
     opt_manager = hyperparam_opt.HyperparamOptManager({k: [params[k]] for k in params}, fixed_params, model_folder)
@@ -48,10 +52,15 @@ def get_attention_tft_model(use_gpu,
         print("{}: {}".format(k, params[k]))
 
     best_params = opt_manager.get_best_params()
-    model = ModelClass(best_params)
-    model.load(opt_manager.hyperparam_folder, use_keras_loadings=True)
 
-    attentions = model.get_attention(valid) if get_attentions else None
+    with tf.device('/device:GPU:0' if use_gpu else "/cpu:0"):
+        model = ModelClass(best_params)
+        model.load(opt_manager.hyperparam_folder, use_keras_loadings=True)
+
+        if not model.training_data_cached():
+            model.cache_batched_data(valid, "valid", num_samples=valid_samples)
+
+        attentions = model.get_attention() if get_attentions else None
 
     results = {'model': model,
                'attentions': attentions,
@@ -60,16 +69,23 @@ def get_attention_tft_model(use_gpu,
 
 
 if __name__ == "__main__":
-    name = 'volatility'
+    print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
+    print("Is Cuda Gpu Available: ", tf.test.is_gpu_available(cuda_only=True))
+    print("Device Name: ", tf.test.gpu_device_name())
+    print('TF eager execution: {}'.format(tf.executing_eagerly()))
+    name = 'electricity'
     experiment_name = 'fixed_complete'
     config = ExperimentConfig(name, None)
     formatter = config.make_data_formatter()
 
     model_folder = os.path.join(config.model_folder, experiment_name)
-    results = get_attention_tft_model(use_gpu='yes',
+    results = get_attention_tft_model(use_gpu=False,
                                       model_folder=model_folder,
                                       data_csv_path=config.data_csv_path,
                                       data_formatter=formatter,
-                                      get_attentions=True)
+                                      get_attentions=True,
+                                      samples=None)
     del results['model']
+    print('Saving File')
     joblib.dump(results, os.path.join(config.results_folder, experiment_name, 'attention_valid.z'))
+    print('Done')

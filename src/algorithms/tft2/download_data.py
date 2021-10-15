@@ -629,4 +629,4 @@ if __name__ == '__main__':
     return args.expt_name, args.force_download == 'yes', root_folder
 
   name, force, folder = get_args()
-  main(expt_name='volatility', force_download=True, output_folder='outputs')
+  main(expt_name='electricity', force_download=True, output_folder='outputs')

@@ -2,10 +2,10 @@ import os
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
-from timeseries.models.market.utils.harness import train_model, test_model
+from timeseries.experiments.market.utils.harness import train_model, test_model
 from timeseries.data.lorenz.lorenz import regime_multivariate_lorenz
-from timeseries.models.market.multivariate.architectures.cnnlstm import cnnlstm_func
-from timeseries.models.market.utils.preprocessing import preprocess
+from timeseries.experiments.market.multivariate.architectures.cnnlstm import cnnlstm_func
+from timeseries.experiments.market.utils.preprocessing import preprocess
 
 if __name__ == '__main__':
     # %% DATA

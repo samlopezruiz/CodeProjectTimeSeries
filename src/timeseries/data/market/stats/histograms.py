@@ -1,11 +1,11 @@
 import os
 
 from timeseries.data.market.files.utils import load_market
-from timeseries.models.lorenz.functions.preprocessing import preprocess_x
+from timeseries.experiments.lorenz.functions.preprocessing import preprocess_x
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import numpy as np
-from timeseries.models.utils.config import unpack_in_cfg
+from timeseries.experiments.utils.config import unpack_in_cfg
 from timeseries.plotly.plot import plotly_ts_candles
 import seaborn as sns
 import matplotlib.pyplot as plt

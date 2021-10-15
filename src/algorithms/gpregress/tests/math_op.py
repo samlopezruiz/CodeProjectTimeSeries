@@ -1,6 +1,6 @@
 from algorithms.gpregress.math import covert_to_array, Xmat_from_inputX, protected_div, protected_sqrt
 from algorithms.stroganoff.tests.multi import func_ts
-from timeseries.models.lorenz.functions.dataprep import split_uv_seq_one_step
+from timeseries.experiments.lorenz.functions.dataprep import split_uv_seq_one_step
 import numpy as np
 
 if __name__ == '__main__':

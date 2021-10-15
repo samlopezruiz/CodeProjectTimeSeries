@@ -19,7 +19,7 @@ def get_col_mapping(column_definition):
     historical_cols = [
         tup[0]
         for tup in column_definition
-        if tup[2] not in {InputTypes.ID, InputTypes.TIME, InputTypes.OBSERVED_INPUT, InputTypes.STATIC_INPUT}
+        if tup[2] not in {InputTypes.ID, InputTypes.TIME, InputTypes.TARGET, InputTypes.STATIC_INPUT}
     ]
 
     historical_cols += static_cols
@@ -32,3 +32,11 @@ def get_col_mapping(column_definition):
         'historical_inputs': historical_cols
     }
     return col_mappings
+
+
+def extract_numerical_data(data):
+    """Strips out forecast time and identifier columns."""
+    return data[[
+        col for col in data.columns
+        if col not in {"forecast_time", "identifier"}
+    ]]

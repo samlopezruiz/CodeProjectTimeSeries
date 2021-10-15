@@ -1,6 +1,6 @@
 from algorithms.stroganoff.classes import Individual
 from algorithms.stroganoff.tests.multi import func_ts
-from timeseries.models.lorenz.functions.dataprep import split_uv_seq_one_step
+from timeseries.experiments.lorenz.functions.dataprep import split_uv_seq_one_step
 
 if __name__ == '__main__':
     #%%
