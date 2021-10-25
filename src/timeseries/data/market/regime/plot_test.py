@@ -70,9 +70,9 @@ if __name__ == '__main__':
     distplfig = ff.create_distplot(hist_data, group_labels, colors=colors,
                              bin_size=.2, show_rug=False)
 
-    for k in range(len(distplfig.data)):
-        fig.add_trace(distplfig.data[k],
-        row=2, col=2
-    )
+    for k in range(len(distplfig.data_map)):
+        fig.add_trace(distplfig.data_map[k],
+                      row=2, col=2
+                      )
     fig.update_layout(barmode='overlay')
     fig.show()

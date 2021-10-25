@@ -9,7 +9,7 @@ from matplotlib import pyplot as plt
 from plotly import graph_objects as go
 from plotly.subplots import make_subplots
 
-from algorithms.moo.utils.plot import plot_multiple_pop
+from algorithms.moo.utils.plot import plot_multiple_pop, plot_hist_hv
 from timeseries.experiments.utils.config import unpack_in_cfg
 from timeseries.experiments.utils.models import get_suffix
 from timeseries.plotly.utils import plotly_params_check, plotly_save
@@ -495,7 +495,7 @@ def plot_bar_summary(df, errors, title=None, save=False, file_path=None, size=(1
                    error_y=errors.iloc[:, i] if i < errors.shape[1] else None))
 
     for i, bar in enumerate(bars):
-        for trace in bar.data:
+        for trace in bar.data_map:
             fig.add_trace(trace, 1, 1 + i)
 
     if not shared_yaxes:
@@ -538,7 +538,7 @@ def plot_bar_summary_2rows(df, errors, df2, errors2, title=None, save=False, fil
                    error_y=errors.iloc[:, i] if i < errors.shape[1] else None))
 
     for i, bar in enumerate(bars):
-        for trace in bar.data:
+        for trace in bar.data_map:
             fig.add_trace(trace, 1, 1 + i)
 
     bars = []
@@ -548,7 +548,7 @@ def plot_bar_summary_2rows(df, errors, df2, errors2, title=None, save=False, fil
                    error_y=errors2.iloc[:, i] if i < errors2.shape[1] else None))
 
     for i, bar in enumerate(bars):
-        for trace in bar.data:
+        for trace in bar.data_map:
             fig.add_trace(trace, 2, 1 + i)
 
     if not shared_yaxes:

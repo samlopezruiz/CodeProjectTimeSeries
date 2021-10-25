@@ -19,17 +19,8 @@ class ExperimentConfig(object):
     default_experiments = ['snp']
 
     def __init__(self,
-                 experiment,
-                 market_file,
-                 additional_file=None,
-                 regime_file=None,
-                 root_folder=None,
-                 macd_vars=None,
-                 returns_vars=None,
-                 add_prefix_col=None,
-                 add_macd_vars=None,
-                 add_returns_vars=None,
-                 true_target=None,
+                 formatter,
+                 cfg,
                  ):
         """Creates configs based on default experiment chosen.
 
@@ -39,8 +30,10 @@ class ExperimentConfig(object):
     """
 
 
-        if experiment not in self.default_experiments:
-            raise ValueError('Unrecognised experiment={}'.format(experiment))
+        if formatter not in self.default_experiments:
+            raise ValueError('Unrecognised experiment={}'.format(formatter))
+
+        root_folder = cfg.get('root_folder', None)
 
         # Defines all relevant paths
         if root_folder is None:
@@ -49,23 +42,23 @@ class ExperimentConfig(object):
             print('Using root folder {}'.format(root_folder))
 
         in_folder = os.path.normpath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '..'))
-        self.macd_vars = macd_vars
-        self.returns_vars = returns_vars
-        self.market_file = market_file
-        self.additional_file = additional_file
-        self.regime_file = regime_file
+        self.macd_vars = cfg.get('macd_vars', [])
+        self.returns_vars = cfg.get('returns_vars', [])
+        self.market_file = cfg['market_file']
+        self.additional_file = cfg.get('additional_file', None)
+        self.regime_file = cfg.get('regime_file', None)
         self.root_folder = root_folder
-        self.experiment = experiment
-        self.add_prefix_col = add_prefix_col
-        self.add_macd_vars = add_macd_vars
-        self.add_returns_vars = add_returns_vars
-        self.data_folder = os.path.join(root_folder, 'data', experiment)
-        self.model_folder = os.path.join(root_folder, 'saved_models', experiment)
-        self.results_folder = os.path.join(root_folder, 'results', experiment)
+        self.experiment = formatter
+        self.add_prefix_col = cfg.get('add_prefix_col', None)
+        self.add_macd_vars = cfg.get('add_macd_vars', None)
+        self.add_returns_vars = cfg.get('add_returns_vars', None)
+        self.data_folder = os.path.join(root_folder, 'data', formatter)
+        self.model_folder = os.path.join(root_folder, 'saved_models', formatter)
+        self.results_folder = os.path.join(root_folder, 'results', formatter)
         self.split_folder = os.path.join(in_folder, 'split', 'res')
         self.regime_folder = os.path.join(in_folder, 'regime', 'res')
         self.additional_folder = os.path.join(in_folder, 'additional_data', 'res')
-        self.true_target = true_target
+        self.true_target = cfg.get('true_target', None)
 
         # Creates folders if they don't exist
         for relevant_directory in [

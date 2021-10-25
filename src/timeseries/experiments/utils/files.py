@@ -3,49 +3,56 @@ import os
 from datetime import datetime
 import joblib
 
-
-def create_dir(file_path):
+def get_new_file_path(file_path, extension, use_date_suffix):
     if not isinstance(file_path, list):
-        raise Exception('file path is not a list: {}'.format(file_path))
+        path = os.path.dirname(file_path)
+        filename = file_path.split('\\')[-1]
+    else:
+        path = os.path.join(*file_path[:-1])
+        filename = file_path[-1]
 
-    for i in range(1, len(file_path)):
-        path = os.path.join(*file_path[:i])
-        if not os.path.exists(path):
-            os.makedirs(path)
+    ex = len(extension)
+    if use_date_suffix:
+        filename = filename + '_' + datetime.now().strftime("%d_%m_%Y %H-%M") + extension
+    else:
+        filename = filename + extension
+        if os.path.exists(os.path.join(path, filename)):
+            counter = 1
+            filename = '{}_1{}'.format(filename[:-ex], extension)
+            while True:
+                filename = '{}{}{}'.format(filename[:-(ex + 1)],
+                                           str(counter),
+                                           extension)
+                if not os.path.exists(os.path.join(path, filename)):
+                    return os.path.join(path, filename)
+                else:
+                    counter += 1
+        else:
+            return os.path.join(path, filename)
+    return os.path.join(path, filename)
 
 
-def save_df(df, file_path=['results', 'res'], use_date=False):
+def save_df(df, file_path, use_date_suffix=False):
     create_dir(file_path)
-    path = os.path.join(get_new_file_path(file_path, '.csv', use_date))
+    path = os.path.join(get_new_file_path(file_path, '.csv', use_date_suffix))
     print('Saving Dataframe to: \n{}'.format(path))
     df.to_csv(path)
 
 
-def save_vars(vars, file_path=['results', 'res'], use_date_suffix=False):
+def save_vars(vars, file_path, extension='.z', use_date_suffix=False):
     create_dir(file_path)
-    path = os.path.join(*get_new_file_path(file_path, '.z', use_date_suffix))
+    path = get_new_file_path(file_path, extension, use_date_suffix)
     print('Saving Vars to: \n{}'.format(path))
     joblib.dump(vars, path)
 
 
-def get_new_file_path(file_path, extension, use_date_suffix):
-    ex = len(extension)
-    new_file_path = copy.copy(file_path)
-    if use_date_suffix:
-        new_file_path[-1] = new_file_path[-1] + '_' + datetime.now().strftime("%d_%m_%Y %H-%M") + extension
+def create_dir(file_path, filename_included=True):
+    if not isinstance(file_path, list):
+        path = os.path.dirname(file_path) if filename_included else file_path
+        if not os.path.exists(path):
+            os.makedirs(path)
     else:
-        new_file_path[-1] = new_file_path[-1] + extension
-        if os.path.exists(os.path.join(*new_file_path)):
-            counter = 1
-            new_file_path[-1] = '{}_1{}'.format(new_file_path[-1][:-ex], extension)
-            while True:
-                new_file_path[-1] = '{}{}{}'.format(new_file_path[-1][:-(ex + 1)],
-                                                    str(counter),
-                                                    extension)
-                if not os.path.exists(os.path.join(*new_file_path)):
-                    return new_file_path
-                else:
-                    counter += 1
-        else:
-            return new_file_path
-    return new_file_path
+        for i in range(1, len(file_path)):
+            path = os.path.join(*file_path[:i])
+            if not os.path.exists(path):
+                os.makedirs(path)

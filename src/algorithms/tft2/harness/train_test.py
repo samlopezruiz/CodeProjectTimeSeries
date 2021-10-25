@@ -31,8 +31,8 @@ def q_loss_model(data_formatter, model, test, return_output_map=False):
         return q_losses
 
 
-def moo_q_loss_model(data_formatter, model, test, return_output_map=False):
-    unscaled_output_map = predict_model(data_formatter, model, test)
+def moo_q_loss_model(data_formatter, model, test, return_output_map=False, multi_processing=False):
+    unscaled_output_map = predict_model(data_formatter, model, test, multi_processing)
     q_losses = compute_moo_q_loss(model.quantiles, unscaled_output_map)
 
     if return_output_map:
@@ -52,7 +52,7 @@ def compute_q_loss(quantiles, unscaled_output_map):
     return q_losses
 
 
-def compute_moo_q_loss(quantiles, unscaled_output_map, per_time_step=True):
+def compute_moo_q_loss(quantiles, unscaled_output_map):
     targets = unscaled_output_map['targets']
     losses = {}
     for q in quantiles:
@@ -65,8 +65,8 @@ def compute_moo_q_loss(quantiles, unscaled_output_map, per_time_step=True):
     return np.array(q_losses)
 
 
-def predict_model(data_formatter, model, test):
-    output_map = model.predict(test, return_targets=True)
+def predict_model(data_formatter, model, test, multi_processing=False):
+    output_map = model.predict(test, return_targets=True, multi_processing=multi_processing)
     unscaled_output_map = {}
     for k, df in output_map.items():
         unscaled_output_map[k] = data_formatter.format_predictions(df)

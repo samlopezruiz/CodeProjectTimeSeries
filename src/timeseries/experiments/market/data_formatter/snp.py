@@ -16,7 +16,8 @@ from timeseries.experiments.market.utils.data import new_cols_names
 _add_column_definition = [
     ('NQc_r', DataTypes.REAL_VALUED, InputTypes.OBSERVED_INPUT),
     ('NQ_atr', DataTypes.REAL_VALUED, InputTypes.OBSERVED_INPUT),
-    ('NQc_macd', DataTypes.REAL_VALUED, InputTypes.OBSERVED_INPUT)
+    ('NQc_macd', DataTypes.REAL_VALUED, InputTypes.OBSERVED_INPUT),
+    ('NQ_volume', DataTypes.REAL_VALUED, InputTypes.OBSERVED_INPUT)
 ]
 
 
@@ -33,11 +34,14 @@ class SnPFormatter(GenericDataFormatter):
         ('subset', DataTypes.CATEGORICAL, InputTypes.ID),
         ('datetime', DataTypes.DATE, InputTypes.TIME),
         ('ESc_r', DataTypes.REAL_VALUED, InputTypes.TARGET),
-        ('ESc', DataTypes.REAL_VALUED, InputTypes.OBSERVED_INPUT),
-        ('NQc', DataTypes.REAL_VALUED, InputTypes.OBSERVED_INPUT),
+        # ('ESc', DataTypes.REAL_VALUED, InputTypes.OBSERVED_INPUT),
+        # ('NQc', DataTypes.REAL_VALUED, InputTypes.OBSERVED_INPUT),
         ('ESo_r', DataTypes.REAL_VALUED, InputTypes.OBSERVED_INPUT),
         ('ESh_r', DataTypes.REAL_VALUED, InputTypes.OBSERVED_INPUT),
         ('ESl_r', DataTypes.REAL_VALUED, InputTypes.OBSERVED_INPUT),
+        ('volume', DataTypes.REAL_VALUED, InputTypes.OBSERVED_INPUT),
+        ('adl', DataTypes.REAL_VALUED, InputTypes.OBSERVED_INPUT),
+        ('delta', DataTypes.REAL_VALUED, InputTypes.OBSERVED_INPUT),
         ('atr', DataTypes.REAL_VALUED, InputTypes.OBSERVED_INPUT),
         ('ESc_macd', DataTypes.REAL_VALUED, InputTypes.OBSERVED_INPUT),
         ('days_from_start', DataTypes.REAL_VALUED, InputTypes.KNOWN_INPUT),
@@ -50,6 +54,25 @@ class SnPFormatter(GenericDataFormatter):
     ]
 
     _column_definition += _add_column_definition
+
+    fixed_params = {
+        'quantiles': [0.1, 0.5, 0.9],
+        'num_epochs': 100,
+        'early_stopping_patience': 10,
+        'multiprocessing_workers': 12,
+    }
+
+    model_params = {
+        'total_time_steps': 50 + 5,
+        'num_encoder_steps': 50,
+        'dropout_rate': 0.3,
+        'hidden_layer_size': 160,
+        'learning_rate': 0.01,
+        'minibatch_size': 64,
+        'max_gradient_norm': 0.01,
+        'num_heads': 4,
+        'stack_size': 1,
+    }
 
     def __init__(self):
         """Initialises formatter."""
@@ -244,31 +267,20 @@ class SnPFormatter(GenericDataFormatter):
         return output
 
     # Default params
+    def update_model_params(self, new_cfg):
+        for key, val in new_cfg.items():
+            self.model_params[key] = val
+
+    def update_fixed_params(self, new_cfg):
+        for key, val in new_cfg.items():
+            self.fixed_params[key] = val
+
     def get_fixed_params(self):
         """Returns fixed model parameters for experiments."""
 
-        fixed_params = {
-            'quantiles': [0.1, 0.5, 0.9],
-            'total_time_steps': 50 + 5,
-            'num_encoder_steps': 50,
-            'num_epochs': 100,
-            'early_stopping_patience': 5,
-            'multiprocessing_workers': 5,
-        }
-
-        return fixed_params
+        return self.fixed_params
 
     def get_default_model_params(self):
         """Returns default optimised model parameters."""
 
-        model_params = {
-            'dropout_rate': 0.3,
-            'hidden_layer_size': 160,
-            'learning_rate': 0.01,
-            'minibatch_size': 64,
-            'max_gradient_norm': 0.01,
-            'num_heads': 4,
-            'stack_size': 1
-        }
-
-        return model_params
+        return self.model_params

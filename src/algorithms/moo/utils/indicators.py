@@ -4,9 +4,9 @@ import numpy as np
 from deap.tools._hypervolume import hv
 from pymoo.factory import get_performance_indicator
 
-from src.models.moo.utils.deap.utils import get_deap_pops_obj, get_pymoo_pops_obj
-from src.models.moo.utils.plot import get_fitnesses
-from src.utils.util import array_from_lists
+from algorithms.moo.utils.plot import get_fitnesses
+from algorithms.moo.utils.utils import get_deap_pops_obj, get_pymoo_pops_obj
+from timeseries.utils.utils import array_from_lists
 
 
 def hypervolume(individuals, ref=None):

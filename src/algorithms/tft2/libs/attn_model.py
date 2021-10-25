@@ -46,7 +46,7 @@ class AttnModel(tf.keras.Model):
         x, y, sample_weight = data_adapter.unpack_x_y_sample_weight(data)
         # Run forward pass.
         with tf.GradientTape() as tape:
-            y_pred, _, _, _, _ = self(x, training=True) # modified line to consider attention_weights
+            y_pred = self(x, training=True)[0] # modified line to consider attention_weights
             # y_pred = self(x, training=True)
             loss = self.compiled_loss(
                 y, y_pred, sample_weight, regularization_losses=self.losses)
@@ -86,7 +86,8 @@ class AttnModel(tf.keras.Model):
         data = data_adapter.expand_1d(data)
         x, _, _ = data_adapter.unpack_x_y_sample_weight(data)
         # y_pred = self(x, training=False)
-        y_pred, _, _, _, _ = self(x, training=False)
+        # first output are predicitons
+        y_pred = self(x, training=False)[0]
         return y_pred
 
     def test_step(self, data):
@@ -116,7 +117,8 @@ class AttnModel(tf.keras.Model):
         x, y, sample_weight = data_adapter.unpack_x_y_sample_weight(data)
 
         # y_pred = self(x, training=False)
-        y_pred, _, _, _, _ = self(x, training=False)
+        y_pred = self(x, training=False)[0]
+        # y_pred, _, _, _, _ = self(x, training=False)
         # Updates stateful loss metrics.
         self.compiled_loss(
             y, y_pred, sample_weight, regularization_losses=self.losses)

@@ -128,6 +128,6 @@ if __name__ == "__main__":
                             data_config=config.data_config,
                             data_formatter=formatter)
 
-    results['reconstructed_forecasts'] = reconstruct_forecasts(formatter, results['forecasts'])
-    if save_forecast:
-        save_forecasts(config, experiment_name, results)
+    # results['reconstructed_forecasts'] = reconstruct_forecasts(formatter, results['forecasts'])
+    # if save_forecast:
+    #     save_forecasts(config, experiment_name, results)

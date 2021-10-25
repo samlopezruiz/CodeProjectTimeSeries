@@ -214,8 +214,12 @@ class GenericDataFormatter(abc.ABC):
   def get_experiment_params(self):
     """Returns fixed model parameters for experiments."""
 
+    # required_keys = [
+    #     'quantiles', 'total_time_steps', 'num_encoder_steps', 'num_epochs',
+    #     'early_stopping_patience', 'multiprocessing_workers'
+    # ]
     required_keys = [
-        'total_time_steps', 'num_encoder_steps', 'num_epochs',
+        'quantiles', 'num_epochs',
         'early_stopping_patience', 'multiprocessing_workers'
     ]
 

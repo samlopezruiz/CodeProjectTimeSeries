@@ -46,7 +46,7 @@ def create_title(prob_cfg, algo_cfg, algorithm):
            get_type_str(algorithm) + ' CFG: ' + str(algo_cfg)
 
 
-def get_algorithm(name, algo_cfg, n_obj=3):
+def get_algorithm(name, algo_cfg, n_obj=3, sampling=get_sampling("real_random")):
     algo_options = ['SMSEMOA', 'MOEAD', 'NSGA2', 'NSGA3']
     if name not in algo_options:
         raise Exception('Algorithm {} not valid. Options are: {}'.format(name, str(algo_options)))
@@ -59,14 +59,14 @@ def get_algorithm(name, algo_cfg, n_obj=3):
         algorithm = SMSEMOA(
             ref_point=algo_cfg['hv_ref'],
             pop_size=algo_cfg['pop_size'],
-            sampling=get_sampling("real_random"),
+            sampling=sampling,
             crossover=get_crossover("real_sbx", prob=cbx_pb, eta=cbx_eta),
             mutation=get_mutation("real_pm", eta=mut_eta),
-            eliminate_duplicates=True
+            eliminate_duplicates=True,
         )
     elif name == 'MOEAD':
         algorithm = MOEAD(
-            sampling=get_sampling("real_random"),
+            sampling=sampling,
             crossover=get_crossover("real_sbx", prob=cbx_pb, eta=cbx_eta),
             mutation=get_mutation("real_pm", eta=mut_eta),
             ref_dirs=ref_dirs,
@@ -76,16 +76,16 @@ def get_algorithm(name, algo_cfg, n_obj=3):
     elif name == 'NSGA2':
         algorithm = NSGA2(
             pop_size=algo_cfg['pop_size'],
-            sampling=get_sampling("real_random"),
+            sampling=sampling,
             crossover=get_crossover("real_sbx", prob=cbx_pb, eta=cbx_eta),
             mutation=get_mutation("real_pm", eta=mut_eta),
             eliminate_duplicates=True,
-            ref_dirs=ref_dirs
+            ref_dirs=ref_dirs,
         )
     elif name == 'NSGA3':
         algorithm = NSGA3(
             pop_size=algo_cfg['pop_size'],
-            sampling=get_sampling("real_random"),
+            sampling=sampling,
             crossover=get_crossover("real_sbx", prob=cbx_pb, eta=cbx_eta),
             mutation=get_mutation("real_pm", eta=mut_eta),
             eliminate_duplicates=True,

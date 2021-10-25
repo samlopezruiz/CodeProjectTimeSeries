@@ -5,9 +5,9 @@ from numpy import mean, std
 from tqdm import tqdm
 
 
-def repeat(run_func, args, n_repeat, parallel=True):
+def repeat(run_func, args, n_repeat, parallel=True, n_jobs=None):
     if parallel:
-        executor = Parallel(n_jobs=cpu_count())
+        executor = Parallel(n_jobs=cpu_count() if n_jobs is None else n_jobs)
         tasks = (delayed(run_func)(*args) for _ in tqdm(range(n_repeat)))
         result = executor(tasks)
     else:
@@ -15,16 +15,16 @@ def repeat(run_func, args, n_repeat, parallel=True):
     return result
 
 
-def repeat_different_args(run_func, args, parallel=True):
+def repeat_different_args(run_func, args, parallel=True, n_jobs=None, backend=None, use_tqdm=True):
     if not isinstance(args, list):
         raise Exception('args have to be a list')
 
     if parallel:
-        executor = Parallel(n_jobs=cpu_count())
-        tasks = (delayed(run_func)(*arg) for arg in tqdm(args))
+        executor = Parallel(n_jobs=cpu_count() if n_jobs is None else n_jobs, backend=backend)
+        tasks = (delayed(run_func)(*arg) for arg in (tqdm(args) if use_tqdm else args))
         result = executor(tasks)
     else:
-        result = [run_func(*arg) for arg in tqdm(args)]
+        result = [run_func(*arg) for arg in (tqdm(args) if use_tqdm else args)]
     return result
 
 

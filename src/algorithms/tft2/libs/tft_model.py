@@ -396,7 +396,7 @@ class TemporalFusionTransformer(object):
     model: Keras model for TFT
   """
 
-    def __init__(self, raw_params, use_cudnn=False):
+    def __init__(self, raw_params, use_cudnn=False, verbose=2, tb_callback=True):
         """Builds TFT from parameters.
 
     Args:
@@ -425,8 +425,9 @@ class TemporalFusionTransformer(object):
         self.column_definition = params['column_definition']
 
         # Network params
+        self.tb_callback = tb_callback
         self.quantiles = params.get('quantiles', [0.1, 0.5, 0.9])
-        self.use_cudnn = use_cudnn  # Whether to use GPU optimised LSTM
+        self.use_cudnn = use_cudnn
         self.hidden_layer_size = int(params['hidden_layer_size'])
         self.dropout_rate = float(params['dropout_rate'])
         self.max_gradient_norm = float(params['max_gradient_norm'])
@@ -438,6 +439,7 @@ class TemporalFusionTransformer(object):
         self.num_encoder_steps = int(params['num_encoder_steps'])
         self.num_stacks = int(params['stack_size'])
         self.num_heads = int(params['num_heads'])
+        self.output_labels = None
 
         # Serialisation options
         self._temp_folder = os.path.join(params['model_folder'], 'tmp')
@@ -447,10 +449,12 @@ class TemporalFusionTransformer(object):
         self._input_placeholder = None
         self._attention_components = None
         self._prediction_parts = None
+        self.verbose = verbose
 
-        print('*** {} params ***'.format(self.name))
-        for k in params:
-            print('# {} = {}'.format(k, params[k]))
+        if self.verbose > 1:
+            print('*** {} params ***'.format(self.name))
+            for k in params:
+                print('# {} = {}'.format(k, params[k]))
 
         # Build model
         self.model = self.build_model()
@@ -596,7 +600,8 @@ class TemporalFusionTransformer(object):
         else:
             TFTDataCache.update(self._batch_data(data), cache_key)
 
-        print('Cached data "{}" updated'.format(cache_key))
+        if self.verbose > 0:
+            print('Cached data "{}" updated'.format(cache_key))
 
     def _batch_sampled_data(self, data, max_samples):
         """Samples segments into a compatible format.
@@ -993,20 +998,19 @@ class TemporalFusionTransformer(object):
         transformer_layer, all_inputs, attention_components = self._build_base_graph()
 
         quantile_dense = tf.keras.layers.Dense(self.output_size * len(self.quantiles), name="dense_quantiles")
-        outputs = tf.keras.layers.TimeDistributed(quantile_dense, name="td_quantiles")\
-            (transformer_layer[Ellipsis, self.num_encoder_steps:, :])
-
+        transformer_output = transformer_layer[Ellipsis, self.num_encoder_steps:, :]
+        outputs = tf.keras.layers.TimeDistributed(quantile_dense, name="td_quantiles")(transformer_output)
 
         self._attention_components = attention_components
 
         adam = tf.keras.optimizers.Adam(learning_rate=self.learning_rate, clipnorm=self.max_gradient_norm)
 
         attn_outputs = [attention_components[key] for key in attention_components]
-        model = AttnModel(inputs=all_inputs, outputs=[outputs] + attn_outputs)
+        model = AttnModel(inputs=all_inputs, outputs=[outputs] + attn_outputs + [transformer_output])
         # model = tf.keras.Model(inputs=all_inputs, outputs=outputs)
 
         # print(model.summary())
-
+        self.output_labels = ['quantiles'] + [key for key in attention_components] + ['transformer_output']
         valid_quantiles = self.quantiles
         output_size = self.output_size
 
@@ -1065,9 +1069,6 @@ class TemporalFusionTransformer(object):
 
         # Add relevant callbacks
         callbacks = [
-            tf.keras.callbacks.TensorBoard(
-                log_dir=log_dir,
-                histogram_freq=0),
             tf.keras.callbacks.EarlyStopping(
                 monitor='val_loss',
                 patience=self.early_stopping_patience,
@@ -1079,6 +1080,11 @@ class TemporalFusionTransformer(object):
                 save_weights_only=True),
             tf.keras.callbacks.TerminateOnNaN()
         ]
+
+        if self.tb_callback:
+            callbacks.append(tf.keras.callbacks.TensorBoard(
+                            log_dir=log_dir,
+                            histogram_freq=0))
 
         print('Getting batched_data')
         if train_df is None:
@@ -1111,7 +1117,8 @@ class TemporalFusionTransformer(object):
                                                                 np.concatenate([labels, labels, labels], axis=-1))
                                                                ).prefetch(tf.data.AUTOTUNE)
             val_dataset = tf.data.Dataset.from_tensor_slices((val_data,
-                                                              np.concatenate([val_labels, val_labels, val_labels], axis=-1),
+                                                              np.concatenate([val_labels, val_labels, val_labels],
+                                                                             axis=-1),
                                                               val_flags)
                                                              ).prefetch(tf.data.AUTOTUNE)
             self.model.fit(
@@ -1180,7 +1187,7 @@ class TemporalFusionTransformer(object):
 
         return metrics[eval_metric]
 
-    def predict(self, df, return_targets=False):
+    def predict(self, df, return_targets=False, multi_processing=True):
         """Computes predictions for a given input dataset.
 
     Args:
@@ -1201,34 +1208,24 @@ class TemporalFusionTransformer(object):
 
         combined = self.model.predict(
             inputs,
-            workers=16,
-            use_multiprocessing=True,
+            workers=16 if multi_processing else 1,
+            use_multiprocessing=multi_processing,
             batch_size=self.minibatch_size)
 
         # Format output_csv
         if self.output_size != 1:
             raise NotImplementedError('Current version only supports 1D targets!')
 
-        def format_outputs(prediction):
-            """Returns formatted dataframes for prediction."""
+        output_map = self.create_output_map(combined, data, return_targets)
 
-            flat_prediction = pd.DataFrame(
-                prediction[:, :, 0],
-                columns=[
-                    't+{}'.format(i + 1)
-                    for i in range(self.time_steps - self.num_encoder_steps)
-                ])
-            cols = list(flat_prediction.columns)
-            flat_prediction['forecast_time'] = time[:, self.num_encoder_steps - 1, 0]
-            flat_prediction['identifier'] = identifier[:, 0, 0]
+        return output_map
 
-            # Arrange in order
-            return flat_prediction[['forecast_time', 'identifier'] + cols]
-
+    def create_output_map(self, quantile_prediction, data, return_targets=True):
+        outputs = data['outputs']
         # Extract predictions for each quantile into different entries
         process_map = {
             'p{}'.format(int(q * 100)):
-                combined[Ellipsis, i * self.output_size:(i + 1) * self.output_size]
+                quantile_prediction[Ellipsis, i * self.output_size:(i + 1) * self.output_size]
             for i, q in enumerate(self.quantiles)
         }
 
@@ -1236,7 +1233,51 @@ class TemporalFusionTransformer(object):
             # Add targets if relevant
             process_map['targets'] = outputs
 
-        return {k: format_outputs(process_map[k]) for k in process_map}
+        return {k: self.format_outputs(process_map[k], data) for k in process_map}
+
+    def predict_all(self, df, batch_size):
+
+        print('Batching data...')
+        data = self._batch_data(df)
+        inputs = data['inputs']
+
+        batches = []
+        for i in range((inputs.shape[0] // batch_size) + 1):
+            batches.append(inputs[i * batch_size:min(i * batch_size + batch_size, inputs.shape[0]), Ellipsis])
+
+        print('Prediction All Outputs...')
+        outputs = []
+        for batch in batches:
+            outputs.append([out.numpy() for out in self.model(batch)])
+
+        concat_outputs = []
+        for i in range(len(outputs[0])):
+            concat_outputs.append(np.concatenate([out[i] for out in outputs], axis=0 if i != 1 else 1))
+
+        result = {}
+        for label, output in zip(self.output_labels, concat_outputs):
+            result[label] = output
+
+        output_map = self.create_output_map(result['quantiles'], data, return_targets=True)
+        return result, output_map, data
+
+    def format_outputs(self, prediction, data):
+        """Returns formatted dataframes for prediction."""
+        time = data['time']
+        identifier = data['identifier']
+
+        flat_prediction = pd.DataFrame(
+            prediction[:, :, 0],
+            columns=[
+                't+{}'.format(i + 1)
+                for i in range(self.time_steps - self.num_encoder_steps)
+            ])
+        cols = list(flat_prediction.columns)
+        flat_prediction['forecast_time'] = time[:, self.num_encoder_steps - 1, 0]
+        flat_prediction['identifier'] = identifier[:, 0, 0]
+
+        # Arrange in order
+        return flat_prediction[['forecast_time', 'identifier'] + cols]
 
     def get_attention(self, df=None):
         """Computes TFT attention weights for a given dataset.
@@ -1262,7 +1303,7 @@ class TemporalFusionTransformer(object):
             """Returns weights for a given minibatch of data."""
             input_placeholder = self._input_placeholder
             attention_weights = {}
-            y_pred, self_att, static_weights, historical_flags, future_flags = self.model(
+            y_pred, self_att, static_weights, historical_flags, future_flags, trans_output = self.model(
                 input_batch.astype(np.float32), training=False)
             attention_weights = {
                 'decoder_self_attn': self_att,

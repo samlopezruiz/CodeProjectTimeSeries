@@ -74,15 +74,17 @@ def load_test_tft(expt_name,
 
     print("*** Running tests ***")
     model_params = opt_manager.get_next_parameters()
-    model = ModelClass(model_params, use_cudnn=use_gpu)
 
-    model.load(opt_manager.hyperparam_folder, use_keras_loadings=True)
+    with tf.device('/device:GPU:0' if use_gpu else "/cpu:0"):
+        model = ModelClass(model_params, use_cudnn=use_gpu)
 
-    print("Computing best validation loss")
-    val_loss = model.evaluate(valid)
+        model.load(opt_manager.hyperparam_folder, use_keras_loadings=True)
 
-    print("Computing test loss")
-    output_map = model.predict(test, return_targets=True)
+        print("Computing best validation loss")
+        val_loss = model.evaluate(valid)
+
+        print("Computing test loss")
+        output_map = model.predict(test, return_targets=True)
 
     unscaled_output_map = {}
     for k, df in output_map.items():

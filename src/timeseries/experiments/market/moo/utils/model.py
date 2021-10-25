@@ -1,4 +1,8 @@
 import numpy as np
+import pandas as pd
+
+from algorithms.tft2.harness.train_test import compute_moo_q_loss
+from algorithms.tft2.utils.nn import dense_layer_output
 
 
 def get_last_layer_weights(model, layer_name='quantiles'):
@@ -32,3 +36,70 @@ def reconstruct_weights(ind, params):
             reconstruct.append(ind[flatten_dim[i - 1]:flatten_dim[i - 1] + flatten_dim[i]].reshape(shapes[i]))
 
     return reconstruct
+
+
+
+def create_output_map(prediction,
+                      quantiles,
+                      output_size,
+                      data_map,
+                      time_steps,
+                      num_encoder_steps):
+    # Extract predictions for each quantile into different entries
+    process_map = {
+        'p{}'.format(int(q * 100)):
+            prediction[Ellipsis, i * output_size:(i + 1) * output_size]
+        for i, q in enumerate(quantiles)
+    }
+
+    process_map['targets'] = data_map['outputs']
+
+    return {k: format_outputs(process_map[k],
+                              data_map,
+                              time_steps,
+                              num_encoder_steps) for k in process_map}
+
+
+def format_outputs(prediction,
+                   data_map,
+                   time_steps,
+                   num_encoder_steps):
+    """Returns formatted dataframes for prediction."""
+    time = data_map['time']
+    identifier = data_map['identifier']
+
+    flat_prediction = pd.DataFrame(
+        prediction[:, :, 0],
+        columns=[
+            't+{}'.format(i + 1)
+            for i in range(time_steps - num_encoder_steps)
+        ])
+    cols = list(flat_prediction.columns)
+    flat_prediction['forecast_time'] = time[:, num_encoder_steps - 1, 0]
+    flat_prediction['identifier'] = identifier[:, 0, 0]
+
+    # Arrange in order
+    return flat_prediction[['forecast_time', 'identifier'] + cols]
+
+
+def run_moo_nn(x,
+               quantiles,
+               output_size,
+               data_map,
+               time_steps,
+               num_encoder_steps,
+               transformer_output,
+               w_params,
+               loss_to_obj):
+    new_weights = reconstruct_weights(x, w_params)
+    prediction = dense_layer_output(new_weights, transformer_output)
+    unscaled_output_map = create_output_map(prediction,
+                                            quantiles,
+                                            output_size,
+                                            data_map,
+                                            time_steps,
+                                            num_encoder_steps)
+    losses = compute_moo_q_loss(quantiles, unscaled_output_map)
+
+    return loss_to_obj(losses)
+

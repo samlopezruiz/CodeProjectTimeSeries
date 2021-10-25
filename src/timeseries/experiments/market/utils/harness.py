@@ -1,3 +1,4 @@
+import datetime as dte
 import multiprocessing
 import time
 from contextlib import contextmanager
@@ -10,6 +11,11 @@ from tensorflow import keras
 from tqdm import tqdm
 
 from algorithms.nnhmm.func import nnhmm_fit, nnhmm_predict
+from algorithms.tft2.libs import utils as utils
+from algorithms.tft2.libs.hyperparam_opt import HyperparamOptManager
+from algorithms.tft2.libs.tft_model import TemporalFusionTransformer
+from algorithms.tft2.utils.data import extract_numerical_data
+# from timeseries.experiments.market.train_tft_fixed_params import formatter
 from timeseries.experiments.market.utils.console import print_progress, print_pred_time, print_progress_loop
 from timeseries.experiments.market.utils.dataprep import to_np
 from timeseries.experiments.market.utils.models import get_params
@@ -25,6 +31,8 @@ def poolcontext(*args, **kwargs):
     pool = multiprocessing.pool.ThreadPool(*args, **kwargs)
     yield pool
     pool.terminate()
+
+
 '''
 EXAMPLE CODE TO USE MULTIPROCESSING
 partial_model_pred = partial(model_pred, model, model_cfg, model_func, model_n_steps_out, ss,
@@ -32,7 +40,6 @@ partial_model_pred = partial(model_pred, model, model_cfg, model_func, model_n_s
 with poolcontext(processes=cpu_count()) as pool:
     result = pool.map(partial_model_pred, range(len(test_x_pp)))
 '''
-
 
 
 def reshape_bundle(bundle, is_mv=True):
@@ -285,3 +292,123 @@ def get_bundles(is_mv, steps, test, train, reg_prob_test):
     else:
         reg_prob_bundle = reg_prob_test[::steps]
     return history, test_bundles, y_test, reg_prob_bundle
+
+
+def train_test_tft(use_gpu,
+                   prefetch_data,
+                   model_folder,
+                   data_config,
+                   data_formatter,
+                   use_testing_mode=False,
+                   predict_eval=True,
+                   tb_callback=True,
+                   use_best_params=False):
+    """Trains tft based on defined model params.
+  Args:
+      :param use_gpu: Whether to run tensorflow with GPU operations
+      :param use_testing_mode: Uses a smaller models and data sizes for testing purposes
+      :param data_formatter: Dataset-specific data fromatter
+      :param data_config: Data input file configurations
+      :param model_folder: Folder path where models are serialized
+      :param prefetch_data: Prefetch data for training
+  """
+
+    num_repeats = 1
+
+    print("Loading & splitting data...")
+    train, valid, test = data_formatter.split_data(data_config)
+    train_samples, valid_samples = data_formatter.get_num_samples_for_calibration()
+
+    # Sets up default params
+    fixed_params = data_formatter.get_experiment_params()
+    params = data_formatter.get_default_model_params()
+    params["model_folder"] = model_folder
+
+    # Parameter overrides for testing only! Small sizes used to speed up script.
+    if use_testing_mode:
+        fixed_params["num_epochs"] = 1
+        params["hidden_layer_size"] = 5
+        train_samples, valid_samples = 100, 10
+
+    # Sets up hyperparam manager
+    print("*** Loading hyperparm manager ***")
+    opt_manager = HyperparamOptManager({k: [params[k]] for k in params}, fixed_params, model_folder)
+
+    # Training -- one iteration only
+    print("*** Running calibration ***")
+    print("Params Selected:")
+    for k in params:
+        print("{}: {}".format(k, params[k]))
+
+    best_loss = np.Inf
+    for _ in range(num_repeats):
+
+        with tf.device('/device:GPU:0' if use_gpu else "/cpu:0"):
+
+            params = opt_manager.get_next_parameters()
+            model = TemporalFusionTransformer(params, use_cudnn=use_gpu, tb_callback=tb_callback)
+
+            if not model.training_data_cached():
+                model.cache_batched_data(train, "train", num_samples=train_samples)
+                model.cache_batched_data(valid, "valid", num_samples=valid_samples)
+
+            model.fit(prefetch_data)
+
+            val_loss = model.evaluate()
+
+            if val_loss < best_loss:
+                opt_manager.update_score(params, val_loss, model)
+                best_loss = val_loss
+
+    print("Training completed @ {}".format(dte.datetime.now()))
+    print("Validation loss = {}".format(val_loss))
+
+    if predict_eval:
+        if use_best_params:
+            print("*** Running tests ***")
+            params = opt_manager.get_best_params()
+            model = TemporalFusionTransformer(params, use_cudnn=use_gpu)
+
+            model.load(opt_manager.hyperparam_folder, use_keras_loadings=True)
+
+            print("Computing best validation loss")
+            val_loss = model.evaluate(valid)
+            print("Best Validation loss = {}".format(val_loss))
+
+        print("Training completed @ {}".format(dte.datetime.now()))
+        print("Best validation loss = {}".format(val_loss))
+
+        return predict_from_tft(params, data_formatter, model, test)
+    else:
+        return val_loss
+
+#
+def predict_from_tft(best_params, data_formatter, model, test):
+    print("Computing test loss")
+    output_map = model.predict(test, return_targets=True)
+    unscaled_output_map = {}
+    for k, df in output_map.items():
+        unscaled_output_map[k] = data_formatter.format_predictions(df)
+
+    losses = {}
+    targets = unscaled_output_map['targets']
+    for q in model.quantiles:
+        key = 'p{}'.format(int(q * 100))
+        losses[key + '_loss'] = utils.numpy_normalised_quantile_loss(
+            extract_numerical_data(targets), extract_numerical_data(unscaled_output_map[key]), q)
+
+
+    print("Params:")
+    for k in best_params:
+        print(k, " = ", best_params[k])
+    print("\nNormalised Quantile Losses for Test Data: {}".format(
+        [p_loss.mean() for k, p_loss in losses.items()]))
+
+    results = {'quantiles': model.quantiles,
+               'forecasts': unscaled_output_map,
+               'losses': losses,
+               'target': data_formatter.test_true_y.columns[0] if data_formatter.test_true_y is not None else None,
+               'fixed_params': data_formatter.get_fixed_params(),
+               'model_params': data_formatter.get_default_model_params()}
+
+    return results
