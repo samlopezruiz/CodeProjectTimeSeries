@@ -2,7 +2,6 @@ import os
 
 import tensorflow as tf
 
-from timeseries.data.market.utils.names import get_inst_ohlc_names
 from timeseries.experiments.market.expt_settings.configs import ExperimentConfig
 from timeseries.experiments.market.utils.harness import train_test_tft
 from timeseries.experiments.market.utils.preprocessing import reconstruct_forecasts
@@ -25,27 +24,25 @@ if __name__ == "__main__":
 
     experiment_cfg = {'formatter': 'snp',
                       'experiment_name': '60t',
-                      'market_file': 'split_ES_minute_60T_dwn_smpl_2018-01_to_2021-06_g12week_r25_4',
-                      'additional_file': 'subset_NQ_minute_60T_dwn_smpl_2012-01_to_2021-07',
-                      'regime_file': 'regime_ESc_r_ESc_macd_T10Y2Y_VIX',
-                      'macd_vars': ['ESc'],
-                      'returns_vars': get_inst_ohlc_names('ES'),
-                      'add_prefix_col': 'NQ',
-                      'add_macd_vars': ['NQc'],
-                      'add_returns_vars': get_inst_ohlc_names('NQ'),
-                      'true_target': 'ESc'
+                      'dataset_config': 'ES_60t_regime_ESc_r_ESc_macd_T10Y2Y_VIX',
+                      'vars_definition': 'ES_r_all'
                       }
 
     config = ExperimentConfig(experiment_cfg['formatter'], experiment_cfg)
     formatter = config.make_data_formatter()
     formatter.update_model_params(model_cfg)
+    model_folder = os.path.join(config.model_folder, experiment_cfg['experiment_name'])
 
     results = train_test_tft(use_gpu=True,
                              prefetch_data=False,
-                             model_folder=os.path.join(config.model_folder, experiment_cfg['experiment_name']),
+                             model_folder=model_folder,
                              data_config=config.data_config,
                              data_formatter=formatter,
-                             use_testing_mode=True)
+                             use_testing_mode=True,
+                             predict_eval=True,
+                             tb_callback=True,
+                             use_best_params=False
+                             )
 
     print('Reconstructing forecasts...')
     results['reconstructed_forecasts'] = reconstruct_forecasts(formatter, results['forecasts'])

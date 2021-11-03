@@ -1,0 +1,1 @@
+['../irace_main.py', '--num_encoder_steps=33', '--num_heads=4', '--datfile', 'c5-1.dat']

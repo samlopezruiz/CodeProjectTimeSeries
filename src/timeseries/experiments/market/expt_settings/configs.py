@@ -1,4 +1,6 @@
 import os
+
+from timeseries.data.market.utils.names import get_inst_ohlc_names
 from timeseries.experiments.market.data_formatter.snp import SnPFormatter
 
 
@@ -42,23 +44,29 @@ class ExperimentConfig(object):
             print('Using root folder {}'.format(root_folder))
 
         in_folder = os.path.normpath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '..'))
-        self.macd_vars = cfg.get('macd_vars', [])
-        self.returns_vars = cfg.get('returns_vars', [])
-        self.market_file = cfg['market_file']
-        self.additional_file = cfg.get('additional_file', None)
-        self.regime_file = cfg.get('regime_file', None)
-        self.root_folder = root_folder
+
         self.experiment = formatter
-        self.add_prefix_col = cfg.get('add_prefix_col', None)
-        self.add_macd_vars = cfg.get('add_macd_vars', None)
-        self.add_returns_vars = cfg.get('add_returns_vars', None)
+        self.root_folder = root_folder
+        self.dataset_config = cfg.get('dataset_config', None)
         self.data_folder = os.path.join(root_folder, 'data', formatter)
         self.model_folder = os.path.join(root_folder, 'saved_models', formatter)
         self.results_folder = os.path.join(root_folder, 'results', formatter)
         self.split_folder = os.path.join(in_folder, 'split', 'res')
         self.regime_folder = os.path.join(in_folder, 'regime', 'res')
         self.additional_folder = os.path.join(in_folder, 'additional_data', 'res')
-        self.true_target = cfg.get('true_target', None)
+
+        dataset_cfg = self.get_dataset_cfg()
+
+        # dataset configurations of timeseries
+        self.macd_vars = dataset_cfg.get('macd_vars', [])
+        self.returns_vars = dataset_cfg.get('returns_vars', [])
+        self.market_file = dataset_cfg['market_file']
+        self.additional_file = dataset_cfg.get('additional_file', None)
+        self.regime_file = dataset_cfg.get('regime_file', None)
+        self.add_prefix_col = dataset_cfg.get('additional_prefix_col', None)
+        self.add_macd_vars = dataset_cfg.get('additional_macd_vars', None)
+        self.add_returns_vars = dataset_cfg.get('additional_returns_vars', None)
+        self.true_target = dataset_cfg.get('true_target', None)
 
         # Creates folders if they don't exist
         for relevant_directory in [
@@ -113,3 +121,24 @@ class ExperimentConfig(object):
         }
 
         return data_formatter_class[self.experiment]()
+
+    def get_dataset_cfg(self):
+        dataset_class = {}
+
+        dataset_class['ES_60t_regime_ESc_r_ESc_macd_T10Y2Y_VIX'] = \
+            {'market_file': 'split_ES_minute_60T_dwn_smpl_2018-01_to_2021-06_g12week_r25_4',
+             'additional_file': 'subset_NQ_minute_60T_dwn_smpl_2012-01_to_2021-07',
+             'regime_file': 'regime_ESc_r_ESc_macd_T10Y2Y_VIX',
+             'macd_vars': ['ESc'],
+             'returns_vars': get_inst_ohlc_names('ES'),
+             'additional_prefix_col': 'NQ',
+             'additional_macd_vars': ['NQc'],
+             'additional_returns_vars': get_inst_ohlc_names('NQ'),
+             'true_target': 'ESc'}
+
+        if self.dataset_config not in dataset_class:
+            raise Exception('{} not found in dataset configurations. '
+                            '\nOptions are: \n{}'.format(self.dataset_config, dataset_class.keys()))
+
+        return dataset_class[self.dataset_config]
+

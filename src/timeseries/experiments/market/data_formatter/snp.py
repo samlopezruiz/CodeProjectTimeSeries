@@ -7,9 +7,10 @@ import joblib
 import pandas as pd
 import sklearn.preprocessing
 
-import src.algorithms.tft2.libs.utils as utils
+import algorithms.tft2.libs.utils as utils
 from algorithms.hmm.func import resample_dfs
 from algorithms.tft2.data_formatters.base import GenericDataFormatter, DataTypes, InputTypes
+from timeseries.experiments.market.expt_settings.definitions import variable_definitions
 from timeseries.experiments.market.preprocess.func import add_features
 from timeseries.experiments.market.utils.data import new_cols_names
 
@@ -63,8 +64,8 @@ class SnPFormatter(GenericDataFormatter):
     }
 
     model_params = {
-        'total_time_steps': 50 + 5,
-        'num_encoder_steps': 50,
+        'total_time_steps': 30 + 5,
+        'num_encoder_steps': 30,
         'dropout_rate': 0.3,
         'hidden_layer_size': 160,
         'learning_rate': 0.01,
@@ -74,8 +75,12 @@ class SnPFormatter(GenericDataFormatter):
         'stack_size': 1,
     }
 
-    def __init__(self):
+    def __init__(self, vars_definition):
         """Initialises formatter."""
+        if vars_definition not in variable_definitions.keys():
+            raise Exception('vars_definition'.format(variable_definitions.keys()))
+
+        self._column_definition = variable_definitions[vars_definition]
         self.identifiers = None
         self._real_scalers = None
         self._cat_scalers = None

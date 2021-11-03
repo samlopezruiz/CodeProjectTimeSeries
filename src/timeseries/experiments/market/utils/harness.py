@@ -305,6 +305,9 @@ def train_test_tft(use_gpu,
                    use_best_params=False):
     """Trains tft based on defined model params.
   Args:
+      :param use_best_params:
+      :param tb_callback:
+      :param predict_eval:
       :param use_gpu: Whether to run tensorflow with GPU operations
       :param use_testing_mode: Uses a smaller models and data sizes for testing purposes
       :param data_formatter: Dataset-specific data fromatter

@@ -1,1 +1,0 @@
-['../main.py', '--num_encoder_steps=27', '--num_heads=3', '--datfile', 'c17-1.dat']

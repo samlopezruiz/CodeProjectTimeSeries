@@ -14,8 +14,8 @@ import json
 import os
 import shutil
 
-import src.algorithms.tft.data_formatters.base
-import src.algorithms.tft.libs.utils as utils
+import algorithms.tft.data_formatters.base
+import algorithms.tft.libs.utils as utils
 import numpy as np
 import pandas as pd
 import tensorflow as tf
@@ -33,7 +33,7 @@ Activation = tf.keras.layers.Activation
 Lambda = tf.keras.layers.Lambda
 
 # Default input types.
-InputTypes = src.algorithms.tft.data_formatters.base.InputTypes
+InputTypes = algorithms.tft.data_formatters.base.InputTypes
 
 
 # Layer utility functions.

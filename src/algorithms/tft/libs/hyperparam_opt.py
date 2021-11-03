@@ -28,7 +28,7 @@ from __future__ import print_function
 import collections
 import os
 import shutil
-import src.algorithms.tft.libs.utils as utils
+import algorithms.tft.libs.utils as utils
 import numpy as np
 import pandas as pd
 

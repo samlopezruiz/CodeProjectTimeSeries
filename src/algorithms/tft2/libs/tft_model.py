@@ -17,8 +17,8 @@ import time
 
 from tqdm import tqdm
 
-import src.algorithms.tft2.data_formatters.base
-import src.algorithms.tft2.libs.utils as utils
+import algorithms.tft2.data_formatters.base
+import algorithms.tft2.libs.utils as utils
 import numpy as np
 import pandas as pd
 import tensorflow as tf
@@ -40,7 +40,7 @@ Lambda = tf.keras.layers.Lambda
 Attention = tf.keras.layers.Attention
 
 # Default input types.
-InputTypes = src.algorithms.tft2.data_formatters.base.InputTypes
+InputTypes = algorithms.tft2.data_formatters.base.InputTypes
 
 
 # Layer utility functions.
