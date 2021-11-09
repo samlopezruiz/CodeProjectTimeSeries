@@ -1,13 +1,5 @@
-import copy
-
 import tensorflow as tf
-from keras import callbacks as callbacks_module
-from keras.engine import base_layer
 from keras.engine import data_adapter
-from keras.engine import training_utils
-from keras.utils import tf_utils
-from keras.utils import version_utils
-from tensorflow.python.eager import context
 
 
 class AttnModel(tf.keras.Model):

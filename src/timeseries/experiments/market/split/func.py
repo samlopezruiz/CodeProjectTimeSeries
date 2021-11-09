@@ -15,12 +15,14 @@ def s_threshold(time_diff_cfg):
 
 def set_subsets_and_test(df, split_cfg):
     df_subsets = group_by(df, split_cfg)
+    df_subsets = group_by(df_subsets, split_cfg, new_col_name='test_train_subset')
     if split_cfg['random'] and split_cfg['groups_of'] == 1 and split_cfg['group'] == 'day':
         print('random test split')
         random_test_split(df_subsets, split_cfg)
     else:
         print('simple test split')
         simple_test_split(df_subsets, test_ratio=split_cfg['test_ratio'])
+
     if split_cfg['time_delta_split']:
         s_thold = s_threshold(split_cfg['time_thold'])
         update_subset_time_delta(df_subsets, time_thold=s_thold)
@@ -65,14 +67,14 @@ def time_subset(df, cfg, describe_=True):
     return df_ss
 
 
-def group_by(df_orig, cfg):
+def group_by(df_orig, cfg, new_col_name='subset'):
     group, groups_of = cfg['group'], cfg['groups_of']
     df = df_orig.copy()
     df['year'] = df.index.isocalendar().year
     df['week'] = df.index.isocalendar().week
     df['day'] = df.index.isocalendar().day
     df['hour'] = df.index.hour
-    df['subset'] = 0
+    df[new_col_name] = 0
 
     group_periods = ['year', 'week', 'day', 'hour']
     if group == 'hour':
@@ -84,7 +86,7 @@ def group_by(df_orig, cfg):
     elif group == 'year':
         grp = df.groupby(group_periods[:-3])
     else:
-        print('Group has to be one of: [year, week, day, hour]')
+        raise Exception('Group has to be one of: [year, week, day, hour]')
 
     # dates, dfs, = [], []
     # for group_cols, data in grp:
@@ -98,7 +100,7 @@ def group_by(df_orig, cfg):
     for i, (group_cols, data) in enumerate(grp):
         if i % groups_of == 0:
             g += 1
-        df.loc[data.index, 'subset'] = g
+        df.loc[data.index, new_col_name] = g
     #     group_df = pd.concat([group_df, df], axis=1)
     #
     #     if i % groups_of == 0:
@@ -136,24 +138,24 @@ def merge_train_test_groups(dfs_train, dfs_test):
     return df_merged
 
 
-def update_subset_time_delta(df, time_thold=1000):
-    if 'subset' in df.columns:
+def update_subset_time_delta(df, time_thold=1000, subset_col='subset'):
+    if subset_col in df.columns:
         df['diff_s'] = (pd.Series(df.index).shift(periods=1, fill_value=np.nan) - pd.Series(
             df.index)).dt.total_seconds().values
         time_mask = df['diff_s'] < -time_thold
-        subset_mask = (df['subset'].shift(periods=1, fill_value=0) - df['subset']).eq(-1)
+        subset_mask = (df[subset_col].shift(periods=1, fill_value=0) - df[subset_col]).eq(-1)
         mask = pd.concat([time_mask, subset_mask], axis=1)
-        mask['step'] = mask['diff_s'] | mask['subset']
+        mask['step'] = mask['diff_s'] | mask[subset_col]
         ix_end = df.loc[mask['step'], :].index
 
-        df['subset'] = 0
+        df[subset_col] = 0
         i = 0
         for i in range(len(ix_end) - 1):
-            df.loc[ix_end[i]:ix_end[i + 1], 'subset'] = i + 1
-        df.loc[ix_end[i + 1]:, 'subset'] = i + 2
+            df.loc[ix_end[i]:ix_end[i + 1], subset_col] = i + 1
+        df.loc[ix_end[i + 1]:, subset_col] = i + 2
         df.drop('diff_s', axis=1, inplace=True)
     else:
-        print('subset column not found')
+        print('subset column: {} not found'.format(subset_col))
 
 
 def get_subsets(df_pp, n_states=None, features=None):

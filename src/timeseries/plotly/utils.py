@@ -47,17 +47,17 @@ def set_y_labels(f, features, fig):
         fig['layout']['yaxis' + str(i + 1)]['title'] = features[i]
 
 
-def plotly_save(fig, file_path, size, use_date_suffix=False):
-    today = date.today()
-
-    print("saving .html and .png")
+def plotly_save(fig, file_path, size, save_png=False, use_date_suffix=False):
+    print("saving .html and/or .png")
     create_dir(file_path)
     image_path = get_new_file_path(file_path, '.png', use_date_suffix)
     html_path = get_new_file_path(file_path, '.html', use_date_suffix)
     if size is None:
         size = (1980, 1080)
 
-    fig.write_image(os.path.join(*image_path), width=size[0], height=size[1], engine='orca')
-    fig.write_html(os.path.join(*html_path))
+    if save_png:
+        fig.write_image(os.path.join(image_path), width=size[0], height=size[1], engine='orca')
+
+    fig.write_html(os.path.join(html_path))
 
 

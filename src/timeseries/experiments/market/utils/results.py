@@ -6,6 +6,8 @@ from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 import matplotlib.pyplot as plt
 import logging
 
+from timeseries.experiments.market.plot_forecasts import group_forecasts
+from timeseries.experiments.market.utils.preprocessing import reconstruct_forecasts
 from timeseries.plotly.plot import plotly_time_series, plotly_time_series_bars_hist, plotly_multiple
 
 
@@ -80,11 +82,16 @@ def plot_multiple_results_forecast(all_forecast_df, forecast_dfs, use_regimes, r
             plotly_multiple(dfs, features=['data', 'forecast'], title=title, save=save, file_path=file_path)
 
 
-def confusion_mat(all_forecast_df, plot_=True):
-    all_forecast_df['up_down'] = all_forecast_df['data'] > all_forecast_df['data'].shift(1)
-    all_forecast_df['up_down_pred'] = all_forecast_df['forecast'] > all_forecast_df['data'].shift(1)
-    all_forecast_df['hit_rate'] = all_forecast_df['up_down'] == all_forecast_df['up_down_pred']
-    cm = confusion_matrix(all_forecast_df['up_down'], all_forecast_df['up_down_pred'], normalize='all')
+def confusion_mat(y_true, y_pred, plot_=True, self_change=False):
+    hit_rate = pd.DataFrame()
+    hit_rate['up_down'] = y_true > y_true.shift(1)
+    if not self_change:
+        hit_rate['up_down_pred'] = y_pred > y_true.shift(1)
+    else:
+        hit_rate['up_down_pred'] = y_pred > y_pred.shift(1)
+    hit_rate['hit_rate'] = hit_rate['up_down'] == hit_rate['up_down_pred']
+    cm = confusion_matrix(hit_rate['up_down'], hit_rate['up_down_pred'], normalize='all')
+
     tn, fp, fn, tp = cm.ravel()
     if plot_:
         disp = ConfusionMatrixDisplay(confusion_matrix=cm)  # , display_labels = clf.classes_)
@@ -93,3 +100,44 @@ def confusion_mat(all_forecast_df, plot_=True):
 
     return cm, {'tn': round(tn, 4), 'fp': round(fp, 4), 'fn': round(fn, 4), 'tp': round(tp, 4)}
 
+
+def hit_rate_from_forecast(results, n_output_steps):
+    target_col = results['target']
+
+    forecasts = results['reconstructed_forecasts'] if results['target'] else results['forecasts']
+    if target_col:
+        label = '{} t+{}'.format(target_col, 1)
+    else:
+        label = 't+{}'.format(1)
+
+    cm, cm_metrics = confusion_mat(y_true=forecasts['targets'][label],
+                                   y_pred=forecasts['p50'][label],
+                                   plot_=True)
+
+    grouped = group_forecasts(forecasts, n_output_steps, target_col)
+
+    confusion_mats = []
+    for identifier, ss_df in grouped['targets'].items():
+        try:
+            confusion_mats.append(confusion_mat(y_true=ss_df[label],
+                                                y_pred=grouped['p50'][identifier][label],
+                                                plot_=False)[0])
+        except:
+            pass
+
+    confusion_mats = np.stack(confusion_mats)
+
+    return {
+        'global_hit_rate': (cm, cm_metrics),
+        'grouped_by_id_hit_rate': confusion_mats
+    }
+
+def post_process_results(results, formatter, experiment_cfg):
+    model_params = formatter.get_default_model_params()
+    n_output_steps = model_params['total_time_steps'] - model_params['num_encoder_steps']
+
+    print('Reconstructing forecasts...')
+    if results['target']:
+        results['reconstructed_forecasts'] = reconstruct_forecasts(formatter, results['forecasts'])
+    results['hit_rates'] = hit_rate_from_forecast(results, n_output_steps)
+    results['experiment_cfg'] = experiment_cfg

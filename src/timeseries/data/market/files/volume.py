@@ -4,7 +4,7 @@ import numpy as np
 import joblib
 from copy import copy
 
-from timeseries.data.market.files.utils import find_filenames, get_path, list_files, save_df, load_market
+from timeseries.data.market.files.utils import find_filenames, list_files, save_df, load_market, get_market_path
 
 
 def merge_vol(data_cfg, vp_cumm):
@@ -43,7 +43,7 @@ def calc_cumm_vp(data_cfg):
 def load_new_vol(data_cfg):
     z_files = list_files(data_cfg, suffix=".z", include_substring='vol')
     if len(z_files) > 0:
-        path_new_vol = get_path(data_cfg, last_folder='src_folder')
+        path_new_vol = get_market_path(data_cfg, last_folder='src_folder')
         print("Loading New Vol File: {}".format(z_files[0]))
         new_vol = joblib.load(os.path.join(path_new_vol, z_files[0]))
         return new_vol
@@ -54,7 +54,7 @@ def load_new_vol(data_cfg):
 
 def load_current_vol(data_cfg):
     z_files = sorted(list_files(data_cfg, suffix=".z", last_folder='split_folder', include_substring='vol'))
-    path_current_vol = get_path(data_cfg, last_folder='split_folder')
+    path_current_vol = get_market_path(data_cfg, last_folder='split_folder')
     print("Loading Current Vol File: {}".format(z_files[-1]))
     current_cumm_vp = joblib.load(os.path.join(path_current_vol, z_files[-1]))
     timestamp, volume_profile = current_cumm_vp[-1]
@@ -104,7 +104,7 @@ def save_vp_cumm(vp_cumm, data_cfg, end='.z'):
     ini_date = str(vp_cumm[0][0].year) + '_' + str(vp_cumm[0][0].month)
     end_date = str(vp_cumm[-1][0].year) + '_' + str(vp_cumm[-1][0].month)
     filename = data_cfg['inst'] + "_" + ini_date + "-" + end_date + '_vol' + end
-    path_save_vol = get_path(data_cfg, last_folder='split_folder')
+    path_save_vol = get_market_path(data_cfg, last_folder='split_folder')
     joblib.dump(vp_cumm, os.path.join(path_save_vol, filename))
     print("File {} saved".format(filename))
 
@@ -113,3 +113,5 @@ def get_full_vol_profile(df, date_input):
     ix = df.index.searchsorted(date_input) - 1
     df_vp = df.iloc[ix, :].dropna()
     return df_vp.sort_index()
+
+

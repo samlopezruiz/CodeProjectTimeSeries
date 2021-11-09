@@ -45,9 +45,11 @@ class ExperimentConfig(object):
 
         in_folder = os.path.normpath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '..'))
 
+        self.architecture = cfg.get('architecture', 'TFTModel')
         self.experiment = formatter
         self.root_folder = root_folder
         self.dataset_config = cfg.get('dataset_config', None)
+        self.vars_definition = cfg['vars_definition']
         self.data_folder = os.path.join(root_folder, 'data', formatter)
         self.model_folder = os.path.join(root_folder, 'saved_models', formatter)
         self.results_folder = os.path.join(root_folder, 'results', formatter)
@@ -58,7 +60,9 @@ class ExperimentConfig(object):
         dataset_cfg = self.get_dataset_cfg()
 
         # dataset configurations of timeseries
+        self.macd_periods = dataset_cfg.get('macd_periods', [])
         self.macd_vars = dataset_cfg.get('macd_vars', [])
+        self.rsi_vars = dataset_cfg.get('rsi_vars', [])
         self.returns_vars = dataset_cfg.get('returns_vars', [])
         self.market_file = dataset_cfg['market_file']
         self.additional_file = dataset_cfg.get('additional_file', None)
@@ -95,6 +99,8 @@ class ExperimentConfig(object):
             'regime_file': reg_path,
             'additional_file': add_path,
             'macd_vars': self.macd_vars,
+            'rsi_vars': self.rsi_vars,
+            'macd_periods': self.macd_periods,
             'returns_vars': self.returns_vars,
             'add_macd_vars': self.add_macd_vars,
             'add_returns_vars': self.add_returns_vars,
@@ -120,7 +126,7 @@ class ExperimentConfig(object):
             'snp': SnPFormatter,
         }
 
-        return data_formatter_class[self.experiment]()
+        return data_formatter_class[self.experiment](self.vars_definition, self.architecture)
 
     def get_dataset_cfg(self):
         dataset_class = {}
@@ -130,11 +136,47 @@ class ExperimentConfig(object):
              'additional_file': 'subset_NQ_minute_60T_dwn_smpl_2012-01_to_2021-07',
              'regime_file': 'regime_ESc_r_ESc_macd_T10Y2Y_VIX',
              'macd_vars': ['ESc'],
+             'rsi_vars': ['ESc'],
+             'macd_periods': [12, 6],
              'returns_vars': get_inst_ohlc_names('ES'),
              'additional_prefix_col': 'NQ',
              'additional_macd_vars': ['NQc'],
              'additional_returns_vars': get_inst_ohlc_names('NQ'),
              'true_target': 'ESc'}
+
+        dataset_class['ES_60t_regime_ESc_r_ESc_macd_T10Y2Y_VIX_2015-01_to_2021-06'] = \
+            {'market_file': 'split_ES_minute_60T_dwn_smpl_2015-01_to_2021-06_g12week_r25_1',
+             'additional_file': 'subset_NQ_minute_60T_dwn_smpl_2012-01_to_2021-07',
+             'regime_file': 'regime_ESc_r_ESc_macd_T10Y2Y_VIX',
+             'macd_vars': ['ESc'],
+             'rsi_vars': ['ESc'],
+             'macd_periods': [12, 6],
+             'returns_vars': get_inst_ohlc_names('ES'),
+             'additional_prefix_col': 'NQ',
+             'additional_macd_vars': ['NQc'],
+             'additional_returns_vars': get_inst_ohlc_names('NQ'),
+             'true_target': 'ESc'}
+
+
+        dataset_class['ES_60t_regime_ESc_r_ESc_macd_T10Y2Y_VIX_2015-01_to_2021-06_macd'] = \
+            {'market_file': 'split_ES_minute_60T_dwn_smpl_2015-01_to_2021-06_g12week_r25_1',
+             'additional_file': 'subset_NQ_minute_60T_dwn_smpl_2012-01_to_2021-07',
+             'regime_file': 'regime_ESc_r_ESc_macd_T10Y2Y_VIX',
+             'macd_vars': ['ESc'],
+             'rsi_vars': ['ESc'],
+             'macd_periods': [12, 6],
+             'returns_vars': get_inst_ohlc_names('ES'),
+             'additional_prefix_col': 'NQ',
+             'additional_macd_vars': ['NQc'],
+             'additional_returns_vars': get_inst_ohlc_names('NQ'),
+             'true_target': None}
+
+        dataset_class['ES_60t_regime_ESc_r_ESc_macd_T10Y2Y_VIX_2018-01_to_2021-06'] = \
+            dataset_class['ES_60t_regime_ESc_r_ESc_macd_T10Y2Y_VIX_2015-01_to_2021-06']
+
+        dataset_class['ES_60t_regime_ESc_r_ESc_macd_T10Y2Y_VIX_2018-01_to_2021-06']['market_file'] = \
+            'split_ES_minute_60T_dwn_smpl_2018-01_to_2021-06_g12week_r25_6'
+
 
         if self.dataset_config not in dataset_class:
             raise Exception('{} not found in dataset configurations. '

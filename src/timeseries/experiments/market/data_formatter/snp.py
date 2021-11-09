@@ -4,6 +4,7 @@
 Defines dataset specific column definitions and data transformations.
 """
 import joblib
+import numpy as np
 import pandas as pd
 import sklearn.preprocessing
 
@@ -13,13 +14,6 @@ from algorithms.tft2.data_formatters.base import GenericDataFormatter, DataTypes
 from timeseries.experiments.market.expt_settings.definitions import variable_definitions
 from timeseries.experiments.market.preprocess.func import add_features
 from timeseries.experiments.market.utils.data import new_cols_names
-
-_add_column_definition = [
-    ('NQc_r', DataTypes.REAL_VALUED, InputTypes.OBSERVED_INPUT),
-    ('NQ_atr', DataTypes.REAL_VALUED, InputTypes.OBSERVED_INPUT),
-    ('NQc_macd', DataTypes.REAL_VALUED, InputTypes.OBSERVED_INPUT),
-    ('NQ_volume', DataTypes.REAL_VALUED, InputTypes.OBSERVED_INPUT)
-]
 
 
 class SnPFormatter(GenericDataFormatter):
@@ -31,35 +25,12 @@ class SnPFormatter(GenericDataFormatter):
     identifiers: Entity identifiers used in experiments.
   """
 
-    _column_definition = [
-        ('subset', DataTypes.CATEGORICAL, InputTypes.ID),
-        ('datetime', DataTypes.DATE, InputTypes.TIME),
-        ('ESc_r', DataTypes.REAL_VALUED, InputTypes.TARGET),
-        # ('ESc', DataTypes.REAL_VALUED, InputTypes.OBSERVED_INPUT),
-        # ('NQc', DataTypes.REAL_VALUED, InputTypes.OBSERVED_INPUT),
-        ('ESo_r', DataTypes.REAL_VALUED, InputTypes.OBSERVED_INPUT),
-        ('ESh_r', DataTypes.REAL_VALUED, InputTypes.OBSERVED_INPUT),
-        ('ESl_r', DataTypes.REAL_VALUED, InputTypes.OBSERVED_INPUT),
-        ('volume', DataTypes.REAL_VALUED, InputTypes.OBSERVED_INPUT),
-        ('adl', DataTypes.REAL_VALUED, InputTypes.OBSERVED_INPUT),
-        ('delta', DataTypes.REAL_VALUED, InputTypes.OBSERVED_INPUT),
-        ('atr', DataTypes.REAL_VALUED, InputTypes.OBSERVED_INPUT),
-        ('ESc_macd', DataTypes.REAL_VALUED, InputTypes.OBSERVED_INPUT),
-        ('days_from_start', DataTypes.REAL_VALUED, InputTypes.KNOWN_INPUT),
-        ('hour_of_day', DataTypes.CATEGORICAL, InputTypes.KNOWN_INPUT),
-        ('day_of_week', DataTypes.CATEGORICAL, InputTypes.KNOWN_INPUT),
-        ('day_of_month', DataTypes.CATEGORICAL, InputTypes.KNOWN_INPUT),
-        ('week_of_year', DataTypes.CATEGORICAL, InputTypes.KNOWN_INPUT),
-        ('month', DataTypes.CATEGORICAL, InputTypes.KNOWN_INPUT),
-        ('regime', DataTypes.CATEGORICAL, InputTypes.STATIC_INPUT),
-    ]
-
-    _column_definition += _add_column_definition
+    _column_definition = []
 
     fixed_params = {
         'quantiles': [0.1, 0.5, 0.9],
         'num_epochs': 100,
-        'early_stopping_patience': 10,
+        'early_stopping_patience': 5,
         'multiprocessing_workers': 12,
     }
 
@@ -71,14 +42,13 @@ class SnPFormatter(GenericDataFormatter):
         'learning_rate': 0.01,
         'minibatch_size': 64,
         'max_gradient_norm': 0.01,
-        'num_heads': 4,
-        'stack_size': 1,
     }
 
-    def __init__(self, vars_definition):
+    def __init__(self, vars_definition, architecture):
         """Initialises formatter."""
         if vars_definition not in variable_definitions.keys():
-            raise Exception('vars_definition'.format(variable_definitions.keys()))
+            raise Exception('vars_definition: {} not found in {}'.format(vars_definition,
+                                                                         variable_definitions.keys()))
 
         self._column_definition = variable_definitions[vars_definition]
         self.identifiers = None
@@ -89,11 +59,18 @@ class SnPFormatter(GenericDataFormatter):
         self.n_states = None
         self.valid_true_y = None
         self.test_true_y = None
+        self.architecture = architecture
+        self._append_model_params()
 
     # def split_data(self, df, valid_boundary=2016, test_boundary=2018):
     #     pass
 
-    def split_data(self, data_config, valid_boundary=2016, test_boundary=2018):
+    def split_data(self,
+                   data_config,
+                   scale=True,
+                   indicators_use_time_subset=True,
+                   ):
+
         """Splits data frame into training-validation-test data frames.
 
     This also calibrates scaling object, and transforms data for each split.
@@ -105,13 +82,67 @@ class SnPFormatter(GenericDataFormatter):
 
     Returns:
       Tuple of transformed (train, valid, test) data.
+        :param scale:
     """
         mkt_data, add_data, reg_data = self.load_data(data_config)
 
+        mkt_data = self.preprocess_data(mkt_data, add_data, reg_data, data_config, indicators_use_time_subset)
+        train, test = mkt_data.loc[mkt_data.loc[:, 'test'] == 0, :], mkt_data.loc[mkt_data.loc[:, 'test'] == 1, :]
+
+        if data_config['true_target'] is not None:
+            self.set_true_target(data_config['true_target'], test, test)
+
+        self.set_scalers(train)
+
+        if scale:
+            return (self.transform_inputs(data) for data in [train, test, test])
+        else:
+            return train, test, test
+
+    def process_data(self,
+                     data_config,
+                     scale=True,
+                     indicators_use_time_subset=True,
+                     ):
+
+        """Splits data frame into training-validation-test data frames.
+
+    This also calibrates scaling object, and transforms data for each split.
+
+    Args:
+      data_config: Source config to split.
+      valid_boundary: Starting year for validation data
+      test_boundary: Starting year for test data
+
+    Returns:
+      Tuple of transformed (train, valid, test) data.
+        :param scale:
+    """
+        mkt_data, add_data, reg_data = self.load_data(data_config)
+
+        mkt_data = self.preprocess_data(mkt_data, add_data, reg_data, data_config, indicators_use_time_subset)
+
+        if data_config['true_target'] is not None:
+            self.set_true_target(data_config['true_target'], mkt_data, mkt_data)
+
+        self.set_scalers(mkt_data)
+
+        if scale:
+            return self.transform_inputs(mkt_data)
+        else:
+            return mkt_data
+
+    def preprocess_data(self, mkt_data, add_data, reg_data, data_config, indicators_use_time_subset):
+
+        print('Preprocessing market data')
         # Add processed features
         add_features(mkt_data,
                      macds=data_config['macd_vars'],
-                     returns=data_config['returns_vars'])
+                     returns=data_config['returns_vars'],
+                     use_time_subset=indicators_use_time_subset,
+                     rsis=data_config['rsi_vars'],
+                     p0s=data_config['macd_periods'],
+                     p1s=np.array(data_config['macd_periods']) * 2)
 
         if add_data is not None:
             additional_resampled = resample_dfs(mkt_data, add_data)
@@ -131,17 +162,10 @@ class SnPFormatter(GenericDataFormatter):
             mkt_data['regime'] = reg_resampled['state']
 
         print('\n{} Available Features: {}'.format(mkt_data.shape[1], list(mkt_data.columns)))
-
         mkt_data['datetime'] = mkt_data.index
         mkt_data.reset_index(drop=True, inplace=True)
-        train, test = mkt_data.loc[mkt_data.loc[:, 'test'] == 0, :], mkt_data.loc[mkt_data.loc[:, 'test'] == 1, :]
 
-        if data_config['true_target'] is not None:
-            self.set_true_target(data_config['true_target'], test, test)
-
-        self.set_scalers(train)
-
-        return (self.transform_inputs(data) for data in [train, test, test])
+        return mkt_data
 
     def load_data(self, data_config):
         print('Loading Market Data: {}'.format(data_config['split_file']))
@@ -170,6 +194,8 @@ class SnPFormatter(GenericDataFormatter):
         time_column = utils.get_single_col_by_input_type(InputTypes.TIME, column_definitions)
         self.valid_true_y = pd.Series(valid[true_target].values, index=valid[time_column], name=true_target).to_frame()
         self.test_true_y = pd.Series(test[true_target].values, index=valid[time_column], name=true_target).to_frame()
+
+
 
     def set_scalers(self, df):
         """Calibrates scalers using the data supplied.
@@ -289,3 +315,21 @@ class SnPFormatter(GenericDataFormatter):
         """Returns default optimised model parameters."""
 
         return self.model_params
+
+    def _append_model_params(self):
+        if self.architecture == 'TFTModel':
+            default_values = {
+                'num_heads': 4,
+                'stack_size': 1
+            }
+        elif self.architecture == 'LSTMModel':
+            default_values = {
+            }
+        elif self.architecture == 'DCNNModel':
+            default_values = {
+                'n_layers': 4,
+                'reg': 'L2',
+                'n_kernel': 3,
+            }
+        self.update_model_params(default_values)
+

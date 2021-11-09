@@ -108,6 +108,6 @@ def append_hmm_states(df, hmm_vars, n_states, label_cfg=None, regime_col='state'
     return df, n_regimes, df_proba
 
 
-def resample_dfs(df, df_proba):
-    df_state = pd.concat([df.iloc[:, 0], df_proba], axis=1)
-    return df_state.loc[:, df_proba.columns].ffill().loc[df.index, :].fillna(0)
+def resample_dfs(df_keep_index, df_external):
+    resampled_df = pd.concat([df_keep_index.iloc[:, 0], df_external], axis=1)
+    return resampled_df.loc[:, df_external.columns].ffill().loc[df_keep_index.index, :].fillna(0)

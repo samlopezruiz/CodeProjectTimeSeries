@@ -1055,7 +1055,7 @@ class TemporalFusionTransformer(object):
     """
 
         print('*** Fitting {} ***'.format(self.name))
-        log_dir = os.path.join(self.model_folder, "logs/fit/" + 'tft-' + datetime.datetime.now().strftime("%Y%m%d-%H%M")[2:])
+        log_dir = os.path.join(self.model_folder, "logs/fit/" + self.name + '-' + datetime.datetime.now().strftime("%Y%m%d-%H%M")[2:])
 
         # Add relevant callbacks
         callbacks = [

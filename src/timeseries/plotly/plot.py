@@ -90,9 +90,20 @@ def plotly_multiple(dfs, title=None, save=False, features=None, file_path=None, 
         plotly_save(fig, file_path, size)
 
 
-def plotly_time_series(df, title=None, save=False, legend=True, file_path=None, size=(1980, 1080), color_col=None,
-                       markers='lines+markers', xaxis_title="time", markersize=5, plot_title=True, label_scale=1,
+def plotly_time_series(df,
+                       title=None,
+                       save=False,
+                       legend=True,
+                       file_path=None,
+                       size=(1980, 1080),
+                       color_col=None,
+                       markers='lines+markers',
+                       xaxis_title="time",
+                       markersize=5,
+                       plot_title=True,
+                       label_scale=1,
                        adjust_height=(False, 0.6), plot_ytitles=False, **kwargs):
+
     params_ok, params = plotly_params_check(df, **kwargs)
     features, rows, cols, type_plot, alphas = params
     n_rows = len(set(rows))

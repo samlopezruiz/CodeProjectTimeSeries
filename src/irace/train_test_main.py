@@ -2,7 +2,7 @@ import os
 
 from timeseries.data.market.utils.names import get_inst_ohlc_names
 from timeseries.experiments.market.expt_settings.configs import ExperimentConfig
-from timeseries.experiments.market.utils.harness import train_test_tft
+from timeseries.experiments.market.utils.harness import train_test_model
 
 
 def train_test_main(num_encoder_steps=30,
@@ -37,16 +37,16 @@ def train_test_main(num_encoder_steps=30,
     formatter.update_fixed_params(fixed_cfg)
     model_folder = os.path.join(config.model_folder, experiment_cfg['experiment_name'])
 
-    results = train_test_tft(use_gpu=True,
-                             prefetch_data=False,
-                             model_folder=model_folder,
-                             data_config=config.data_config,
-                             data_formatter=formatter,
-                             use_testing_mode=False,
-                             predict_eval=False,
-                             tb_callback=False,
-                             use_best_params=False
-                             )
+    results = train_test_model(use_gpu=True,
+                               prefetch_data=False,
+                               model_folder=model_folder,
+                               data_config=config.data_config,
+                               data_formatter=formatter,
+                               use_testing_mode=False,
+                               predict_eval=False,
+                               tb_callback=False,
+                               use_best_params=False
+                               )
     return results
 
 

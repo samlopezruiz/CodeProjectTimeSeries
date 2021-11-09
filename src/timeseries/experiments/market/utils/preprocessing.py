@@ -248,7 +248,7 @@ def reconstruct_forecasts(formatter, results):
         # calculate forecasts from return forecasts
         P_1 = df.loc[:, true_target_col].values.reshape(-1, 1)
         Ln_r = df.loc[:, return_forecast_cols].values
-        arr = np.array([series_from_ln_r(p_1, ln_r) for p_1, ln_r in zip(P_1, Ln_r)])
+        # arr = np.array([series_from_ln_r(p_1, ln_r) for p_1, ln_r in zip(P_1, Ln_r)])
         df.loc[:, target_forecast_cols] = np.array([series_from_ln_r(p_1, ln_r) for p_1, ln_r in zip(P_1, Ln_r)])
 
         reconstructed_forecast[key] = df

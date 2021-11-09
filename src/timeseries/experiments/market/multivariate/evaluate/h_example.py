@@ -25,20 +25,22 @@ from timeseries.experiments.market.utils.tf_models import save_tf_model, load_tf
 # OPEN TENSORBOARD IN TERMINAL
 # tensorboard - -logdir logs/fit
 if __name__ == '__main__':
+    #%%
     res_cfg = {'save_results': False, 'save_plots': False, 'plot_forecast': False, 'plot_title': True,
                'plot_hist': False, 'callbacks': True, 'image_folder': 'img', 'results_folder': 'res',
                'models_folder': "my_models", 'model_version': "0001"}
-    data_mkt_cfg = {'filename': "split_ES_minute_2018-01_to_2021-06_g4week_r0.25_2021_07_28_10-55",
+    data_mkt_cfg = {'filename': "split_ES_minute_60T_dwn_smpl_2018-01_to_2021-06_g12week_r25_5",
                     'src_folder': "res"}
     add_mkt_cfg0 = {'filename': 'subset_NQ_minute_60T_dwn_smpl_2012-01_to_2021-07_2021_08_11_13-08',
                     'src_folder': "res"}
-    data_reg_cfg = {'filename': "regime_ESc_r_ESc_macd_T10Y2Y_VIX_2021_07_14_16-29",
+    data_reg_cfg = {'filename': "regime_ESc_r_ESc_macd_T10Y2Y_VIX",
                     'src_folder': "res"}
 
-    df, split_cfg, data_cfg_ = load_files(data_mkt_cfg, 'split', end=".z")
+    market_data = load_files(data_mkt_cfg, 'split', end=".z")
+    # df, split_cfg, data_cfg_ = load_files(data_mkt_cfg, 'split', end=".z")
     df_add0 = load_files(add_mkt_cfg0, 'additional_data', end=".z")[0]
-    df_reg, n_regimes, df_proba, hmm_cfg, data_reg_cfgs_ = load_files(data_reg_cfg, 'regime', end=".z")
-    n_states = df_proba.shape[1]
+    regime_data = load_files(data_reg_cfg, 'regime', end=".z")
+    n_states = regime_data['df_proba'].shape[1]
 
     # %% PREPROCESSING
     training_cfg = {'inst': 'ESc_r', 'y_true_var': 'ESc', 'y_train_var': 'ESc_r', 'features': ['atr', 'ESc_macd'],
@@ -46,12 +48,12 @@ if __name__ == '__main__':
                     'preprocess': True}
 
     # append additional features
-    add_features(df, macds=['ESc'], returns=get_inst_ohlc_names('ES'))
+    add_features(market_data['data'], macds=['ESc'], returns=get_inst_ohlc_names('ES'))
 
     # %% ADD DATA
     add_cfg = {'inst': 'NQc_r', 'include_ohlc': True, 'features': ['NQ_atr', 'NQc_macd']}
     if training_cfg['use_add_data']:
-        df_add0_resampled = resample_dfs(df, df_add0)
+        df_add0_resampled = resample_dfs(market_data['data'], df_add0)
         df_add0_resampled.columns = new_cols_names(df_add0_resampled, 'NQ')
         # append additional features
         add_features(df_add0_resampled, macds=['NQc'], returns=get_inst_ohlc_names('NQ'))
@@ -61,21 +63,21 @@ if __name__ == '__main__':
                        + add_cfg['features']
         df_add0_resampled = df_add0_resampled.loc[:, add_features]
         training_cfg['features'] = training_cfg['features'] + add_features
-        df_add = pd.concat([df, df_add0_resampled], axis=1)
+        df_add = pd.concat([market_data['data'], df_add0_resampled], axis=1)
 
-    df_scaled, ss, train_features = scale_df(df if not training_cfg['use_add_data'] else df_add, training_cfg)
+    df_scaled, ss, train_features = scale_df(market_data['data'] if not training_cfg['use_add_data'] else df_add, training_cfg)
     # scaled data does not contain subset and test columns
     # append subset and test columns to scaled data
-    append_subset_cols(df_scaled, df, timediff=True)
+    append_subset_cols(df_scaled, market_data['data'], timediff=True)
 
     # add hmm probabilites to data
-    df_proba_resampled = resample_dfs(df_scaled, df_proba)
+    df_proba_resampled = resample_dfs(df_scaled, regime_data['df_proba'])
     df_scaled_proba_subsets = pd.concat([df_scaled, df_proba_resampled], axis=1)
 
     # %% SUBSETS
     # compute list of subsets
     scaled_proba_subsets = get_subsets(df_scaled_proba_subsets, n_states=n_states)
-    unscaled_y_subsets = get_subsets(df, features=[training_cfg['y_true_var']])
+    unscaled_y_subsets = get_subsets(market_data['data'], features=[training_cfg['y_true_var']])
 
     # %% TRAIN
     # model_cfg = {'name': 'D-CNN', 'verbose': 1, 'use_regimes': True,
@@ -122,9 +124,11 @@ if __name__ == '__main__':
                       save=res_cfg['save_plots'], file_path=[res_cfg['image_folder'], file_name])
 
     # %%
-    cm, cm_metrics = confusion_mat(all_forecast_df)
+    cm, cm_metrics = confusion_mat(y_true=all_forecast_df['data'],
+                                   y_pred=all_forecast_df['forecast'])
     print('Hit Rate: {} %'.format(round(100 * sum(all_forecast_df['hit_rate']) / all_forecast_df.shape[0], 4)))
     print(cm_metrics)
 
     log_forecast_results(data_mkt_cfg, data_reg_cfg, training_cfg, model_cfg,
                          results, all_forecast_df, cm_metrics, model_func, train_features)
+

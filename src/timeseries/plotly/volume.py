@@ -34,7 +34,7 @@ def plotly_years_vol_profile(df, inst, years):
     time.sleep(.5)
 
 
-def plotly_vol_profile(last_vp, inst):
+def plotly_vol_profile(last_vp):
     date_title = last_vp.name.strftime("%m/%d/%Y")
     vol = np.array(last_vp) #[::-1]
     volp = np.array(last_vp.index).astype(float) #[::-1]
@@ -51,7 +51,7 @@ def plotly_vol_profile(last_vp, inst):
 
     fig['layout']['yaxis']['title'] = "Price"
     fig.update_layout(template="plotly_dark", xaxis_rangeslider_visible=False,
-                      title=inst + " Volume Profile " + date_title,
+                      title="Volume Profile " + date_title,
                       yaxis_range=[min(volp), max(volp)])
     fig.show()
     time.sleep(.5)

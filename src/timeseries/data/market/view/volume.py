@@ -6,7 +6,7 @@ if __name__ == '__main__':
     data_cfg = {'inst': "ES", 'suffix': "2012_1-2021_6_vol", 'sampling': 'minute', 'market': 'cme',
                 'src_folder': "vol"}
 
-    df, vp_prices = load_market(data_cfg)
+    df = load_market(data_cfg)
 
 #%%
     date_input = '2015-01-01 00:00:00'

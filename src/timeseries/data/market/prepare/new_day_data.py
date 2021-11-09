@@ -1,4 +1,4 @@
-from timeseries.data.market.market_files import compress_txt_to_z, merge_new_data, move_used_files
+from timeseries.data.market.files.load_save import compress_txt_to_z, merge_new_data, move_used_files
 from timeseries.plotly.plot import plotly_merge
 
 if __name__ == '__main__':

@@ -229,3 +229,6 @@ fabric.properties
 /src/timeseries/experiments/market/regime/res/
 /src/timeseries/experiments/market/outputs/
 /src/timeseries/experiments/market/additional_data/res/
+/src/timeseries/experiments/market/volume/img/
+/src/timeseries/experiments/market/volume/res/
+/src/timeseries/experiments/market/cloud/data/

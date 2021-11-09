@@ -16,6 +16,7 @@ from algorithms.tft2.libs.hyperparam_opt import HyperparamOptManager
 from algorithms.tft2.libs.tft_model import TemporalFusionTransformer
 from algorithms.tft2.utils.data import extract_numerical_data
 # from timeseries.experiments.market.train_tft_fixed_params import formatter
+from algorithms.ts.models import TFTModel, LSTMModel, DCNNModel
 from timeseries.experiments.market.utils.console import print_progress, print_pred_time, print_progress_loop
 from timeseries.experiments.market.utils.dataprep import to_np
 from timeseries.experiments.market.utils.models import get_params
@@ -294,17 +295,20 @@ def get_bundles(is_mv, steps, test, train, reg_prob_test):
     return history, test_bundles, y_test, reg_prob_bundle
 
 
-def train_test_tft(use_gpu,
-                   prefetch_data,
-                   model_folder,
-                   data_config,
-                   data_formatter,
-                   use_testing_mode=False,
-                   predict_eval=True,
-                   tb_callback=True,
-                   use_best_params=False):
+def train_test_model(use_gpu,
+                     architecture,
+                     prefetch_data,
+                     model_folder,
+                     data_config,
+                     data_formatter,
+                     use_testing_mode=False,
+                     predict_eval=True,
+                     tb_callback=True,
+                     use_best_params=False,
+                     indicators_use_time_subset=False):
     """Trains tft based on defined model params.
   Args:
+      :param architecture:
       :param use_best_params:
       :param tb_callback:
       :param predict_eval:
@@ -316,11 +320,14 @@ def train_test_tft(use_gpu,
       :param prefetch_data: Prefetch data for training
   """
 
-    num_repeats = 1
+    Model = get_model(architecture)
 
     print("Loading & splitting data...")
-    train, valid, test = data_formatter.split_data(data_config)
+    train, valid, test = data_formatter.split_data(data_config,
+                                                   indicators_use_time_subset=indicators_use_time_subset)
     train_samples, valid_samples = data_formatter.get_num_samples_for_calibration()
+
+    print('shape: {}'.format(train.shape))
 
     # Sets up default params
     fixed_params = data_formatter.get_experiment_params()
@@ -344,24 +351,24 @@ def train_test_tft(use_gpu,
         print("{}: {}".format(k, params[k]))
 
     best_loss = np.Inf
-    for _ in range(num_repeats):
 
-        with tf.device('/device:GPU:0' if use_gpu else "/cpu:0"):
+    with tf.device('/device:GPU:0' if use_gpu else "/cpu:0"):
 
-            params = opt_manager.get_next_parameters()
-            model = TemporalFusionTransformer(params, use_cudnn=use_gpu, tb_callback=tb_callback)
+        params = opt_manager.get_next_parameters()
+        # model = TemporalFusionTransformer(params, use_cudnn=use_gpu, tb_callback=tb_callback)
+        model = Model(params, tb_callback=tb_callback)
 
-            if not model.training_data_cached():
-                model.cache_batched_data(train, "train", num_samples=train_samples)
-                model.cache_batched_data(valid, "valid", num_samples=valid_samples)
+        if not model.training_data_cached():
+            model.cache_batched_data(train, "train", num_samples=train_samples)
+            model.cache_batched_data(valid, "valid", num_samples=valid_samples)
 
-            model.fit(prefetch_data)
+        model.fit(prefetch_data)
 
-            val_loss = model.evaluate()
+        val_loss = model.evaluate()
 
-            if val_loss < best_loss:
-                opt_manager.update_score(params, val_loss, model)
-                best_loss = val_loss
+        if val_loss < best_loss:
+            opt_manager.update_score(params, val_loss, model)
+            best_loss = val_loss
 
     print("Training completed @ {}".format(dte.datetime.now()))
     print("Validation loss = {}".format(val_loss))
@@ -370,7 +377,8 @@ def train_test_tft(use_gpu,
         if use_best_params:
             print("*** Running tests ***")
             params = opt_manager.get_best_params()
-            model = TemporalFusionTransformer(params, use_cudnn=use_gpu)
+            model = Model(params, tb_callback=tb_callback)
+            # model = TemporalFusionTransformer(params, use_cudnn=use_gpu)
 
             model.load(opt_manager.hyperparam_folder, use_keras_loadings=True)
 
@@ -381,12 +389,13 @@ def train_test_tft(use_gpu,
         print("Training completed @ {}".format(dte.datetime.now()))
         print("Best validation loss = {}".format(val_loss))
 
-        return predict_from_tft(params, data_formatter, model, test)
+        return predict_from_model(params, data_formatter, model, test)
     else:
         return val_loss
 
+
 #
-def predict_from_tft(best_params, data_formatter, model, test):
+def predict_from_model(best_params, data_formatter, model, test):
     print("Computing test loss")
     output_map = model.predict(test, return_targets=True)
     unscaled_output_map = {}
@@ -400,7 +409,6 @@ def predict_from_tft(best_params, data_formatter, model, test):
         losses[key + '_loss'] = utils.numpy_normalised_quantile_loss(
             extract_numerical_data(targets), extract_numerical_data(unscaled_output_map[key]), q)
 
-
     print("Params:")
     for k in best_params:
         print(k, " = ", best_params[k])
@@ -410,8 +418,68 @@ def predict_from_tft(best_params, data_formatter, model, test):
     results = {'quantiles': model.quantiles,
                'forecasts': unscaled_output_map,
                'losses': losses,
+               'fit_history': model.fit_history,
                'target': data_formatter.test_true_y.columns[0] if data_formatter.test_true_y is not None else None,
                'fixed_params': data_formatter.get_fixed_params(),
                'model_params': data_formatter.get_default_model_params()}
 
     return results
+
+
+def load_predict_model(use_gpu,
+                       architecture,
+                       model_folder,
+                       data_config,
+                       data_formatter,
+                       use_all_data=False):
+    """Trains tft based on defined model params.
+  Args:
+      :param use_all_data:
+      :param use_gpu: Whether to run tensorflow with GPU operations
+      :param use_testing_mode: Uses a smaller models and data sizes for testing purposes
+      :param data_formatter: Dataset-specific data fromatter
+      :param data_config: Data input file configurations
+      :param model_folder: Folder path where models are serialized
+
+  """
+    Model = get_model(architecture)
+
+    print("Loading & splitting data...")
+    if use_all_data:
+        test = data_formatter.process_data(data_config)
+    else:
+        train, valid, test = data_formatter.split_data(data_config)
+
+    # Sets up default params
+    fixed_params = data_formatter.get_experiment_params()
+    params = data_formatter.get_default_model_params()
+    params["model_folder"] = model_folder
+
+    # Sets up hyperparam manager
+    print("*** Loading hyperparm manager ***")
+    opt_manager = HyperparamOptManager({k: [params[k]] for k in params}, fixed_params, model_folder)
+
+    print("*** Running tests ***")
+    params = opt_manager.get_next_parameters()
+
+    with tf.device('/device:GPU:0' if use_gpu else "/cpu:0"):
+        # model = TemporalFusionTransformer(params, use_cudnn=use_gpu)
+        model = Model(params)
+        model.load(opt_manager.hyperparam_folder, use_keras_loadings=True)
+
+        return predict_from_model(params, data_formatter, model, test), test
+
+
+def get_model(architecture):
+    architecture_options = ['TFTModel', 'LSTMModel', 'DCNNModel']
+    if architecture not in architecture_options:
+        raise Exception('{} not a valid option. \nOptions: {}'.format(architecture, architecture_options))
+
+    if architecture == 'TFTModel':
+        model = TFTModel
+    elif architecture == 'LSTMModel':
+        model = LSTMModel
+    elif architecture == 'DCNNModel':
+        model = DCNNModel
+
+    return model

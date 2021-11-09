@@ -35,7 +35,7 @@ def load_files(data_cfg, subfolder, last_folder='src_folder', end=".z"):
 
 def get_model_market_path(data_cfg, subfolder='split', last_folder='src_folder'):
     src_folder = data_cfg.get(last_folder, 'res')
-    return os.path.join(PROJECT_ROOT, 'models', 'market', subfolder, src_folder)
+    return os.path.join(PROJECT_ROOT, 'experiments', 'market', subfolder, src_folder)
 
 
 def get_market_path(data_cfg, last_folder='src_folder'):
@@ -61,8 +61,8 @@ def load_market(data_cfg, end=".csv", last_folder='src_folder'):
     if filename is None:
         inst, suffix = data_cfg['inst'], data_cfg['suffix']
         filename = inst + "_" + suffix + end
-    dataset, features = load_data(filename, path)
-    return dataset, features
+    dataset = load_data(filename, path)
+    return dataset
 
 
 def load_multiple_markets(data_cfgs, resampling='D', ffill=True):
@@ -76,21 +76,18 @@ def load_multiple_markets(data_cfgs, resampling='D', ffill=True):
     return df
 
 
-def load_data(filename, path, describe_=True):
-    dataset = features = None
+def load_data(filename, path):
+    dataset = None
     print("\nLoading", filename)
     try:
         if filename.endswith(".csv") or filename.endswith(".txt"):
             dataset = read_csv(os.path.join(path, filename))
         else:
             dataset = joblib.load(os.path.join(path, filename))
-        if describe_:
-            describe(dataset)
-        features = dataset.columns
     except Exception as ex:
         print(ex)
 
-    return dataset, list(features)
+    return dataset
 
 
 def save_df(df, data_cfg, timestamp=True, last_folder='src_folder', end='.csv', suffix=''):

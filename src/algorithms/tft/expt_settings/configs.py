@@ -100,7 +100,7 @@ class ExperimentConfig(object):
 
     data_formatter_class = {
         'volatility': src.algorithms.tft.data_formatters.volatility.VolatilityFormatter,
-        # 'electricity': src.algorithms.tft.data_formatters.electricity.ElectricityFormatter,
+        'electricity': src.algorithms.tft.data_formatters.electricity.ElectricityFormatter,
         # 'traffic': src.algorithms.tft.data_formatters.traffic.TrafficFormatter,
         # 'favorita': src.algorithms.tft.data_formatters.favorita.FavoritaFormatter
     }
