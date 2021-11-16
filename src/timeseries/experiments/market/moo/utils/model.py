@@ -18,7 +18,7 @@ def params_conversion_weights(weights):
     shapes = [w.shape for w in weights]
     flatten_dim = [np.multiply(*s) if len(s) > 1 else s[0] for s in shapes]
 
-    ind = np.concatenate([w.flatten() for w in weights])
+    ind = np.concatenate([w.flatten() for w in weights]).reshape(1, -1)
     params = {
         'shapes': shapes,
         'flatten_dim': flatten_dim
@@ -29,6 +29,7 @@ def params_conversion_weights(weights):
 def reconstruct_weights(ind, params):
     shapes, flatten_dim = params['shapes'], params['flatten_dim']
     reconstruct = []
+    ind = ind.reshape(-1,)
     for i in range(len(shapes)):
         if i == 0:
             reconstruct.append(ind[:flatten_dim[i]].reshape(shapes[i]))
@@ -90,8 +91,21 @@ def run_moo_nn(x,
                num_encoder_steps,
                transformer_output,
                w_params,
-               loss_to_obj):
+               loss_to_obj,
+               p50_w,
+               p50_b,
+               output_eq_loss=False):
+
     new_weights = reconstruct_weights(x, w_params)
+
+    if p50_w is not None and p50_b is not None:
+        new_weights[0] = np.vstack([new_weights[0][:, 0],
+                                    p50_w,
+                                    new_weights[0][:, 1]]).T
+        new_weights[1] = np.array([new_weights[1][0],
+                                   p50_b,
+                                   new_weights[1][1]])
+
     prediction = dense_layer_output(new_weights, transformer_output)
     unscaled_output_map = create_output_map(prediction,
                                             quantiles,
@@ -99,7 +113,12 @@ def run_moo_nn(x,
                                             data_map,
                                             time_steps,
                                             num_encoder_steps)
-    losses = compute_moo_q_loss(quantiles, unscaled_output_map)
 
-    return loss_to_obj(losses)
+    losses = compute_moo_q_loss(quantiles, unscaled_output_map, output_eq_loss=output_eq_loss)
+
+    if output_eq_loss:
+        return loss_to_obj(losses[0]), loss_to_obj(losses[1])
+    else:
+        return loss_to_obj(losses)
+
 

@@ -64,6 +64,7 @@ class ExperimentConfig(object):
         self.macd_vars = dataset_cfg.get('macd_vars', [])
         self.rsi_vars = dataset_cfg.get('rsi_vars', [])
         self.returns_vars = dataset_cfg.get('returns_vars', [])
+        self.returns_from_ema = dataset_cfg.get('returns_from_ema', (None, False))
         self.market_file = dataset_cfg['market_file']
         self.additional_file = dataset_cfg.get('additional_file', None)
         self.regime_file = dataset_cfg.get('regime_file', None)
@@ -102,6 +103,7 @@ class ExperimentConfig(object):
             'rsi_vars': self.rsi_vars,
             'macd_periods': self.macd_periods,
             'returns_vars': self.returns_vars,
+            'returns_from_ema': self.returns_from_ema,
             'add_macd_vars': self.add_macd_vars,
             'add_returns_vars': self.add_returns_vars,
             'add_prefix_col': self.add_prefix_col,
@@ -139,6 +141,7 @@ class ExperimentConfig(object):
              'rsi_vars': ['ESc'],
              'macd_periods': [12, 6],
              'returns_vars': get_inst_ohlc_names('ES'),
+             'returns_from_ema': (3, True),
              'additional_prefix_col': 'NQ',
              'additional_macd_vars': ['NQc'],
              'additional_returns_vars': get_inst_ohlc_names('NQ'),
@@ -152,6 +155,7 @@ class ExperimentConfig(object):
              'rsi_vars': ['ESc'],
              'macd_periods': [12, 6],
              'returns_vars': get_inst_ohlc_names('ES'),
+             'returns_from_ema': (3, True),
              'additional_prefix_col': 'NQ',
              'additional_macd_vars': ['NQc'],
              'additional_returns_vars': get_inst_ohlc_names('NQ'),
@@ -166,6 +170,7 @@ class ExperimentConfig(object):
              'rsi_vars': ['ESc'],
              'macd_periods': [12, 6],
              'returns_vars': get_inst_ohlc_names('ES'),
+             'returns_from_ema': (3, True),
              'additional_prefix_col': 'NQ',
              'additional_macd_vars': ['NQc'],
              'additional_returns_vars': get_inst_ohlc_names('NQ'),
@@ -177,6 +182,33 @@ class ExperimentConfig(object):
         dataset_class['ES_60t_regime_ESc_r_ESc_macd_T10Y2Y_VIX_2018-01_to_2021-06']['market_file'] = \
             'split_ES_minute_60T_dwn_smpl_2018-01_to_2021-06_g12week_r25_6'
 
+        dataset_class['ES_60t_regime_2015-01_to_2021-06_ema'] = \
+            {'market_file': 'split_ES_minute_60T_dwn_smpl_2015-01_to_2021-06_g12week_r25_1',
+             'additional_file': 'subset_NQ_minute_60T_dwn_smpl_2012-01_to_2021-07',
+             'regime_file': 'regime_ESc_r_ESc_macd_T10Y2Y_VIX',
+             'macd_vars': ['ESc'],
+             'rsi_vars': ['ESc'],
+             'macd_periods': [12, 6],
+             'returns_vars': get_inst_ohlc_names('ES'),
+             'returns_from_ema': (3, True),
+             'additional_prefix_col': 'NQ',
+             'additional_macd_vars': ['NQc'],
+             'additional_returns_vars': get_inst_ohlc_names('NQ'),
+             'true_target': 'ESc_e3'}
+
+        dataset_class['ES_5t_regime_2015-01_to_2021-06_ema_r'] = \
+            {'market_file': 'split_ES_minute_5T_dwn_smpl_2015-01_to_2021-06_g12week_r25',
+             'additional_file': 'subset_NQ_minute_5T_dwn_smpl_2012-01_to_2021-07',
+             'regime_file': 'regime_ESc_r_ESc_macd_T10Y2Y_VIX',
+             'macd_vars': ['ESc'],
+             'rsi_vars': ['ESc'],
+             'macd_periods': [24, 12, 6],
+             'returns_vars': get_inst_ohlc_names('ES'),
+             'returns_from_ema': (11, True),
+             'additional_prefix_col': 'NQ',
+             'additional_macd_vars': ['NQc'],
+             'additional_returns_vars': get_inst_ohlc_names('NQ'),
+             'true_target': 'ESc_e11'}
 
         if self.dataset_config not in dataset_class:
             raise Exception('{} not found in dataset configurations. '

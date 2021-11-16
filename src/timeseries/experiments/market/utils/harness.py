@@ -1,5 +1,6 @@
 import datetime as dte
 import multiprocessing
+import os
 import time
 from contextlib import contextmanager
 from multiprocessing import cpu_count
@@ -17,6 +18,9 @@ from algorithms.tft2.libs.tft_model import TemporalFusionTransformer
 from algorithms.tft2.utils.data import extract_numerical_data
 # from timeseries.experiments.market.train_tft_fixed_params import formatter
 from algorithms.ts.models import TFTModel, LSTMModel, DCNNModel
+from timeseries.experiments.market.expt_settings.configs import ExperimentConfig
+from timeseries.experiments.market.moo.utils.model import get_last_layer_weights, params_conversion_weights, \
+    reconstruct_weights
 from timeseries.experiments.market.utils.console import print_progress, print_pred_time, print_progress_loop
 from timeseries.experiments.market.utils.dataprep import to_np
 from timeseries.experiments.market.utils.models import get_params
@@ -294,6 +298,14 @@ def get_bundles(is_mv, steps, test, train, reg_prob_test):
         reg_prob_bundle = reg_prob_test[::steps]
     return history, test_bundles, y_test, reg_prob_bundle
 
+def get_model_data_config(experiment_cfg, model_cfg, fixed_cfg):
+    config = ExperimentConfig(experiment_cfg['formatter'], experiment_cfg)
+    formatter = config.make_data_formatter()
+    formatter.update_model_params(model_cfg)
+    formatter.update_fixed_params(fixed_cfg)
+    model_folder = os.path.join(config.model_folder, experiment_cfg['experiment_name'])
+
+    return config, formatter, model_folder
 
 def train_test_model(use_gpu,
                      architecture,
@@ -305,9 +317,12 @@ def train_test_model(use_gpu,
                      predict_eval=True,
                      tb_callback=True,
                      use_best_params=False,
-                     indicators_use_time_subset=False):
+                     indicators_use_time_subset=False,
+                     split_data=None):
     """Trains tft based on defined model params.
   Args:
+      :param split_data:
+      :param indicators_use_time_subset:
       :param architecture:
       :param use_best_params:
       :param tb_callback:
@@ -323,8 +338,12 @@ def train_test_model(use_gpu,
     Model = get_model(architecture)
 
     print("Loading & splitting data...")
-    train, valid, test = data_formatter.split_data(data_config,
-                                                   indicators_use_time_subset=indicators_use_time_subset)
+    if split_data is None:
+        train, valid, test = data_formatter.split_data(data_config,
+                                                       indicators_use_time_subset=indicators_use_time_subset)
+    else:
+        train, valid, test = split_data
+
     train_samples, valid_samples = data_formatter.get_num_samples_for_calibration()
 
     print('shape: {}'.format(train.shape))
@@ -418,6 +437,7 @@ def predict_from_model(best_params, data_formatter, model, test):
     results = {'quantiles': model.quantiles,
                'forecasts': unscaled_output_map,
                'losses': losses,
+               'learning_rate': model.learning_rate,
                'fit_history': model.fit_history,
                'target': data_formatter.test_true_y.columns[0] if data_formatter.test_true_y is not None else None,
                'fixed_params': data_formatter.get_fixed_params(),
@@ -431,7 +451,9 @@ def load_predict_model(use_gpu,
                        model_folder,
                        data_config,
                        data_formatter,
-                       use_all_data=False):
+                       use_all_data=False,
+                       last_layer_weights=None,
+                       exclude_p50=True):
     """Trains tft based on defined model params.
   Args:
       :param use_all_data:
@@ -466,6 +488,32 @@ def load_predict_model(use_gpu,
         # model = TemporalFusionTransformer(params, use_cudnn=use_gpu)
         model = Model(params)
         model.load(opt_manager.hyperparam_folder, use_keras_loadings=True)
+
+        # manually set last layer weights (used in multi-objective optimization)
+        if last_layer_weights is not None:
+            weights, last_layer = get_last_layer_weights(model)
+
+            # get original p50 weights
+            if exclude_p50:
+                p50_w = weights[0][:, 1]
+                p50_b = weights[1][1]
+                weights_woP50 = [weights[0][:, [0, 2]], weights[1][[0, 2]]]
+
+                # get conversion parameters from weights wo p50
+                ind, w_params_woP50 = params_conversion_weights(weights_woP50)
+                new_weights = reconstruct_weights(last_layer_weights, w_params_woP50)
+
+                new_weights[0] = np.vstack([new_weights[0][:, 0],
+                                            p50_w,
+                                            new_weights[0][:, 1]]).T
+                new_weights[1] = np.array([new_weights[1][0],
+                                           p50_b,
+                                           new_weights[1][1]])
+            else:
+                ind, w_params_wP50 = params_conversion_weights(weights)
+                new_weights = reconstruct_weights(last_layer_weights, w_params_wP50)
+
+            last_layer.set_weights(new_weights)
 
         return predict_from_model(params, data_formatter, model, test), test
 

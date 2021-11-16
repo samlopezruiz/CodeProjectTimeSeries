@@ -16,7 +16,7 @@ np.random.seed(42)
 
 if __name__ == '__main__':
     # %%
-    in_cfg = {'save_results': False,
+    in_cfg = {'save_results': True,
               'save_plot': False,
               'verbose': 1,
               'plot_title': True,
@@ -32,7 +32,7 @@ if __name__ == '__main__':
                 'data_to': '2021-06',
                 'vol_filename': "Vol_5levels_ESc_2012_1-2021_6.z",
                 'downsample': True,
-                'downsample_p': '60T'}
+                'downsample_p': '5T'}
 
     split_cfg = {'group': 'week',
                  'groups_of': 12,
@@ -76,3 +76,5 @@ if __name__ == '__main__':
         'data_cfg': data_cfg
     }
     save_subsets_and_test(result, in_cfg, data_cfg, split_cfg)
+
+    head = df_subsets.head(1000)

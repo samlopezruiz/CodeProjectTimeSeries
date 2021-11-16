@@ -1,0 +1,198 @@
+# called with: --target-runner target-runner.bat
+Warning: A default scenario file "./scenario.txt" has been found and will be read
+# 0 expression(s) specifying forbidden configurations read from 'D:/MEGA/CienciasDeLaComputacion/Tesis/CodeProjectTimeSeries/src/irace/forbidden.txt'
+# 0 expression(s) specifying forbidden configurations read from 'D:/MEGA/CienciasDeLaComputacion/Tesis/CodeProjectTimeSeries/src/irace/forbidden.txt'
+Error: == irace == Insufficient budget: With the current settings, irace will require a value of 'maxExperiments' of at least '180'.
+> irace.cmdline('--target-runner target-runner.bat')
+#------------------------------------------------------------------------------
+# irace: An implementation in R of (Elitist) Iterated Racing
+# Version: 3.4.1.9fcaeaf
+# Copyright (C) 2010-2020
+# Manuel Lopez-Ibanez     <manuel.lopez-ibanez@manchester.ac.uk>
+# Jeremie Dubois-Lacoste
+# Leslie Perez Caceres    <leslie.perez.caceres@ulb.ac.be>
+#
+# This is free software, and you are welcome to redistribute it under certain
+# conditions.  See the GNU General Public License for details. There is NO
+# WARRANTY; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+#
+# irace builds upon previous code from the race package:
+#     race: Racing methods for the selection of the best
+#     Copyright (C) 2003 Mauro Birattari
+#------------------------------------------------------------------------------
+# installed at: C:/Users/sam24/.conda/envs/r4-env/lib/R/library/irace
+# called with: --target-runner target-runner.bat
+Warning: A default scenario file "./scenario.txt" has been found and will be read
+# 0 expression(s) specifying forbidden configurations read from 'D:/MEGA/CienciasDeLaComputacion/Tesis/CodeProjectTimeSeries/src/irace/forbidden.txt'
+# 0 expression(s) specifying forbidden configurations read from 'D:/MEGA/CienciasDeLaComputacion/Tesis/CodeProjectTimeSeries/src/irace/forbidden.txt'
+# 2021-11-09 16:16:49 CST: Initialization
+# Elitist race
+# Elitist new instances: 1
+# Elitist limit: 2
+# nbIterations: 4
+# minNbSurvival: 4
+# nbParameters: 4
+# seed: 1211258119
+# confidence level: 0.95
+# budget: 180
+# mu: 5
+# deterministic: FALSE
+
+# 2021-11-09 16:16:49 CST: Iteration 1 of 4
+# experimentsUsedSoFar: 0
+# remainingBudget: 180
+# currentBudget: 45
+# nbConfigurations: 7
+# Markers:
+     x No test is performed.
+     c Configurations are discarded only due to capping.
+     - The test is performed and some configurations are discarded.
+     = The test is performed but no configuration is discarded.
+     ! The test is performed and configurations could be discarded but elite configurations are preserved.
+     . All alive configurations are elite and nothing is discarded
+
++-+-----------+-----------+-----------+---------------+-----------+--------+-----+----+------+
+| |   Instance|      Alive|       Best|      Mean best| Exp so far|  W time|  rho|KenW|  Qvar|
++-+-----------+-----------+-----------+---------------+-----------+--------+-----+----+------+
+|x|          1|          7|          4|   0.7068013549|          7|01:03:18|   NA|  NA|    NA|
+|x|          2|          7|          1|   0.7183196247|         14|00:59:26|+0.71|0.86|0.0062|
+|x|          3|          7|          1|   0.6716006398|         21|00:48:50|+0.74|0.83|0.0218|
+|x|          4|          7|          1|   0.6856229156|         28|00:48:32|+0.54|0.66|0.0213|
+|-|          5|          3|          1|   0.6916899204|         35|00:47:25|-0.10|0.12|0.6593|
++-+-----------+-----------+-----------+---------------+-----------+--------+-----+----+------+
+Best-so-far configuration:           1    mean value:    0.6916899204
+Description of the best-so-far configuration:
+  .ID. num_encoder_steps num_heads hidden_layer_size learning_rate .PARENT.
+1    1                14         3               101           0.1       NA
+
+# 2021-11-09 20:44:23 CST: Elite configurations (first number is the configuration ID; listed from best to worst according to the sum of ranks):
+  num_encoder_steps num_heads hidden_layer_size learning_rate
+1                14         3               101           0.1
+4                22         3                72           0.2
+7                46         4               102           0.2
+# 2021-11-09 20:44:23 CST: Iteration 2 of 4
+# experimentsUsedSoFar: 35
+# remainingBudget: 145
+# currentBudget: 48
+# nbConfigurations: 9
+# Markers:
+     x No test is performed.
+     c Configurations are discarded only due to capping.
+     - The test is performed and some configurations are discarded.
+     = The test is performed but no configuration is discarded.
+     ! The test is performed and configurations could be discarded but elite configurations are preserved.
+     . All alive configurations are elite and nothing is discarded
+
++-+-----------+-----------+-----------+---------------+-----------+--------+-----+----+------+
+| |   Instance|      Alive|       Best|      Mean best| Exp so far|  W time|  rho|KenW|  Qvar|
++-+-----------+-----------+-----------+---------------+-----------+--------+-----+----+------+
+|x|          6|          9|         11|   0.7000575662|          9|01:02:06|   NA|  NA|    NA|
+|x|          2|          9|          9|   0.6924577355|         15|00:40:06|+0.82|0.91|0.1946|
+|x|          3|          9|          1|   0.6611585418|         21|00:41:30|+0.84|0.89|0.1830|
+|x|          1|          9|          9|   0.6955830902|         27|00:40:59|+0.62|0.72|0.2023|
+|-|          4|          7|         11|   0.6796013117|         33|00:40:32|+0.29|0.43|0.6643|
+|-|          5|          5|          9|   0.6996945540|         37|00:26:23|-0.09|0.09|0.8892|
+|=|          7|          5|         11|   0.6886915735|         42|00:33:37|-0.07|0.08|0.8419|
+|=|          8|          5|          9|   0.7029900178|         47|00:33:49|-0.07|0.06|0.8498|
++-+-----------+-----------+-----------+---------------+-----------+--------+-----+----+------+
+Best-so-far configuration:           9    mean value:    0.7029900178
+Description of the best-so-far configuration:
+  .ID. num_encoder_steps num_heads hidden_layer_size learning_rate .PARENT.
+9    9                19         4                12           0.2        4
+
+# 2021-11-10 02:03:28 CST: Elite configurations (first number is the configuration ID; listed from best to worst according to the sum of ranks):
+   num_encoder_steps num_heads hidden_layer_size learning_rate
+9                 19         4                12           0.2
+11                25         4                 6           0.3
+1                 14         3               101           0.1
+13                15         3                50           0.1
+# 2021-11-10 02:03:28 CST: Iteration 3 of 4
+# experimentsUsedSoFar: 82
+# remainingBudget: 98
+# currentBudget: 49
+# nbConfigurations: 9
+# Markers:
+     x No test is performed.
+     c Configurations are discarded only due to capping.
+     - The test is performed and some configurations are discarded.
+     = The test is performed but no configuration is discarded.
+     ! The test is performed and configurations could be discarded but elite configurations are preserved.
+     . All alive configurations are elite and nothing is discarded
+
++-+-----------+-----------+-----------+---------------+-----------+--------+-----+----+------+
+| |   Instance|      Alive|       Best|      Mean best| Exp so far|  W time|  rho|KenW|  Qvar|
++-+-----------+-----------+-----------+---------------+-----------+--------+-----+----+------+
+|x|          9|          9|         13|   0.5518067479|          9|01:01:12|   NA|  NA|    NA|
+|x|          8|          9|         14|   0.6822422743|         14|00:34:17|+0.42|0.71|0.1960|
+|x|          6|          9|         15|   0.7000082930|         19|00:34:12|+0.18|0.45|0.1305|
+|x|          4|          9|         15|   0.7007973343|         24|00:34:15|+0.33|0.50|0.1229|
+|-|          5|          7|          9|   0.7071590781|         29|00:34:12|-0.10|0.12|0.9710|
+|=|          3|          7|          9|   0.7025383015|         32|00:20:37|-0.02|0.15|0.8664|
+|=|          7|          7|         13|   0.6726390464|         35|00:20:35|+0.03|0.17|0.7946|
+|=|          1|          7|          9|   0.7065612897|         38|00:20:33|+0.02|0.14|0.8392|
+|=|          2|          7|          9|   0.7036326461|         41|00:21:01|+0.07|0.18|0.7910|
+|=|         10|          7|          9|   0.7076758385|         48|00:48:55|+0.00|0.10|0.8371|
++-+-----------+-----------+-----------+---------------+-----------+--------+-----+----+------+
+Best-so-far configuration:           9    mean value:    0.7076758385
+Description of the best-so-far configuration:
+  .ID. num_encoder_steps num_heads hidden_layer_size learning_rate .PARENT.
+9    9                19         4                12           0.2        4
+
+# 2021-11-10 07:33:23 CST: Elite configurations (first number is the configuration ID; listed from best to worst according to the sum of ranks):
+   num_encoder_steps num_heads hidden_layer_size learning_rate
+9                 19         4                12           0.2
+13                15         3                50           0.1
+11                25         4                 6           0.3
+15                20         5                 5           0.3
+# 2021-11-10 07:33:23 CST: Iteration 4 of 4
+# experimentsUsedSoFar: 130
+# remainingBudget: 50
+# currentBudget: 50
+# nbConfigurations: 8
+# Markers:
+     x No test is performed.
+     c Configurations are discarded only due to capping.
+     - The test is performed and some configurations are discarded.
+     = The test is performed but no configuration is discarded.
+     ! The test is performed and configurations could be discarded but elite configurations are preserved.
+     . All alive configurations are elite and nothing is discarded
+
++-+-----------+-----------+-----------+---------------+-----------+--------+-----+----+------+
+| |   Instance|      Alive|       Best|      Mean best| Exp so far|  W time|  rho|KenW|  Qvar|
++-+-----------+-----------+-----------+---------------+-----------+--------+-----+----+------+
+|x|         11|          8|          9|   0.6866191030|          8|01:02:03|   NA|  NA|    NA|
+|x|         10|          8|         21|   0.6789623797|         12|00:30:59|-0.19|0.40|0.8377|
+|x|          3|          8|         21|   0.6860072215|         16|00:31:02|+0.10|0.40|0.8118|
+|x|          5|          8|         21|   0.6909887791|         20|00:30:21|+0.19|0.39|0.6462|
+|-|          8|          5|         21|   0.6860756993|         24|00:29:00|+0.14|0.31|0.7330|
+|=|          6|          5|         21|   0.6885892848|         25|00:07:34|+0.03|0.19|0.7868|
+|=|          9|          5|         21|   0.6854960237|         26|00:07:24|+0.10|0.22|0.7709|
+|=|          4|          5|         21|   0.6627853811|         27|00:07:23|+0.10|0.21|0.7494|
+|=|          2|          5|         21|   0.6618999773|         28|00:07:06|+0.16|0.25|0.6969|
+|!|          7|          5|         21|   0.6635962546|         29|00:07:30|+0.18|0.26|0.6612|
+|-|          1|          1|         21|   0.6588640701|         30|00:07:23|   NA|  NA|    NA|
++-+-----------+-----------+-----------+---------------+-----------+--------+-----+----+------+
+Best-so-far configuration:          21    mean value:    0.6588640701
+Description of the best-so-far configuration:
+   .ID. num_encoder_steps num_heads hidden_layer_size learning_rate .PARENT.
+21   21                24         5                13           0.1        9
+
+# 2021-11-10 11:21:13 CST: Elite configurations (first number is the configuration ID; listed from best to worst according to the sum of ranks):
+   num_encoder_steps num_heads hidden_layer_size learning_rate
+21                24         5                13           0.1
+# 2021-11-10 11:21:13 CST: Stopped because there is not enough budget left to race more than the minimum (4)
+# You may either increase the budget or set 'minNbSurvival' to a lower value
+# Iteration: 5
+# nbIterations: 5
+# experimentsUsedSoFar: 160
+# timeUsed: 0
+# remainingBudget: 20
+# currentBudget: 20
+# number of elites: 1
+# nbConfigurations: 2
+# Best configurations (first number is the configuration ID; listed from best to worst according to the sum of ranks):
+
+   num_encoder_steps num_heads hidden_layer_size learning_rate
+21                24         5                13           0.1
+# Best configurations as commandlines (first number is the configuration ID; same order as above):
+21  --num_encoder_steps=24 --num_heads=5 --hidden_layer_size=13 --learning_rate=0.1

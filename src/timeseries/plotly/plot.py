@@ -9,10 +9,10 @@ from matplotlib import pyplot as plt
 from plotly import graph_objects as go
 from plotly.subplots import make_subplots
 
-from algorithms.moo.utils.plot import plot_multiple_pop, plot_hist_hv
+from algorithms.moo.utils.plot import plot_hist_hv
 from timeseries.experiments.utils.config import unpack_in_cfg
 from timeseries.experiments.utils.models import get_suffix
-from timeseries.plotly.utils import plotly_params_check, plotly_save
+from timeseries.plotly.utils import plotly_params_check, plotly_save, calc_geo_points
 from timeseries.utils.dataframes import check_cols_exists, check_col_exists
 from timeseries.utils.files import load_data_err
 import plotly.io as pio
@@ -103,7 +103,6 @@ def plotly_time_series(df,
                        plot_title=True,
                        label_scale=1,
                        adjust_height=(False, 0.6), plot_ytitles=False, **kwargs):
-
     params_ok, params = plotly_params_check(df, **kwargs)
     features, rows, cols, type_plot, alphas = params
     n_rows = len(set(rows))
@@ -1076,26 +1075,67 @@ def plotly_time_series_bars_hist(df, color_col, bars_cols, features=None, title=
     if file_path is not None and save is True:
         plotly_save(fig, file_path, size)
 
-def plot_results_moo(res, file_path=None, title=None, save_plots=False, use_date=False):
-    # Plotting hypervolume
-    plot_hist_hv(res, save=save_plots)
 
-    # Plot Optimum Solutions
-    pop_hist = [gen.pop.get('F') for gen in res.history]
-    if res.opt.get('F').shape[1] > 3:
-        pop = pop_hist[-1][:, :3]
-        opt = res.opt.get('F')[:, :3]
-    elif res.opt.get('F').shape[1] == 3:
-        pop = pop_hist[-1]
-        opt = res.opt.get('F')
-    else:
-        print('Objective space: dim < 3. Shape={}'.format(res.opt.get('F').shape[1]))
+def add_3d_scatter_trace(data, name=None, color_ix=0, markersize=5, marker_symbol='circle',
+                         mode='markers', legend=True, opacity=1, line_width=None, transparent_fill=False):
+    return go.Scatter3d(
+        x=data[:, 0],
+        y=data[:, 1],
+        z=data[:, 2],
+        visible=True,
+        showlegend=legend,
+        name=name,
+        mode=mode,
+        opacity=opacity,
+        marker_symbol=marker_symbol,
+        marker=dict(size=markersize,
+                    color='rgba(0, 0, 0, 0)' if transparent_fill else colors[color_ix % 10],
+                    line=dict(
+                        color=colors[color_ix % 10],
+                        width=line_width
+                    ) if line_width is not None else None)
+    )
 
-    plot_multiple_pop([pop, opt],
-                      labels=['population', 'optimum'],
-                      save=save_plots,
-                      opacities=[.2, 1],
-                      plot_border=True,
-                      file_path=file_path,
-                      title=title,
-                      use_date=use_date)
+
+def plot_4D(F,
+            opacity_col,
+            save=False,
+            file_path=None,
+            label_scale=1,
+            size=(1980, 1080),
+            save_png=False,
+            title=''
+            ):
+
+    opacity = F[:, opacity_col]
+    F_3D = np.delete(F, opacity_col, axis=1)
+    best_point, worst_point, extreme_points, intercepts = calc_geo_points(F_3D)
+
+    # fig = make_subplots(rows=1, cols=1)
+    traces = []
+
+    # Population
+    traces.append(add_3d_scatter_trace(F_3D, name='population', color_ix=0, opacity=opacity, markersize=5))
+
+    # Ideal and worst point
+    traces.append(
+        add_3d_scatter_trace(best_point.reshape(1, -1), name='ideal_point', color_ix=2, markersize=10,
+                             marker_symbol='cross'))
+    traces.append(
+        add_3d_scatter_trace(worst_point.reshape(1, -1), name='ndir_point', color_ix=5, markersize=10,
+                             marker_symbol='cross'))
+
+    fig = go.Figure(data=traces)
+    fig.update_layout(scene=dict(
+        xaxis_title='f1(x)',
+        yaxis_title='f2(x)',
+        zaxis_title='f3(x)'))
+    fig.update_layout(title=title, legend_itemsizing='constant',
+                      legend=dict(font=dict(size=18 * label_scale)))
+    fig.update_xaxes(tickfont=dict(size=14 * label_scale), title_font=dict(size=18 * label_scale))
+    fig.update_yaxes(tickfont=dict(size=14 * label_scale), title_font=dict(size=18 * label_scale))
+    fig.show()
+
+    time.sleep(1.5)
+    if file_path is not None and save is True:
+        plotly_save(fig, file_path, size, save_png)

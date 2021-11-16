@@ -1,0 +1,103 @@
+# installed at: C:/Users/sam24/.conda/envs/r4-env/lib/R/library/irace
+# called with: --target-runner target-runner.bat
+Warning: A default scenario file "./scenario.txt" has been found and will be read
+# 0 expression(s) specifying forbidden configurations read from 'D:/MEGA/CienciasDeLaComputacion/Tesis/CodeProjectTimeSeries/src/irace/forbidden.txt'
+# 0 expression(s) specifying forbidden configurations read from 'D:/MEGA/CienciasDeLaComputacion/Tesis/CodeProjectTimeSeries/src/irace/forbidden.txt'
+# 2021-11-10 22:28:02 CST: Initialization
+# Elitist race
+# Elitist new instances: 1
+# Elitist limit: 2
+# nbIterations: 4
+# minNbSurvival: 4
+# nbParameters: 4
+# seed: 934460076
+# confidence level: 0.95
+# budget: 180
+# mu: 5
+# deterministic: FALSE
+
+# 2021-11-10 22:28:02 CST: Iteration 1 of 4
+# experimentsUsedSoFar: 0
+# remainingBudget: 180
+# currentBudget: 45
+# nbConfigurations: 7
+# Markers:
+     x No test is performed.
+     c Configurations are discarded only due to capping.
+     - The test is performed and some configurations are discarded.
+     = The test is performed but no configuration is discarded.
+     ! The test is performed and configurations could be discarded but elite configurations are preserved.
+     . All alive configurations are elite and nothing is discarded
+
++-+-----------+-----------+-----------+---------------+-----------+--------+-----+----+------+
+| |   Instance|      Alive|       Best|      Mean best| Exp so far|  W time|  rho|KenW|  Qvar|
++-+-----------+-----------+-----------+---------------+-----------+--------+-----+----+------+
+|x|          1|          7|          1|   0.5680352449|          7|00:34:03|   NA|  NA|    NA|
+|x|          2|          7|          3|   0.5711327493|         14|00:34:58|+0.43|0.71|0.3022|
+|x|          3|          7|          6|   0.5724707842|         21|00:35:15|+0.37|0.58|0.5059|
+|x|          4|          7|          6|   0.5740075707|         28|00:35:16|+0.52|0.64|0.4398|
+|-|          5|          3|          6|   0.5733736634|         35|00:35:16|-0.20|0.04|0.8071|
++-+-----------+-----------+-----------+---------------+-----------+--------+-----+----+------+
+Best-so-far configuration:           6    mean value:    0.5733736634
+Description of the best-so-far configuration:
+  .ID. num_encoder_steps num_heads hidden_layer_size minibatch_size .PARENT.
+6    6                30         3                64             64       NA
+
+# 2021-11-11 01:22:52 CST: Elite configurations (first number is the configuration ID; listed from best to worst according to the sum of ranks):
+  num_encoder_steps num_heads hidden_layer_size minibatch_size
+6                30         3                64             64
+3                39         3                16             64
+1                29         2                64             64
+# 2021-11-11 01:22:52 CST: Iteration 2 of 4
+# experimentsUsedSoFar: 35
+# remainingBudget: 145
+# currentBudget: 48
+# nbConfigurations: 9
+# Markers:
+     x No test is performed.
+     c Configurations are discarded only due to capping.
+     - The test is performed and some configurations are discarded.
+     = The test is performed but no configuration is discarded.
+     ! The test is performed and configurations could be discarded but elite configurations are preserved.
+     . All alive configurations are elite and nothing is discarded
+
++-+-----------+-----------+-----------+---------------+-----------+--------+-----+----+------+
+| |   Instance|      Alive|       Best|      Mean best| Exp so far|  W time|  rho|KenW|  Qvar|
++-+-----------+-----------+-----------+---------------+-----------+--------+-----+----+------+
+|x|          6|          9|          3|   0.5644494295|          9|01:04:34|   NA|  NA|    NA|
+|x|          5|          9|          6|   0.5710979104|         15|00:52:24|+0.93|0.97|0.0583|
+|x|          4|          9|         11|   0.5708041390|         21|00:52:35|+0.66|0.77|0.1504|
+|x|          3|          9|         11|   0.5729893148|         27|00:52:27|+0.59|0.70|0.2360|
+|-|          2|          5|         11|   0.5726364017|         33|00:52:37|+0.03|0.22|0.7565|
+|=|          1|          5|         11|   0.5717118680|         35|00:08:17|+0.01|0.17|0.7923|
+|=|          7|          5|         11|   0.5715043630|         40|00:20:38|-0.09|0.07|0.8159|
++-+-----------+-----------+-----------+---------------+-----------+--------+-----+----+------+
+Best-so-far configuration:          11    mean value:    0.5715043630
+Description of the best-so-far configuration:
+   .ID. num_encoder_steps num_heads hidden_layer_size minibatch_size .PARENT.
+11   11                46         4                16             64        3
+
+# 2021-11-11 06:26:26 CST: Elite configurations (first number is the configuration ID; listed from best to worst according to the sum of ranks):
+   num_encoder_steps num_heads hidden_layer_size minibatch_size
+11                46         4                16             64
+3                 39         3                16             64
+6                 30         3                64             64
+1                 29         2                64             64
+# 2021-11-11 06:26:26 CST: Iteration 3 of 4
+# experimentsUsedSoFar: 75
+# remainingBudget: 105
+# currentBudget: 52
+# nbConfigurations: 10
+# Markers:
+     x No test is performed.
+     c Configurations are discarded only due to capping.
+     - The test is performed and some configurations are discarded.
+     = The test is performed but no configuration is discarded.
+     ! The test is performed and configurations could be discarded but elite configurations are preserved.
+     . All alive configurations are elite and nothing is discarded
+
++-+-----------+-----------+-----------+---------------+-----------+--------+-----+----+------+
+| |   Instance|      Alive|       Best|      Mean best| Exp so far|  W time|  rho|KenW|  Qvar|
++-+-----------+-----------+-----------+---------------+-----------+--------+-----+----+------+
+|x|          8|         10|         18|   0.5678349733|         10|00:50:06|   NA|  NA|    NA|
+|x|          3|         10|         18|   0.5690296590|         16|00:33:43|+0.16|0.58|0.8261|

@@ -4,10 +4,14 @@ import numpy as np
 from deap.tools._hypervolume import hv
 from pymoo.factory import get_performance_indicator
 
-from algorithms.moo.utils.plot import get_fitnesses
 from algorithms.moo.utils.utils import get_deap_pops_obj, get_pymoo_pops_obj
 from timeseries.utils.utils import array_from_lists
 
+
+def get_fitnesses(pop):
+    fitnesses = np.array([ind.fitness.wvalues for ind in pop])
+    fitnesses *= -1
+    return fitnesses
 
 def hypervolume(individuals, ref=None):
     # front = tools.sortLogNondominated(individuals, len(individuals), first_front_only=True)

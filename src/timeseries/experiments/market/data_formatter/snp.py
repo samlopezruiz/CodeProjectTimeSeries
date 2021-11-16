@@ -35,10 +35,10 @@ class SnPFormatter(GenericDataFormatter):
     }
 
     model_params = {
-        'total_time_steps': 30 + 5,
-        'num_encoder_steps': 30,
+        'total_time_steps': 48 + 5,
+        'num_encoder_steps': 48,
         'dropout_rate': 0.3,
-        'hidden_layer_size': 160,
+        'hidden_layer_size': 16,
         'learning_rate': 0.01,
         'minibatch_size': 64,
         'max_gradient_norm': 0.01,
@@ -139,6 +139,7 @@ class SnPFormatter(GenericDataFormatter):
         add_features(mkt_data,
                      macds=data_config['macd_vars'],
                      returns=data_config['returns_vars'],
+                     returns_from_ema=data_config['returns_from_ema'],
                      use_time_subset=indicators_use_time_subset,
                      rsis=data_config['rsi_vars'],
                      p0s=data_config['macd_periods'],

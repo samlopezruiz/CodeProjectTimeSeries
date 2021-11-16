@@ -24,7 +24,10 @@
 ##    character '|' followed by an R expression involving the names of
 ##    other parameters. This expression must return TRUE if the 
 ##    condition is satisfied, FALSE otherwise.
+## learning_rate          "--learning_rate="           r  (0.01, 0.1)
 
 # 1:                   2:                           3:              4:      5:
-num_encoder_steps      "--num_encoder_steps="       i  (20, 50)
-num_heads              "--num_heads="               i  (1, 4)
+num_encoder_steps      "--num_encoder_steps="       i  (4, 48)
+num_heads              "--num_heads="               i  (1, 6)
+hidden_layer_size      "--hidden_layer_size="       c  (16, 32, 64, 128)
+minibatch_size         "--minibatch_size="          c  (16, 32, 64)

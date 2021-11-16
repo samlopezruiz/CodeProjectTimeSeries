@@ -10,6 +10,7 @@ def ismv(train):
 
 def ln_returns(x):
     ln_r = np.log(x) - np.log(np.roll(x, 1, axis=0))
+
     # first row has no returns
     if isinstance(ln_r, pd.Series):
         return ln_r.iloc[1:]

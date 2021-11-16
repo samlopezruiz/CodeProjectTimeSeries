@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 import os
 from datetime import date
@@ -60,4 +61,50 @@ def plotly_save(fig, file_path, size, save_png=False, use_date_suffix=False):
 
     fig.write_html(os.path.join(html_path))
 
+
+def find_extreme_points(fitnesses, best_point):
+    'Finds the individuals with extreme values for each objective function.'
+
+    # Translate objectives
+    ft = fitnesses - best_point
+
+    # Find achievement scalarizing function (asf)
+    asf = np.eye(best_point.shape[0])
+    asf[asf == 0] = 1e6
+    asf = np.max(ft * asf[:, np.newaxis, :], axis=2)
+
+    # Extreme point are the fitnesses with minimal asf
+    min_asf_idx = np.argmin(asf, axis=1)
+    return fitnesses[min_asf_idx, :]
+
+
+def find_intercepts(extreme_points, best_point, current_worst, front_worst):
+    """Find intercepts between the hyperplane and each axis with
+    the ideal point as origin."""
+    # Construct hyperplane sum(f_i^n) = 1
+    b = np.ones(extreme_points.shape[1])
+    A = extreme_points - best_point
+    try:
+        x = np.linalg.solve(A, b)
+    except np.linalg.LinAlgError:
+        intercepts = current_worst
+    else:
+        intercepts = 1 / x
+
+        if (not np.allclose(np.dot(A, x), b) or
+                np.any(intercepts <= 1e-6) or
+                np.any((intercepts + best_point) > current_worst)):
+            intercepts = front_worst
+
+    return intercepts
+
+
+def calc_geo_points(pop):
+    best_point = np.min(pop, axis=0)
+    worst_point = np.max(pop, axis=0)
+
+    extreme_points = find_extreme_points(pop, best_point)
+    intercepts = find_intercepts(extreme_points, best_point, worst_point, worst_point)
+
+    return best_point, worst_point, extreme_points, intercepts
 

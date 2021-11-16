@@ -3,27 +3,37 @@ import os
 import joblib
 import numpy as np
 
+from timeseries.experiments.market.expt_settings.configs import ExperimentConfig
 from timeseries.experiments.market.utils.plot import plot_forecast_intervals, group_forecasts
 
 if __name__ == "__main__":
     # %%
+    general_cfg = {'save_plot': True}
+
     forecast_cfg = {'formatter': 'snp',
-                    'experiment_name': '60t_macd',
-                    'forecast': 'TFTModel_ES_fast_macd_forecasts_2'}
+                    'experiment_name': '60t_ema_q159',
+                    'forecast': 'TFTModel_all_ES_ema_r_q159_moo_ix60_pred'}
+    additional_vars = ['ESc']
 
     base_path = os.path.join('outputs/results',
                              forecast_cfg['formatter'],
                              forecast_cfg['experiment_name'],
+                             'moo',
                              forecast_cfg['forecast'])
     suffix = ''
 
     results = joblib.load(base_path + suffix + '.z')
+
+    if len(additional_vars) > 0:
+        config = ExperimentConfig(results['experiment_cfg']['formatter'], results['experiment_cfg'])
+        formatter = config.make_data_formatter()
+        mkt_data, add_data, reg_data = formatter.load_data(config.data_config)
+
     forecasts = results['reconstructed_forecasts'] if 'reconstructed_forecasts' in results else results['forecasts']
 
     identifiers = forecasts['targets']['identifier'].unique()
     target_col = results.get('target', 'ESc')
 
-    # %%
     n_output_steps = results['model_params']['total_time_steps'] - results['model_params']['num_encoder_steps']
     forecasts_grouped = group_forecasts(forecasts, n_output_steps, target_col)
 
@@ -33,21 +43,34 @@ if __name__ == "__main__":
         steps = ['t+{}'.format(i + 1) for i in range(n_output_steps)]
 
     # %%
-    # id = identifiers[5]
-    # plot_individual_forecast(forecasts_grouped, n_output_steps, id)
-    # plot_forecast_intervals(forecasts_grouped, n_output_steps, id, markersize=3, fill_max_opacity=0.1)
-
-    # %%
     sorted_ix_cm = np.argsort(results['hit_rates']['grouped_by_id_hit_rate'][:, 0, 0] +
                               results['hit_rates']['grouped_by_id_hit_rate'][:, 1, 1])[::-1]
 
-
+    img_path = os.path.join('outputs/results',
+                             forecast_cfg['formatter'],
+                             forecast_cfg['experiment_name'],
+                             'img')
+    filename = forecast_cfg['forecast']
+    sorted_ix_cm = [1]
     for ix in sorted_ix_cm[:10]:
         id = identifiers[ix]
+        title = 'Filename: {} <br>Model: {}, Vars Definition: {},' \
+                '<br>Dataset: {}, <br>Quantiles: {}, Group Id: {}'.format(forecast_cfg['forecast'],
+                                                                          results['experiment_cfg']['architecture'],
+                                                                          results['experiment_cfg']['vars_definition'],
+                                                                          results['experiment_cfg']['dataset_config'],
+                                                                          results['quantiles'],
+                                                                          id)
+        if 'objective_space' in results:
+            obj = np.round(results['objective_space'], 4)
+            title += '<br>QCP: {}, QEE: {}'.format(obj[0], obj[1])
+
         plot_forecast_intervals(forecasts_grouped, n_output_steps, id,
                                 markersize=3, mode='light',
-                                fill_max_opacity=0.1,
-                                 title='{}: {}'.format(id,
-                                                       np.round(
-                                                           results['hit_rates']['grouped_by_id_hit_rate'][ix, Ellipsis],
-                                                           4)))
+                                fill_max_opacity=0.2,
+                                additional_vars=['ESc'],
+                                additional_rows=[0],
+                                additional_data=mkt_data,
+                                title=title,
+                                save=general_cfg['save_plot'],
+                                file_path=os.path.join(img_path, filename+'_id{}'.format(id)))

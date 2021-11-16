@@ -34,3 +34,12 @@ def log_forecast_results(data_mkt_cfg, data_reg_cfg, training_cfg, model_cfg, re
                                                round(np.std(all_forecast_df['rse']), 2)))
     logging.info('Hit Rate: {} %'.format(round(100 * sum(all_forecast_df['hit_rate']) / all_forecast_df.shape[0], 4)))
     logging.info('Hits Confusion Matrix: {}'.format(str(cm_metrics)))
+
+
+def log_irace_run(model_cfg, fixed_cfg, experiment_cfg, results):
+    set_logging()
+    logging.info('---NEW RUN ---')
+    logging.info('Experiment Cfg: {}'.format(experiment_cfg))
+    logging.info('Model Cfg: {}'.format(model_cfg))
+    logging.info('Fixed Cfg: {}'.format(fixed_cfg))
+    logging.info('Quantile Score: {}'.format(results))

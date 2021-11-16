@@ -19,7 +19,6 @@ import os
 import numpy as np
 import tensorflow as tf
 
-from algorithms.tft2.expt_settings.save import save_forecasts
 from algorithms.tft2.harness.train_test import valid_test_model, moo_q_loss_model
 from algorithms.tft2.libs.hyperparam_opt import HyperparamOptManager
 from algorithms.tft2.libs.tft_model import TemporalFusionTransformer

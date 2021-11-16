@@ -1,8 +1,12 @@
+import time
+
 import numpy as np
 import pandas as pd
 import plotly.io as pio
 from plotly import graph_objects as go
 from plotly.subplots import make_subplots
+
+from timeseries.plotly.utils import plotly_save
 
 pio.renderers.default = "browser"
 
@@ -20,8 +24,22 @@ colors = [
 ]
 
 
-def plot_forecast_intervals(forecasts_grouped, n_output_steps, id, markersize=3, fill_max_opacity=0.1,
-                            label_scale=1, title='', mode='light'):
+def plot_forecast_intervals(forecasts_grouped,
+                            n_output_steps,
+                            id,
+                            additional_vars=[],
+                            additional_rows=[],
+                            additional_data=None,
+                            markersize=3,
+                            fill_max_opacity=0.1,
+                            label_scale=1,
+                            title='',
+                            mode='light',
+                            save=False,
+                            file_path=None,
+                            size=(1980, 1080),
+                            save_png=False
+                            ):
 
     steps = list(forecasts_grouped[list(forecasts_grouped.keys())[0]][id].columns)
     opacities = np.array([n_output_steps / (i + 1) for i in range(n_output_steps)]) / n_output_steps
@@ -42,7 +60,31 @@ def plot_forecast_intervals(forecasts_grouped, n_output_steps, id, markersize=3,
         lower_bound = forecasts_grouped[pair[0]][id]
         upper_bound = forecasts_grouped[pair[1]][id]
 
-        fig = make_subplots(rows=1, cols=1, shared_xaxes=True)
+        if len(additional_rows) > 0 and max(additional_rows) > 0:
+            fig = make_subplots(rows=max(additional_rows)+1, cols=1, shared_xaxes=True)
+        else:
+            fig = make_subplots(rows=1, cols=1, shared_xaxes=True)
+
+        if len(additional_vars) > 0 and additional_data is not None:
+            ix = forecasts_grouped['targets'][id].index
+            add_data = additional_data.loc[ix, :]
+            for i, var in enumerate(additional_vars):
+                fig.add_trace(
+                    go.Scatter(
+                        x=add_data.index,
+                        y=add_data[var],
+                        visible=True,
+                        showlegend=True,
+                        name=var,
+                        mode='lines+markers',
+                        opacity=1,
+                        line=dict(color=colors[4 + i], width=2),
+                        marker=dict(size=markersize,
+                                    color=colors[4 + i]),
+                    ),
+                    row=additional_rows[i] + 1,
+                    col=1
+                )
 
         for i, step in enumerate(steps[::-1]):
             if mode == 'light':
@@ -74,7 +116,7 @@ def plot_forecast_intervals(forecasts_grouped, n_output_steps, id, markersize=3,
                         y=forecasts_grouped['p50'][id][step],
                         visible=True,
                         showlegend=True,
-                        name='pred ' + step,
+                        name='pred ' + step[:-2] + str(-(i+1)),
                         mode='lines+markers',
                         opacity=opacities[i],
                         line=dict(color=colors[0], width=2),
@@ -102,6 +144,8 @@ def plot_forecast_intervals(forecasts_grouped, n_output_steps, id, markersize=3,
                 col=1
             )
 
+
+
         fig.update_layout(template="plotly_white" if mode == 'light' else 'plotly_dark',
                           xaxis_rangeslider_visible=False, title=title,
                           legend=dict(font=dict(size=18 * label_scale)))
@@ -109,6 +153,10 @@ def plot_forecast_intervals(forecasts_grouped, n_output_steps, id, markersize=3,
         fig.update_xaxes(tickfont=dict(size=14 * label_scale), title_font=dict(size=18 * label_scale))
         fig.update_yaxes(tickfont=dict(size=14 * label_scale), title_font=dict(size=18 * label_scale))
         fig.show()
+        time.sleep(1.5)
+
+        if file_path is not None and save is True:
+            plotly_save(fig, file_path, size, save_png=save_png)
 
 
 def append_scatter_trace(fig, df_ss, feature, opacity, markersize=5, color_ix=None, name=None):

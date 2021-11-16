@@ -16,12 +16,11 @@ from algorithms.moo.utils.plot import plot_runs, plot_histogram
 from algorithms.moo.utils.utils import get_moo_args, get_hv_hist_vs_n_evals
 from timeseries.data.market.files.utils import save_df
 from timeseries.experiments.utils.files import save_vars
-from timeseries.plotly.plot import plot_results_moo
 from timeseries.utils.parallel import repeat_different_args, repeat
 from timeseries.utils.utils import get_type_str, array_from_lists, mean_std_from_array
 
 
-def run_moo(problem, algorithm, algo_cfg, verbose=1, seed=None):
+def run_moo(problem, algorithm, algo_cfg, verbose=1, seed=None, save_history=True):
     termination = get_termination(algo_cfg['termination'][0], algo_cfg['termination'][1])
 
     t0 = time.time()
@@ -29,14 +28,14 @@ def run_moo(problem, algorithm, algo_cfg, verbose=1, seed=None):
                    algorithm,
                    termination,
                    seed=seed,
-                   save_history=True,
+                   save_history=save_history,
                    verbose=verbose >= 2)
 
     opt_time = time.time() - t0
     if verbose >= 1:
         print('{} with {} finished in {}s'.format(get_type_str(problem), get_type_str(algorithm), round(opt_time, 4)))
 
-    pop_hist = [gen.pop.get('F') for gen in res.history]
+    pop_hist = [gen.pop.get('F') for gen in res.history] if save_history else None
     result = {'res': res, 'pop_hist': pop_hist, 'opt_time': opt_time}
     return result
 
@@ -114,12 +113,12 @@ def run_moo_problem(name,
     algo_cfg['name'] = get_type_str(algorithm)
     result = run_moo(problem, algorithm, algo_cfg, verbose=verbose, seed=seed)
 
-    if plot:
-        plot_results_moo(result['res'],
-                         file_path=file_path,
-                         title=create_title(prob_cfg, algo_cfg, algorithm),
-                         save_plots=save_plots,
-                         use_date=use_date)
+    # if plot:
+    #     plot_results_moo(result['res'],
+    #                      file_path=file_path,
+    #                      title=create_title(prob_cfg, algo_cfg, algorithm),
+    #                      save_plots=save_plots,
+    #                      use_date=use_date)
 
     hv_pop = get_hypervolume(result['pop_hist'][-1], prob_cfg['hv_ref'])
     hv_opt = None #get_hypervolume(result['res'].opt.get('F'), prob_cfg['hv_ref'])

@@ -1,8 +1,10 @@
 import os
 
 from google.cloud import storage
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = os.path.join(os.path.dirname('D:\MEGA\ComputerScience\Machine_Learning\ml_cred'), \
-                                                    'timeseriesprediction-331120-1af388f95e96.json')
+
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = os.path.join(
+    os.path.dirname('D:\MEGA\ComputerScience\Machine_Learning\ml_cred'), \
+    'timeseriesprediction-331120-1af388f95e96.json')
 
 
 def download_google_storage_file(cloud_filepath):

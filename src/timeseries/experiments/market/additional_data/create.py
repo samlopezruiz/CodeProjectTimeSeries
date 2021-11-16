@@ -14,8 +14,8 @@ if __name__ == '__main__':
               'image_folder': 'img', 'results_folder': 'res'}
     data_cfg = {'inst': "NQ", 'sampling': 'minute', 'suffix': "2012_1-2021_6", 'market': 'cme',
                 'src_folder': "data", 'data_from': '2012-01', 'data_to': '2021-07',
-                'downsample': True, 'downsample_p': '60T'}
-    df, features = load_market(data_cfg)
+                'downsample': True, 'downsample_p': '5T'}
+    df = load_market(data_cfg)
     df = time_subset(df, data_cfg)
     # plot_mkt_candles(df, data_cfg['inst'], template='plotly_dark')
 

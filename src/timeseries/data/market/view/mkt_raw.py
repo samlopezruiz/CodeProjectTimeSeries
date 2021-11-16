@@ -1,13 +1,6 @@
-from algorithms.dchange.func import get_regimes
-from algorithms.hmm.func import fitHMM
 from timeseries.data.market.files.utils import load_market
 from timeseries.experiments.market.preprocess.func import add_features
-from timeseries.plotly.plot import plotly_ts_candles, plotly_time_series
-from timeseries.preprocessing.func import macd, ema, rsi
-from timeseries.utils.dataframes import append_to_df
-
-
-
+from timeseries.plotly.plot import plotly_time_series
 
 if __name__ == '__main__':
     #%%
@@ -22,20 +15,30 @@ if __name__ == '__main__':
     data_to = '2021-12'
     df_ss = df.loc[data_from:data_to]
     df_ss = df_ss.resample('60T').last().dropna() if resample else df_ss
-    df_ss['macd_12_26'] = macd(df_ss['ESc'], p0=12, p1=26)
-    df_ss['macd_6_13'] = macd(df_ss['ESc'], p0=6, p1=13)
-    df_ss['ema_26'] = ema(df_ss['ESc'], period=26)
-    df_ss['ema_12'] = ema(df_ss['ESc'], period=12)
-    df_ss['rsi'] = rsi(df_ss, periods=14, col='ESc')
 
+    add_features(df_ss,
+                 macds=['ESc'],
+                 rsis=['ESc'],
+                 returns=['ESc'],
+                 use_time_subset=True,
+                 p0s=[12],
+                 p1s=[26],
+                 returns_from_ema=(3, True))
 
-#%% RSI
-    # df_plot['rsi'] = rsi(df_plot, periods=14, col='ESc')
+    # df_ss['macd_12_26'] = macd(df_ss['ESc'], p0=12, p1=26)
+    # df_ss['macd_6_13'] = macd(df_ss['ESc'], p0=6, p1=13)
+    # df_ss['ema_26'] = ema(df_ss['ESc'], period=26)
+    # df_ss['ema_3'] = ema(df_ss['ESc'], period=3)
+    # df_ss['rsi'] = rsi(df_ss['ESc'], periods=14, )
+    # df_ss['ESc_r'] = ln_returns(df_ss['ESc'])
+    # df_ss['ESc_e3_r'] = ln_returns(df_ss['ema_3'])
+
 
     #%%
-    df_plot_ss = df_ss.head(10000)
-    features = ['ESc', 'ema_26', 'ema_12', 'macd_12_26', 'macd_6_13', 'rsi']
-    rows = [0, 0, 0, 1, 1, 2]
+    df_plot_ss = df_ss.head(1000)
+    features = ['ESc', 'ESc_e3', 'ESc_r', 'ESc_e3_r']
+    rows = [0, 0, 1, 1]
+
     plotly_time_series(df_plot_ss, features=features,
                        markers='lines+markers',
                        rows=rows)

@@ -101,7 +101,7 @@ def confusion_mat(y_true, y_pred, plot_=True, self_change=False):
     return cm, {'tn': round(tn, 4), 'fp': round(fp, 4), 'fn': round(fn, 4), 'tp': round(tp, 4)}
 
 
-def hit_rate_from_forecast(results, n_output_steps):
+def hit_rate_from_forecast(results, n_output_steps, plot_=True):
     target_col = results['target']
 
     forecasts = results['reconstructed_forecasts'] if results['target'] else results['forecasts']
@@ -112,7 +112,7 @@ def hit_rate_from_forecast(results, n_output_steps):
 
     cm, cm_metrics = confusion_mat(y_true=forecasts['targets'][label],
                                    y_pred=forecasts['p50'][label],
-                                   plot_=True)
+                                   plot_=plot_)
 
     grouped = group_forecasts(forecasts, n_output_steps, target_col)
 
@@ -132,12 +132,12 @@ def hit_rate_from_forecast(results, n_output_steps):
         'grouped_by_id_hit_rate': confusion_mats
     }
 
-def post_process_results(results, formatter, experiment_cfg):
+def post_process_results(results, formatter, experiment_cfg, plot_=True):
     model_params = formatter.get_default_model_params()
     n_output_steps = model_params['total_time_steps'] - model_params['num_encoder_steps']
 
     print('Reconstructing forecasts...')
     if results['target']:
         results['reconstructed_forecasts'] = reconstruct_forecasts(formatter, results['forecasts'])
-    results['hit_rates'] = hit_rate_from_forecast(results, n_output_steps)
+    results['hit_rates'] = hit_rate_from_forecast(results, n_output_steps, plot_=plot_)
     results['experiment_cfg'] = experiment_cfg

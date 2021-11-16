@@ -164,3 +164,40 @@ append_vars(variable_definitions['ES_fast_macd_vol'], mkt_vars)
 append_vars(variable_definitions['ES_fast_macd_vol'], cat_date_vars)
 append_vars(variable_definitions['ES_fast_macd_vol'], additional_market_vars)
 append_vars(variable_definitions['ES_fast_macd_vol'], vol_profile_vars)
+
+
+variable_definitions['ES_ema_r'] = \
+    [
+        # TARGET
+        ('ESc_e3_r', DataTypes.REAL_VALUED, InputTypes.TARGET),
+
+        ('test_train_subset', DataTypes.CATEGORICAL, InputTypes.ID),
+        # ('subset', DataTypes.CATEGORICAL, InputTypes.ID),
+        ('datetime', DataTypes.DATE, InputTypes.TIME),
+        ('ESc_macd_6_12', DataTypes.REAL_VALUED, InputTypes.OBSERVED_INPUT),
+        ('ESc_macd_12_24', DataTypes.REAL_VALUED, InputTypes.OBSERVED_INPUT),
+        ('regime', DataTypes.CATEGORICAL, InputTypes.STATIC_INPUT),
+    ]
+
+append_vars(variable_definitions['ES_ema_r'], mkt_vars)
+append_vars(variable_definitions['ES_ema_r'], cat_date_vars)
+append_vars(variable_definitions['ES_ema_r'], additional_market_vars)
+
+
+variable_definitions['ES_slow_ema_r'] = \
+    [
+        # TARGET
+        ('ESc_e11_r', DataTypes.REAL_VALUED, InputTypes.TARGET),
+
+        ('test_train_subset', DataTypes.CATEGORICAL, InputTypes.ID),
+        # ('subset', DataTypes.CATEGORICAL, InputTypes.ID),
+        ('datetime', DataTypes.DATE, InputTypes.TIME),
+        ('ESc_macd_6_12', DataTypes.REAL_VALUED, InputTypes.OBSERVED_INPUT),
+        ('ESc_macd_12_24', DataTypes.REAL_VALUED, InputTypes.OBSERVED_INPUT),
+        ('ESc_macd_24_48', DataTypes.REAL_VALUED, InputTypes.OBSERVED_INPUT),
+        ('regime', DataTypes.CATEGORICAL, InputTypes.STATIC_INPUT),
+    ]
+
+append_vars(variable_definitions['ES_slow_ema_r'], mkt_vars)
+append_vars(variable_definitions['ES_slow_ema_r'], cat_date_vars)
+append_vars(variable_definitions['ES_slow_ema_r'], additional_market_vars)

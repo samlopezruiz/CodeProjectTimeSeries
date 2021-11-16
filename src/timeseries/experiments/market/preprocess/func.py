@@ -4,7 +4,7 @@ import seaborn as sns
 from sklearn.preprocessing import StandardScaler
 
 from timeseries.experiments.market.split.func import get_train_features, s_threshold
-from timeseries.preprocessing.func import ln_returns, macd, rsi
+from timeseries.preprocessing.func import ln_returns, macd, rsi, ema
 
 
 def append_timediff_subsets(df, time_diff_cfg, new_col='time_subset', plot_=False):
@@ -36,29 +36,44 @@ def add_features(df,
                  returns=None,
                  use_time_subset=True,
                  p0s=[12],
-                 p1s=[26]):
+                 p1s=[26],
+                 returns_from_ema=(3, False)):
 
     if 'time_subset' in df.columns and use_time_subset:
         df_grp = df.groupby('time_subset')
         for i, (group_cols, df_subset) in enumerate(df_grp):
             if returns is not None:
                 for var in returns:
+                    if returns_from_ema[1]:
+                        p = int(returns_from_ema[0])
+                        df.loc[df_subset.index, '{}_e{}'.format(var, p)] = ema(df_subset[var], period=p)
+                        df.loc[df_subset.index, '{}_e{}_r'.format(var, p)] = ln_returns(df.loc[df_subset.index, '{}_e{}'.format(var, p)])
+
                     df.loc[df_subset.index, var + '_r'] = ln_returns(df_subset[var])
+
             if macds is not None:
                 for var in macds:
                     for p0, p1 in zip(p0s, p1s):
                         df.loc[df_subset.index, '{}_macd_{}_{}'.format(var, p0, p1)] = macd(df_subset[var], p0=p0, p1=p1)
+
             if rsis is not None:
                 for var in rsis:
                     df.loc[df_subset.index, '{}_rsi'.format(var)] = rsi(df_subset[var], periods=14, ema=True)
     else:
         if returns is not None:
             for var in returns:
+                if returns_from_ema[1]:
+                    p = int(returns_from_ema[0])
+                    df['{}_e{}'.format(var, p)] = ema(df[var], period=p)
+                    df['{}_e{}_r'.format(var, p)] = ln_returns(df['{}_e{}'.format(var, p)])
+
                 df[var + '_r'] = ln_returns(df[var])
+
         if macds is not None:
             for var in macds:
                 for p0, p1 in zip(p0s, p1s):
                     df['{}_macd_{}_{}'.format(var, p0, p1)] = macd(df[var], p0=p0, p1=p1)
+
         if rsis is not None:
             for var in rsis:
                 df['{}_rsi'.format(var)] = rsi(df[var], periods=14, ema=True)
@@ -66,6 +81,10 @@ def add_features(df,
     if returns is not None:
         for var in returns:
             df.loc[:, var + '_r'].fillna(0, inplace=True)
+
+            if returns_from_ema[1]:
+                p = int(returns_from_ema[0])
+                df.loc[:, '{}_e{}_r'.format(var, p)].fillna(0, inplace=True)
 
 
 def scale_df(df, training_cfg):
