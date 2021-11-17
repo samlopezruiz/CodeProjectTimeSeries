@@ -1098,44 +1098,142 @@ def add_3d_scatter_trace(data, name=None, color_ix=0, markersize=5, marker_symbo
 
 
 def plot_4D(F,
-            opacity_col,
+            color_col,
+            ranked_F=None,
+            original_point=None,
+            selected_point=None,
             save=False,
             file_path=None,
             label_scale=1,
             size=(1980, 1080),
             save_png=False,
-            title=''
-            ):
-
-    opacity = F[:, opacity_col]
-    F_3D = np.delete(F, opacity_col, axis=1)
-    best_point, worst_point, extreme_points, intercepts = calc_geo_points(F_3D)
-
-    # fig = make_subplots(rows=1, cols=1)
+            title='',
+            markersize=5,
+            axis_labels=None,
+            camera_position=None):
+    color_scale = F[:, color_col]  # / max(F[:, color_col])
+    data = np.delete(F, color_col, axis=1)
+    # best_point, worst_point, extreme_points, intercepts = calc_geo_points(data)
+    cmin, cmax = min(color_scale), max(color_scale)
     traces = []
+    colorbar_label = axis_labels[color_col] if axis_labels is not None else \
+        ['f1(x)', 'f2(x)', 'f3(x)', 'f4(x)'][color_col]
 
-    # Population
-    traces.append(add_3d_scatter_trace(F_3D, name='population', color_ix=0, opacity=opacity, markersize=5))
+    if ranked_F is not None:
+        for i, ranked_f in enumerate(ranked_F):
+            color_scale = ranked_f[:, color_col]
+            data = np.delete(ranked_f, color_col, axis=1)
+            traces.append(
+                go.Scatter3d(
+                    x=data[:, 0],
+                    y=data[:, 1],
+                    z=data[:, 2],
+                    visible=True,
+                    showlegend=True if i == 0 else False,
+                    name='Solutions',
+                    mode='markers',
+                    opacity=(len(ranked_F) - i) / len(ranked_F),
+                    marker_symbol='circle',
+                    marker=dict(size=markersize,
+                                color=color_scale,
+                                colorbar=dict(title=colorbar_label) if i == 0 else None,
+                                showscale=True if i == 0 else False,
+                                cmin=cmin,
+                                cmax=cmax,
+                                colorscale=[[0, "blue"],
+                                            [1, 'green']],
+                                )
+                ))
+    else:
+        # fig = make_subplots(rows=1, cols=1)
+        # Population
+        traces.append(
+            go.Scatter3d(
+                x=data[:, 0],
+                y=data[:, 1],
+                z=data[:, 2],
+                visible=True,
+                showlegend=True,
+                name='Solutions',
+                mode='markers',
+                # opacity=opacity,
+                marker_symbol='circle',
+                marker=dict(size=markersize,
+                            color=color_scale,
+                            showscale=True
+                            )
+            )
+        )
+
+    if original_point is not None:
+        data = np.delete(original_point, color_col, axis=0)
+        traces.append(
+            go.Scatter3d(
+                x=[data[0]],
+                y=[data[1]],
+                z=[data[2]],
+                visible=True,
+                showlegend=True,
+                name='Original solution',
+                mode='markers',
+                marker_symbol='cross',
+                marker=dict(size=markersize * 2,
+                            color='black'
+                            )
+            )
+        )
+
+    if selected_point is not None:
+        data = np.delete(selected_point, color_col, axis=0)
+        traces.append(
+            go.Scatter3d(
+                x=[data[0]],
+                y=[data[1]],
+                z=[data[2]],
+                visible=True,
+                showlegend=True,
+                name='Selected solution',
+                mode='markers',
+                marker_symbol='cross',
+                marker=dict(size=markersize * 2,
+                            color='red'
+                            )
+            )
+        )
 
     # Ideal and worst point
-    traces.append(
-        add_3d_scatter_trace(best_point.reshape(1, -1), name='ideal_point', color_ix=2, markersize=10,
-                             marker_symbol='cross'))
-    traces.append(
-        add_3d_scatter_trace(worst_point.reshape(1, -1), name='ndir_point', color_ix=5, markersize=10,
-                             marker_symbol='cross'))
+    # traces.append(
+    #     add_3d_scatter_trace(best_point.reshape(1, -1), name='ideal_point', color_ix=2, markersize=10,
+    #                          marker_symbol='cross'))
+    # traces.append(
+    #     add_3d_scatter_trace(worst_point.reshape(1, -1), name='ndir_point', color_ix=5, markersize=10,
+    #                          marker_symbol='cross'))
 
     fig = go.Figure(data=traces)
+    if axis_labels is not None:
+        axis_labels = np.delete(axis_labels, color_col)
+    else:
+        axis_labels = ['f1(x)', 'f2(x)', 'f3(x)']
+
     fig.update_layout(scene=dict(
-        xaxis_title='f1(x)',
-        yaxis_title='f2(x)',
-        zaxis_title='f3(x)'))
-    fig.update_layout(title=title, legend_itemsizing='constant',
+        xaxis_title=axis_labels[0],
+        yaxis_title=axis_labels[1],
+        zaxis_title=axis_labels[2]))
+
+
+
+    if camera_position is not None:
+        fig.update_layout(scene_camera=dict(eye=dict(x=camera_position[0],
+                                                     y=camera_position[1],
+                                                     z=camera_position[2])))
+
+    fig.update_layout(legend_orientation="h")
+    fig.update_layout(title=title,
                       legend=dict(font=dict(size=18 * label_scale)))
     fig.update_xaxes(tickfont=dict(size=14 * label_scale), title_font=dict(size=18 * label_scale))
     fig.update_yaxes(tickfont=dict(size=14 * label_scale), title_font=dict(size=18 * label_scale))
     fig.show()
 
-    time.sleep(1.5)
     if file_path is not None and save is True:
+        time.sleep(1.5)
         plotly_save(fig, file_path, size, save_png)

@@ -8,11 +8,11 @@ from timeseries.experiments.market.utils.plot import plot_forecast_intervals, gr
 
 if __name__ == "__main__":
     # %%
-    general_cfg = {'save_plot': True}
+    general_cfg = {'save_plot': False}
 
     forecast_cfg = {'formatter': 'snp',
                     'experiment_name': '60t_ema_q159',
-                    'forecast': 'TFTModel_all_ES_ema_r_q159_moo_ix60_pred'}
+                    'forecast': 'TFTModel_all_ES_ema_r_q159_moo_ix66_k4_pred'}
     additional_vars = ['ESc']
 
     base_path = os.path.join('outputs/results',
@@ -50,8 +50,13 @@ if __name__ == "__main__":
                              forecast_cfg['formatter'],
                              forecast_cfg['experiment_name'],
                              'img')
+
     filename = forecast_cfg['forecast']
+
     sorted_ix_cm = [1]
+    y_range = [2000, 2050]
+    x_range = ['2015-04-19T20:00', '2015-04-24T15:00']
+
     for ix in sorted_ix_cm[:10]:
         id = identifiers[ix]
         title = 'Filename: {} <br>Model: {}, Vars Definition: {},' \
@@ -62,8 +67,8 @@ if __name__ == "__main__":
                                                                           results['quantiles'],
                                                                           id)
         if 'objective_space' in results:
-            obj = np.round(results['objective_space'], 4)
-            title += '<br>QCP: {}, QEE: {}'.format(obj[0], obj[1])
+            obj = np.round(results['objective_space'], 3)
+            title += '<br>Objective space: {}'.format(obj)
 
         plot_forecast_intervals(forecasts_grouped, n_output_steps, id,
                                 markersize=3, mode='light',
@@ -73,4 +78,6 @@ if __name__ == "__main__":
                                 additional_data=mkt_data,
                                 title=title,
                                 save=general_cfg['save_plot'],
-                                file_path=os.path.join(img_path, filename+'_id{}'.format(id)))
+                                file_path=os.path.join(img_path, filename+'_id{}'.format(id)),
+                                y_range=y_range,
+                                x_range=x_range)

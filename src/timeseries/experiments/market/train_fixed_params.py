@@ -3,7 +3,7 @@ import os
 
 import numpy as np
 import tensorflow as tf
-
+import telegram_send
 from timeseries.experiments.market.expt_settings.configs import ExperimentConfig
 from timeseries.experiments.market.utils.filename import quantiles_name
 from timeseries.experiments.market.utils.harness import train_test_model, get_model_data_config
@@ -16,7 +16,8 @@ if __name__ == "__main__":
     print("Device Name: ", tf.test.gpu_device_name())
     print('TF eager execution: {}'.format(tf.executing_eagerly()))
 
-    general_cfg = {'save_results': True}
+    general_cfg = {'save_results': True,
+                   'send_notifications': True}
 
     model_cfg = {'total_time_steps': 48 + 5,
                  'num_encoder_steps': 48,
@@ -63,6 +64,13 @@ if __name__ == "__main__":
                                use_best_params=False,
                                indicators_use_time_subset=True
                                )
+    filename = '{}_{}_q{}_lr{}_pred'.format(experiment_cfg['architecture'],
+                                            experiment_cfg['vars_definition'],
+                                            quantiles_name(results['quantiles']),
+                                            str(results['learning_rate'])[2:],
+                                            )
+    if general_cfg['send_notifications']:
+        telegram_send.send(messages=["training for {} completed".format(filename)])
 
     post_process_results(results, formatter, experiment_cfg)
     if general_cfg['save_results']:
@@ -71,10 +79,6 @@ if __name__ == "__main__":
         results['experiment_cfg'] = experiment_cfg
         save_vars(results, os.path.join(config.results_folder,
                                         experiment_cfg['experiment_name'],
-                                        '{}_{}_q{}_lr{}_pred'.format(experiment_cfg['architecture'],
-                                                                     experiment_cfg['vars_definition'],
-                                                                     quantiles_name(results['quantiles']),
-                                                                     str(results['learning_rate'])[2:],
-                                                                     )))
+                                        filename))
 
     print(results['hit_rates']['global_hit_rate'][1])

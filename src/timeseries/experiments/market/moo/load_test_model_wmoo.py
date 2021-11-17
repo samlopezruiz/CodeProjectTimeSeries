@@ -2,16 +2,17 @@ import os
 
 import joblib
 import numpy as np
+import seaborn as sns
 import tensorflow as tf
 
 from algorithms.tft2.harness.train_test import compute_moo_q_loss
-from timeseries.experiments.market.expt_settings.configs import ExperimentConfig
-from timeseries.experiments.market.plot.plot import plot_2D_pareto_front, plot_2D_moo_results
+from timeseries.experiments.market.moo.utils.utils import get_loss_to_obj_function, rank_solutions, aggregate_qcd_qee
+from timeseries.experiments.market.plot.plot import plot_2D_moo_results
 from timeseries.experiments.market.utils.filename import get_result_folder, quantiles_name
 from timeseries.experiments.market.utils.harness import load_predict_model, get_model_data_config
 from timeseries.experiments.market.utils.results import post_process_results
 from timeseries.experiments.utils.files import save_vars
-import seaborn as sns
+from timeseries.plotly.plot import plot_4D
 
 sns.set_theme('poster')
 
@@ -22,13 +23,13 @@ if __name__ == "__main__":
     print('TF eager execution: {}'.format(tf.executing_eagerly()))
 
     general_cfg = {'save_forecast': True,
-                   'save_plot': True,
+                   'save_plot': False,
                    'use_all_data': True,
                    'use_moo_weights': True}
 
     results_cfg = {'formatter': 'snp',
-                   'experiment_name': '60t_ema_q357',
-                   'results': 'ES_ema_r_q357_moo_weights'
+                   'experiment_name': '60t_ema_q159',
+                   'results': 'ES_ema_r_q159_moo_weights_4'
                    }
 
     # moo_result = joblib.load(os.path.join(get_result_folder(results_cfg), results_cfg['results'] + '.z'))
@@ -44,28 +45,77 @@ if __name__ == "__main__":
 
     # %%
     original_ix = np.argmin(np.sum(np.abs(quantiles_loss - moo_result['original_losses']), axis=1))
-    xaxis_limit = 0.6
-    total_selected_error = 1.25
 
-    Fs_x_plot_masks = quantiles_loss[:, 0] < xaxis_limit
-    selected_ix = np.argmin(np.abs(np.sum(eq_quantiles_loss[Fs_x_plot_masks, :], axis=1) - total_selected_error))
-    # selected_ix = np.searchsorted(quantiles_loss[:, 0], qcp_selected_error, side='left',)
+    filter_thold = 1.
+    total_selected_error = 1.25  # for 2k
+    sort_weights = [0.2, 0.2, 0.6, 0.2]  # for 4k
+    camera_position = np.array([0.3, 1.25, .6]) * 1.5
 
-    filename = '{}{}_q{}_pf'.format(experiment_cfg['vars_definition'],
-                                    '_ix_{}'.format(selected_ix) if general_cfg['use_moo_weights'] else '',
-                                    quantiles_name(moo_result['quantiles']))
+    xaxis_limit = filter_thold
+    if quantiles_loss.shape[1] == 2:
+        Fs_x_plot_masks = quantiles_loss[:, 0] < xaxis_limit
+        selected_ix = np.argmin(np.abs(np.sum(eq_quantiles_loss[Fs_x_plot_masks, :], axis=1) - total_selected_error))
 
-    plot_2D_moo_results(quantiles_loss, eq_quantiles_loss,
-                        selected_ix=selected_ix if general_cfg['use_moo_weights'] else None,
-                        save=general_cfg['save_plot'],
-                        file_path=os.path.join(config.results_folder,
-                                               experiment_cfg['experiment_name'],
-                                               'img',
-                                               filename),
-                        original_ixs=original_ix,
-                        figsize=(20, 15),
-                        xaxis_limit=xaxis_limit,
-                        title='Multi objective optimization for quantiles: {}'.format(moo_result['quantiles']))
+        quantiles_loss_2k = quantiles_loss
+        eq_quantiles_loss_2k = eq_quantiles_loss
+
+    elif quantiles_loss.shape[1] == 4:
+
+        tholds = [filter_thold] * 4
+        mask = np.all(np.vstack([quantiles_loss[:, i] < thold for i, thold in enumerate(tholds)]).T, axis=1)
+        filtered_quantiles = quantiles_loss[mask, :]
+
+        ranked_ix = rank_solutions(filtered_quantiles, sort_weights)
+        ranked_losses = filtered_quantiles[ranked_ix, :]
+
+        selected_filtered_ix = ranked_ix[0]
+        selected_ix = np.argmax(np.all(quantiles_loss == filtered_quantiles[selected_filtered_ix, :], axis=1))
+        plot_ranked_losses = [x.reshape(1, -1) if len(x.shape) == 1 else x for x in ranked_losses]
+
+        quantiles_loss_2k = aggregate_qcd_qee(quantiles_loss)
+        eq_quantiles_loss_2k = aggregate_qcd_qee(eq_quantiles_loss)
+
+    filename = '{}{}_q{}_k{}_pf'.format(experiment_cfg['vars_definition'],
+                                        '_ix_{}'.format(selected_ix) if general_cfg['use_moo_weights'] else '',
+                                        quantiles_name(moo_result['quantiles']),
+                                        quantiles_loss.shape[1])
+
+    if quantiles_loss.shape[1] == 4:
+        axis_labels = ['QCP lower bound', 'QEE lower bound',
+                       'QCP upper bound', 'QEE upper bound']
+
+        plot_4D(filtered_quantiles,
+                color_col=3,
+                ranked_F=plot_ranked_losses,
+                original_point=moo_result['original_losses'],
+                selected_point=quantiles_loss[selected_ix, :],
+                save=general_cfg['save_plot'],
+                axis_labels=axis_labels,
+                file_path=os.path.join(config.results_folder,
+                                       experiment_cfg['experiment_name'],
+                                       'img',
+                                       filename),
+                label_scale=1,
+                size=(1980, 1080),
+                save_png=False,
+                title='',
+                camera_position=camera_position
+                )
+
+    # plot_2D_moo_results(quantiles_loss_2k, eq_quantiles_loss_2k,
+    #                     selected_ix=selected_ix if general_cfg['use_moo_weights'] else None,
+    #                     save=general_cfg['save_plot'],
+    #                     file_path=os.path.join(config.results_folder,
+    #                                            experiment_cfg['experiment_name'],
+    #                                            'img',
+    #                                            filename),
+    #                     original_ixs=original_ix,
+    #                     figsize=(20, 15),
+    #                     xaxis_limit=xaxis_limit,
+    #                     title='Multi objective optimization for quantiles: {}'.format(moo_result['quantiles']))
+
+    print('original quantiles loss: {}'.format(moo_result['original_losses']))
+    print('selected quantiles loss: {}'.format(quantiles_loss[selected_ix, :]))
 
     # %%
     selected_weights = weights[selected_ix, :] if general_cfg['use_moo_weights'] else None
@@ -79,20 +129,21 @@ if __name__ == "__main__":
                                        exclude_p50=True)
 
     post_process_results(results, formatter, experiment_cfg, plot_=False)
-    loss_to_obj = lambda x: np.mean(x, axis=0)  # moo_result['loss_to_obj'] #
+
     q_losses = compute_moo_q_loss(results['quantiles'], results['forecasts'])
-    obj = loss_to_obj(q_losses)
+    obj = get_loss_to_obj_function(moo_result['loss_to_obj_type'])(q_losses)
     print('objective space: {}'.format(obj))
 
     results['data'] = data
     results['objective_space'] = obj
     if general_cfg['save_forecast']:
-        filename = '{}_{}{}_q{}{}_pred'.format(experiment_cfg['architecture'],
-                                               'all_' if general_cfg['use_all_data'] else '',
-                                               experiment_cfg['vars_definition'],
-                                               quantiles_name(results['quantiles']),
-                                               '_moo_ix{}'.format(selected_ix) if general_cfg[
-                                                   'use_moo_weights'] else '')
+        filename = '{}_{}{}_q{}{}_k{}_pred'.format(experiment_cfg['architecture'],
+                                                   'all_' if general_cfg['use_all_data'] else '',
+                                                   experiment_cfg['vars_definition'],
+                                                   quantiles_name(results['quantiles']),
+                                                   '_moo_ix{}'.format(selected_ix) if general_cfg[
+                                                       'use_moo_weights'] else '',
+                                                   quantiles_loss.shape[1])
 
         save_vars(results, os.path.join(config.results_folder,
                                         experiment_cfg['experiment_name'],

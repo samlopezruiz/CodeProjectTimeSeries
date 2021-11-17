@@ -4,7 +4,8 @@ from matplotlib import pyplot as plt
 from algorithms.moo.utils.plot import save_fig
 from timeseries.experiments.market.split.func import merge_train_test_groups
 from timeseries.plotly.plot import plotly_ts_candles, plotly_ts_regime
-
+import seaborn as sns
+sns_colors = sns.color_palette()
 
 def plot_mkt_candles(df, inst, features=None, resample=False, period='90T', ts_height=0.6, template='plotly_white'):
     df_plot = df.resample(period).last() if resample else df
@@ -36,8 +37,8 @@ def get_legend_labels(prefix, suffix=None, length=None):
 def plot_2D_pareto_front(Fs,
                          save=False,
                          file_path=None,
-                         ix_highlight=None,
-                         specific_points=None,
+                         selected_ixs=None,
+                         original_ixs=None,
                          figsize=(15, 15),
                          use_date=False,
                          xlabel='Quantile coverage probability',
@@ -64,44 +65,51 @@ def plot_2D_pareto_front(Fs,
                    markersize=8,
                    label='Pareto front')
 
-    if specific_points is not None:
-        if isinstance(specific_points, list):
-            for i, specific_point in enumerate(specific_points):
-                ax[0].plot(specific_point[0], specific_point[1],
+    if original_ixs is not None:
+        if isinstance(original_ixs, list):
+            for i, ix, F in enumerate(zip(original_ixs, Fs)):
+                ax[0].plot(F[ix, 0], F[ix, 1],
                            'k*',
                            markersize=24,
                            label='Original solution' if i == 0 else None)
         else:
-            ax[0].plot(specific_points[0], specific_points[1],
+            ax[0].plot(Fs[original_ixs, 0], Fs[original_ixs, 1],
                        'k*',
                        markersize=24,
                        label='Original solution')
 
-    if ix_highlight is not None:
+    if selected_ixs is not None:
         if isinstance(Fs, list):
             for i, F in enumerate(Fs):
-                ax[0].plot(F[ix_highlight, 0], F[ix_highlight, 1],
+                ax[0].plot(F[selected_ixs, 0], F[selected_ixs, 1],
                            '*',
                            markersize=24,
                            color='red',
                            label='Selected solution' if i == 0 else None)
         else:
-            ax[0].plot(Fs[ix_highlight, 0], Fs[ix_highlight, 1],
+            ax[0].plot(Fs[selected_ixs, 0], Fs[selected_ixs, 1],
                        '*',
                        markersize=24,
                        color='red',
                        label='Selected solution')
+            if plot_total_loss_sublot:
+                ax[1].plot(Fs[selected_ixs, 0], Fs[selected_ixs, 1],
+                           '*',
+                           markersize=24,
+                           color='red',
+                           label='Selected solution')
+
 
     if plot_total_loss_sublot:
         if isinstance(Fs, list):
             for i, F in enumerate(Fs):
-                ax[1].plot(np.sum(F, axis=1),
+                ax[1].plot(F[:, 0], np.sum(F, axis=1),
                            'o',
                            markersize=8,
                            color='gray',
                            label='Total loss' if i == 0 else None)
         else:
-            ax[1].plot(np.sum(Fs, axis=1),
+            ax[1].plot(Fs[:, 0], np.sum(Fs, axis=1),
                        'o',
                        markersize=8,
                        color='gray',
@@ -124,8 +132,7 @@ def plot_2D_pareto_front(Fs,
     if save:
         save_fig(fig, file_path, use_date)
 
-import seaborn as sns
-sns_colors = sns.color_palette()
+
 
 def plot_2D_moo_results(Fs, eq_Fs,
                         save=False,
@@ -148,9 +155,9 @@ def plot_2D_moo_results(Fs, eq_Fs,
             Fs_x_plot_masks = Fs[:, 0] < xaxis_limit
     else:
         if isinstance(Fs, list):
-            Fs_x_plot_masks = [np.ones((F.shape[0],)) < xaxis_limit for F in Fs]
+            Fs_x_plot_masks = [np.ones((F.shape[0],)).astype(bool) < xaxis_limit for F in Fs]
         else:
-            Fs_x_plot_masks = np.ones((Fs.shape[0],))
+            Fs_x_plot_masks = np.ones((Fs.shape[0],)).astype(bool)
 
 
     if isinstance(Fs, list):

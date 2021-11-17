@@ -38,7 +38,9 @@ def plot_forecast_intervals(forecasts_grouped,
                             save=False,
                             file_path=None,
                             size=(1980, 1080),
-                            save_png=False
+                            save_png=False,
+                            x_range=None,
+                            y_range=None,
                             ):
 
     steps = list(forecasts_grouped[list(forecasts_grouped.keys())[0]][id].columns)
@@ -149,6 +151,12 @@ def plot_forecast_intervals(forecasts_grouped,
         fig.update_layout(template="plotly_white" if mode == 'light' else 'plotly_dark',
                           xaxis_rangeslider_visible=False, title=title,
                           legend=dict(font=dict(size=18 * label_scale)))
+
+        if y_range is not None:
+            fig.update_layout(yaxis=dict(range=y_range))
+
+        if x_range is not None:
+            fig.update_layout(xaxis=dict(range=x_range))
 
         fig.update_xaxes(tickfont=dict(size=14 * label_scale), title_font=dict(size=18 * label_scale))
         fig.update_yaxes(tickfont=dict(size=14 * label_scale), title_font=dict(size=18 * label_scale))

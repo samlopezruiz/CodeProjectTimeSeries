@@ -45,7 +45,9 @@ def create_title(prob_cfg, algo_cfg, algorithm):
            get_type_str(algorithm) + ' CFG: ' + str(algo_cfg)
 
 
-def get_algorithm(name, algo_cfg, n_obj=3, sampling=get_sampling("real_random")):
+def get_algorithm(name, algo_cfg, n_obj=3, sampling=None):
+    if sampling is None:
+        sampling = get_sampling("real_random")
     algo_options = ['SMSEMOA', 'MOEAD', 'NSGA2', 'NSGA3']
     if name not in algo_options:
         raise Exception('Algorithm {} not valid. Options are: {}'.format(name, str(algo_options)))
