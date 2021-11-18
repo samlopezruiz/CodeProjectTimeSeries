@@ -33,6 +33,7 @@ class WeightsNN_Moo(Problem):
                  use_gpu=True,
                  parallelize_pop=True,
                  exclude_p50=True,
+
                  **kwargs):
 
         Model = get_model(architecture)

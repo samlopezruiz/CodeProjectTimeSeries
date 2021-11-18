@@ -26,7 +26,7 @@ if __name__ == "__main__":
                  'learning_rate': 0.01,
                  }
 
-    fixed_cfg = {'quantiles': [0.1, 0.5, 0.9],
+    fixed_cfg = {'quantiles': [0.2, 0.5, 0.8],
                  }
 
     # experiment_cfg = {'formatter': 'snp',
@@ -37,7 +37,7 @@ if __name__ == "__main__":
     #                   }
 
     experiment_cfg = {'formatter': 'snp',
-                      'experiment_name': '60t_ema_q159',
+                      'experiment_name': '60t_ema_q258',
                       'dataset_config': 'ES_60t_regime_2015-01_to_2021-06_ema',
                       'vars_definition': 'ES_ema_r',
                       'architecture': 'TFTModel'

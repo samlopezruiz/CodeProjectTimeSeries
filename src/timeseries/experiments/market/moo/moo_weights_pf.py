@@ -1,4 +1,5 @@
 import os
+import time
 
 import joblib
 import numpy as np
@@ -11,7 +12,8 @@ from timeseries.experiments.market.moo.harness.moo import run_moo, get_algorithm
 from timeseries.experiments.market.moo.problem_def import WeightsNN_Moo
 from timeseries.experiments.market.moo.utils.utils import get_loss_to_obj_function, sort_1st_col
 from timeseries.experiments.market.plot.plot import plot_2D_pareto_front, plot_2D_moo_results
-from timeseries.experiments.market.utils.filename import get_output_folder, quantiles_name, get_result_folder
+from timeseries.experiments.market.utils.filename import get_output_folder, quantiles_name, get_result_folder, \
+    termination_name
 from timeseries.experiments.market.utils.harness import get_model_data_config
 from timeseries.experiments.utils.files import save_vars
 from timeseries.utils.utils import get_type_str
@@ -22,8 +24,7 @@ sns.set_theme('poster')
 if __name__ == '__main__':
     # %%
     general_cfg = {'save_results': True,
-                   'save_plot': True,
-                   'save_history': False,
+                   'save_history': True,
                    'send_notifications': True}
 
     prob_cfg = {}
@@ -39,6 +40,7 @@ if __name__ == '__main__':
 
     agg_obj_type_func = 'ind_loss_woP50'  # 'ind_loss_woP50' #'mean_across_quantiles'
 
+    t0 = time.time()
     model_results = joblib.load(os.path.join(get_result_folder(results_cfg), results_cfg['results'] + '.z'))
 
     config, formatter, model_folder = get_model_data_config(model_results['experiment_cfg'],
@@ -54,12 +56,13 @@ if __name__ == '__main__':
                             use_gpu=False,
                             parallelize_pop=True)
 
-    name = 'NSGA3'
+    moo_method = 'NSGA2'
 
-    algorithm = get_algorithm(name,
+    algorithm = get_algorithm(moo_method,
                               algo_cfg,
                               n_obj=problem.n_obj,
-                              sampling=problem.ini_ind if algo_cfg['use_sampling'] else None)
+                              sampling=np.tile(problem.ini_ind, (algo_cfg['pop_size'], 1)) if algo_cfg['use_sampling'] else None)
+                              # sampling=problem.ini_ind if algo_cfg['use_sampling'] else None)
 
     prob_cfg['n_var'], prob_cfg['n_obj'] = problem.n_var, problem.n_obj
     prob_cfg['hv_ref'] = [5] * problem.n_obj
@@ -76,12 +79,18 @@ if __name__ == '__main__':
                                                    eq_F)
 
     # %%
-    filename = '{}_q{}_{}_moo_weights'.format(experiment_cfg['vars_definition'],
-                                                              quantiles_name(problem.quantiles),
-                                                              name)
+    filename = '{}_{}_q{}_{}_{}_p{}_s{}_k{}_wmoo'.format(experiment_cfg['architecture'],
+                                                         experiment_cfg['vars_definition'],
+                                                         quantiles_name(problem.quantiles),
+                                                         moo_method,
+                                                         termination_name(algo_cfg['termination']),
+                                                         algo_cfg['pop_size'],
+                                                         int(algo_cfg['use_sampling']),
+                                                         F_sorted.shape[1])
 
     if general_cfg['send_notifications']:
-        telegram_send.send(messages=["moo for {} completed".format(filename)])
+        telegram_send.send(messages=["moo for {} completed in {} min".format(filename,
+                                                                             round((time.time() - t0) / 60, 0))])
 
     if general_cfg['save_history']:
         plot_hist_hv(moo_result['res'], save=False)
@@ -97,6 +106,9 @@ if __name__ == '__main__':
               'experiment_cfg': model_results['experiment_cfg'],
               'model_cfg': model_results['model_cfg'],
               'fixed_cfg': model_results['fixed_cfg'],
+              'moo_method': moo_method,
+              'algo_cfg': algo_cfg,
+              'pop_hist': moo_result['pop_hist']
               }
 
     if general_cfg['save_results']:

@@ -41,6 +41,7 @@ def dwn_smple_text(data_cfg):
         d_text = ''
     return d_text
 
+
 def get_output_folder():
     root_folder = os.path.normpath(os.path.join(
         os.path.dirname(os.path.realpath(__file__)), '..', 'outputs'))
@@ -53,8 +54,14 @@ def get_result_folder(cfg):
                         cfg.get('formatter', ''),
                         cfg.get('experiment_name', ''))
 
+
 def quantiles_name(quantiles):
     return ''.join((np.array(quantiles) * 10).astype(int).astype(str))
+
+
+def termination_name(termination):
+    return '{}{}'.format('g' if termination[0] == 'n_gen' else 'e',
+                         termination[1])
 
 # def subsets_and_test_filename(data_cfg, split_cfg):
 #     return 'split_' + data_cfg['inst'] + '_' + data_cfg['sampling'] + '_' + data_cfg['data_from'] + '_to_' + \

@@ -378,4 +378,5 @@ def save_fig(fig, file_path, use_date):
     if file_path is not None:
         create_dir(file_path)
         file_path = get_new_file_path(file_path, '.png', use_date)
+        print('Saving image: {}'.format(file_path))
         fig.savefig(os.path.join(file_path))
