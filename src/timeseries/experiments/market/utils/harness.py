@@ -492,28 +492,29 @@ def load_predict_model(use_gpu,
         # manually set last layer weights (used in multi-objective optimization)
         if last_layer_weights is not None:
             weights, last_layer = get_last_layer_weights(model)
+            last_layer.set_weights(last_layer_weights)
 
-            # get original p50 weights
-            if exclude_p50:
-                p50_w = weights[0][:, 1]
-                p50_b = weights[1][1]
-                weights_woP50 = [weights[0][:, [0, 2]], weights[1][[0, 2]]]
+            # # get original p50 weights
+            # if exclude_p50:
+            #     p50_w = weights[0][:, 1]
+            #     p50_b = weights[1][1]
+            #     weights_woP50 = [weights[0][:, [0, 2]], weights[1][[0, 2]]]
+            #
+            #     # get conversion parameters from weights wo p50
+            #     ind, w_params_woP50 = params_conversion_weights(weights_woP50)
+            #     new_weights = reconstruct_weights(last_layer_weights, w_params_woP50)
+            #
+            #     new_weights[0] = np.vstack([new_weights[0][:, 0],
+            #                                 p50_w,
+            #                                 new_weights[0][:, 1]]).T
+            #     new_weights[1] = np.array([new_weights[1][0],
+            #                                p50_b,
+            #                                new_weights[1][1]])
+            # else:
+            #     ind, w_params_wP50 = params_conversion_weights(weights)
+            #     new_weights = reconstruct_weights(last_layer_weights, w_params_wP50)
 
-                # get conversion parameters from weights wo p50
-                ind, w_params_woP50 = params_conversion_weights(weights_woP50)
-                new_weights = reconstruct_weights(last_layer_weights, w_params_woP50)
-
-                new_weights[0] = np.vstack([new_weights[0][:, 0],
-                                            p50_w,
-                                            new_weights[0][:, 1]]).T
-                new_weights[1] = np.array([new_weights[1][0],
-                                           p50_b,
-                                           new_weights[1][1]])
-            else:
-                ind, w_params_wP50 = params_conversion_weights(weights)
-                new_weights = reconstruct_weights(last_layer_weights, w_params_wP50)
-
-            last_layer.set_weights(new_weights)
+            # last_layer.set_weights(new_weights)
 
         return predict_from_model(params, data_formatter, model, test), test
 

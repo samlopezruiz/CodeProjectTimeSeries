@@ -12,7 +12,7 @@ if __name__ == "__main__":
 
     forecast_cfg = {'formatter': 'snp',
                     'experiment_name': '60t_ema_q159',
-                    'forecast': 'TFTModel_all_ES_ema_r_q159_moo_ix66_k4_pred'}
+                    'forecast': 'TFTModel_ES_ema_r_q159_NSGA2_g100_p100_s1__all_pred_1'}
     additional_vars = ['ESc']
 
     base_path = os.path.join('outputs/results',
@@ -42,7 +42,6 @@ if __name__ == "__main__":
     else:
         steps = ['t+{}'.format(i + 1) for i in range(n_output_steps)]
 
-    # %%
     sorted_ix_cm = np.argsort(results['hit_rates']['grouped_by_id_hit_rate'][:, 0, 0] +
                               results['hit_rates']['grouped_by_id_hit_rate'][:, 1, 1])[::-1]
 

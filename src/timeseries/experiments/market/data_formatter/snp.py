@@ -88,16 +88,17 @@ class SnPFormatter(GenericDataFormatter):
 
         mkt_data = self.preprocess_data(mkt_data, add_data, reg_data, data_config, indicators_use_time_subset)
         train, test = mkt_data.loc[mkt_data.loc[:, 'test'] == 0, :], mkt_data.loc[mkt_data.loc[:, 'test'] == 1, :]
+        valid = mkt_data.loc[mkt_data.loc[:, 'test'] == 2, :]
 
         if data_config['true_target'] is not None:
-            self.set_true_target(data_config['true_target'], test, test)
+            self.set_true_target(data_config['true_target'], valid, test)
 
         self.set_scalers(train)
 
         if scale:
-            return (self.transform_inputs(data) for data in [train, test, test])
+            return (self.transform_inputs(data) for data in [train, valid, test])
         else:
-            return train, test, test
+            return train, valid, test
 
     def process_data(self,
                      data_config,

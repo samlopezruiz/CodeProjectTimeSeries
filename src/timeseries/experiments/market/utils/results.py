@@ -6,6 +6,7 @@ from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 import matplotlib.pyplot as plt
 import logging
 
+from algorithms.moo.utils.indicators import get_hypervolume
 from timeseries.experiments.market.plot_forecasts import group_forecasts
 from timeseries.experiments.market.utils.preprocessing import reconstruct_forecasts
 from timeseries.plotly.plot import plotly_time_series, plotly_time_series_bars_hist, plotly_multiple
@@ -141,3 +142,19 @@ def post_process_results(results, formatter, experiment_cfg, plot_=True):
         results['reconstructed_forecasts'] = reconstruct_forecasts(formatter, results['forecasts'])
     results['hit_rates'] = hit_rate_from_forecast(results, n_output_steps, plot_=plot_)
     results['experiment_cfg'] = experiment_cfg
+
+
+def compile_multiple_results(moo_results, experiment_labels, hv_ref=[10] * 2):
+    results = {}
+    for q_lbl, bound in zip(['lower quantile', 'upper quantile'], ['lq', 'uq']):
+        results[q_lbl] = {}
+        results[q_lbl]['risks'] = {}
+        results[q_lbl]['history'] = {}
+        results[q_lbl]['hv_hist'] = {}
+        for experiment, exp_lbl in zip(moo_results, experiment_labels):
+            results[q_lbl]['risks'][exp_lbl] = [e[bound]['F'] for e in experiment]
+            results[q_lbl]['history'][exp_lbl] = [e[bound]['pop_hist'] for e in experiment]
+            results[q_lbl]['hv_hist'][exp_lbl] = [[get_hypervolume(F, hv_ref) for F in hist] for hist
+                                                  in [e[bound]['pop_hist'] for e in experiment] if hist is not None]
+
+    return results

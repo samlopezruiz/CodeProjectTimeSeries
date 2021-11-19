@@ -323,7 +323,8 @@ def plot_runs(y_runs,
               save=False,
               legend_labels=None,
               show_grid=True,
-              use_date=False):
+              use_date=False,
+              show_title=True):
     x = np.arange(y_runs.shape[1]).astype(int) + 1
 
     fig, ax = plt.subplots(figsize=size)
@@ -336,7 +337,8 @@ def plot_runs(y_runs,
     plt.xlim([0, y_runs.shape[1]])
     ax.set(xlabel='x' if x_label is None else x_label,
            ylabel='x' if y_label is None else y_label)
-    ax.set_title('' if title is None else title)
+    if show_title:
+        ax.set_title('' if title is None else title)
 
     if legend_labels is not None:
         plt.legend(labels=legend_labels)
@@ -346,6 +348,7 @@ def plot_runs(y_runs,
 
     if save:
         save_fig(fig, file_path, use_date)
+
 
 
 def plot_histogram(Y,
@@ -378,5 +381,5 @@ def save_fig(fig, file_path, use_date):
     if file_path is not None:
         create_dir(file_path)
         file_path = get_new_file_path(file_path, '.png', use_date)
-        print('Saving image: {}'.format(file_path))
+        print('Saving image: {}\n'.format(file_path))
         fig.savefig(os.path.join(file_path))

@@ -21,7 +21,7 @@ def set_subsets_and_test(df, split_cfg):
         random_test_split(df_subsets, split_cfg)
     else:
         print('simple test split')
-        simple_test_split(df_subsets, test_ratio=split_cfg['test_ratio'])
+        simple_test_split(df_subsets, test_ratio=split_cfg['test_ratio'], valid_ratio=split_cfg['valid_ratio'])
 
     if split_cfg['time_delta_split']:
         s_thold = s_threshold(split_cfg['time_thold'])
@@ -44,6 +44,7 @@ def shift_subsets(df):
 def random_test_split(df, split_cfg):
     test_time_ini, test_time_end = split_cfg['test_time_start'], split_cfg['test_time_end']
     test_ratio = split_cfg['test_ratio']
+    valid_ratio = split_cfg['valid_ratio']
     df['test'] = 0
     grp = df.groupby('subset')
     for i, (group_cols, subset) in enumerate(grp):
@@ -113,12 +114,14 @@ def group_by(df_orig, cfg, new_col_name='subset'):
     return df  # dfs_groups
 
 
-def simple_test_split(df, test_ratio=0.2):
+def simple_test_split(df, valid_ratio=0.15, test_ratio=0.15):
     df['test'] = 0
     grp = df.groupby('subset')
     for i, (group_cols, data) in enumerate(grp):
-        test_len = int(round(data.shape[0] * test_ratio, 0))
+        test_len = int(data.shape[0] * test_ratio)
+        valid_len = int(data.shape[0] * valid_ratio)
         df.loc[data.index[-test_len:], 'test'] = 1
+        df.loc[data.index[-(test_len+valid_len):-test_len], 'test'] = 2
     #
     # dfs_train, dfs_test = [], []
     # for data in dfs_groups:

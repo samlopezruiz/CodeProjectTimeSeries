@@ -16,9 +16,8 @@ if __name__ == "__main__":
 
     results_cfg = {'formatter': 'snp'}
 
-    weights_files = [('60t_ema_q159', 'TFTModel_ES_ema_r_q159_NSGA2_g250_p100_s1_k2_wmoo'),
-                     ('60t_ema_q159', 'TFTModel_ES_ema_r_q159_NSGA3_g250_p100_s1_k2_wmoo'),
-                     ('60t_ema_q159', 'TFTModel_ES_ema_r_q159_MOEAD_g250_p100_s1_k2_wmoo')]
+    weights_files = [('60t_ema_q159', 'TFTModel_ES_ema_r_q159_NSGA2_g100_p100_s1_dual_wmoo_1'),
+                     ('60t_ema_q159', 'TFTModel_ES_ema_r_q159_NSGA3_g100_p100_s1_dual_wmoo')]
 
     results_folder = get_result_folder(results_cfg)
     moo_results = [joblib.load(os.path.join(results_folder, file[0], 'moo', file[1]) + '.z') for file in weights_files]

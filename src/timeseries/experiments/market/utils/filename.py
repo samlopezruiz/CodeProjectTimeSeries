@@ -63,6 +63,16 @@ def termination_name(termination):
     return '{}{}'.format('g' if termination[0] == 'n_gen' else 'e',
                          termination[1])
 
+def risk_name(risk):
+    text = ''
+    for key, value in risk.items():
+        text += '{}{}_'.format(key, str(value)[2:])
+    if len(text) > 0:
+        return text[:-1]
+    else:
+        return text
+
+
 # def subsets_and_test_filename(data_cfg, split_cfg):
 #     return 'split_' + data_cfg['inst'] + '_' + data_cfg['sampling'] + '_' + data_cfg['data_from'] + '_to_' + \
 #             data_cfg['data_to'] + '_g' + str(split_cfg['groups_of']) + split_cfg['group'] + \

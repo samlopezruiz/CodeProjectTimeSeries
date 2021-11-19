@@ -32,11 +32,12 @@ if __name__ == '__main__':
                 'data_to': '2021-06',
                 'vol_filename': "Vol_5levels_ESc_2012_1-2021_6.z",
                 'downsample': True,
-                'downsample_p': '5T'}
+                'downsample_p': '60T'}
 
     split_cfg = {'group': 'week',
                  'groups_of': 12,
-                 'test_ratio': 0.25,
+                 'test_ratio': 0.15,
+                 'valid_ratio': 0.15,
                  'random': True,
                  'time_thold': {'hours': 3, 'seconds': None, 'days': None},
                  'test_time_start': (8, 30),

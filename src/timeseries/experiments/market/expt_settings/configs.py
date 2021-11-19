@@ -196,6 +196,10 @@ class ExperimentConfig(object):
              'additional_returns_vars': get_inst_ohlc_names('NQ'),
              'true_target': 'ESc_e3'}
 
+        dataset_class['ES_60t_regime_2015-01_to_2021-06_ema_ttv'] = dataset_class['ES_60t_regime_2015-01_to_2021-06_ema']
+        dataset_class['ES_60t_regime_2015-01_to_2021-06_ema_ttv']['market_file'] =\
+            'split_ES_minute_60T_dwn_smpl_2015-01_to_2021-06_g12week_r15' #with valid data
+#
         dataset_class['ES_5t_regime_2015-01_to_2021-06_ema_r'] = \
             {'market_file': 'split_ES_minute_5T_dwn_smpl_2015-01_to_2021-06_g12week_r25',
              'additional_file': 'subset_NQ_minute_5T_dwn_smpl_2012-01_to_2021-07',

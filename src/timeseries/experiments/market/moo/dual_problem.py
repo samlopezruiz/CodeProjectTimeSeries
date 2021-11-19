@@ -15,26 +15,23 @@ from algorithms.tft2.utils.nn import dense_layer_output
 from timeseries.data.market.utils.names import get_inst_ohlc_names
 from timeseries.experiments.market.expt_settings.configs import ExperimentConfig
 from timeseries.experiments.market.moo.utils.model import get_last_layer_weights, params_conversion_weights, \
-    run_moo_nn, create_output_map, reconstruct_weights
+    run_moo_nn, create_output_map, reconstruct_weights, run_single_w_nn, get_ix_ind_from_weights
 from timeseries.experiments.market.moo.utils.utils import get_loss_to_obj_function
 from timeseries.experiments.market.utils.filename import get_result_folder
 from timeseries.experiments.market.utils.harness import get_model, get_model_data_config
 from timeseries.utils.parallel import repeat_different_args
 
 
-class WeightsNN_Moo(Problem):
+class DualQuantileWeights:
 
     def __init__(self,
                  architecture,
                  model_folder,
                  data_formatter,
                  data_config,
-                 loss_to_obj,
                  use_gpu=True,
                  parallelize_pop=True,
-                 exclude_p50=True,
-                 **kwargs):
-
+                 exclude_p50=True):
         Model = get_model(architecture)
         train, valid, test = data_formatter.split_data(data_config)
 
@@ -52,15 +49,6 @@ class WeightsNN_Moo(Problem):
             model = Model(model_params)
             model.load(opt_manager.hyperparam_folder, use_keras_loadings=True)
             weights, last_layer = get_last_layer_weights(model)
-            if exclude_p50:
-                self.p50_w = weights[0][:, 1]
-                self.p50_b = weights[1][1]
-                mod_weights = [weights[0][:, [0, 2]], weights[1][[0, 2]]]
-                ind, w_params = params_conversion_weights(mod_weights)
-            else:
-                self.p50_w = None
-                self.p50_b = None
-                ind, w_params = params_conversion_weights(weights)
 
             print("\n*** Test Q-Loss with original weights ***")
             losses, unscaled_output_map = moo_q_loss_model(data_formatter, model, valid,
@@ -69,35 +57,87 @@ class WeightsNN_Moo(Problem):
             outputs, output_map, data = model.predict_all(valid, batch_size=128)
             transformer_output = outputs['transformer_output']
 
-            # if exclude_p50:
-            #     orig_weights_p50 = ind[:, ind.shape[1] // 3: ind.shape[1] // 3 * 2]
-            #     ind = np.concatenate([ind[:, ind.shape[1] // 3], ind[:, ind.shape[1] // 3 * 2:]])
-            # else:
-            #     orig_weights_p50 = None
-
         self.transformer_output = transformer_output
         self.data_map = data
         self.data_formatter = data_formatter
-        self.loss_to_obj = loss_to_obj
         self.valid = valid
         self.original_weights = weights
-        self.ini_ind = ind
         self.last_layer = last_layer
-        self.weights_params = w_params
         self.exclude_p50 = exclude_p50
-        # self.orig_weights_p50 = orig_weights_p50
-        self.original_losses = self.loss_to_obj(losses)
+        self.original_losses = losses
         self.parallelize_pop = parallelize_pop
         self.quantiles = copy.copy(model.quantiles)
         self.output_size = copy.copy(model.output_size)
         self.time_steps = copy.copy(model.time_steps)
         self.num_encoder_steps = copy.copy(model.num_encoder_steps)
 
-        n_var = ind.shape[1]
-        n_obj = len(self.original_losses)
-        super().__init__(n_var, n_obj, n_constr=0, xl=-1.0, xu=1.0, **kwargs)
+        ind_lq = get_ix_ind_from_weights(self.original_weights, 0)
+        ind_uq = get_ix_ind_from_weights(self.original_weights, 2)
+
+        self.lower_quantile_problem = SingleQuantileWeights(ind_lq,
+                                                            self.quantiles,
+                                                            self.output_size,
+                                                            self.data_map,
+                                                            self.time_steps,
+                                                            self.num_encoder_steps,
+                                                            self.transformer_output,
+                                                            0,  # index of lower quantile
+                                                            self.original_weights,
+                                                            self.parallelize_pop,
+                                                            self.original_losses)
+
+        self.upper_quantile_problem = SingleQuantileWeights(ind_uq,
+                                                            self.quantiles,
+                                                            self.output_size,
+                                                            self.data_map,
+                                                            self.time_steps,
+                                                            self.num_encoder_steps,
+                                                            self.transformer_output,
+                                                            2,  # index of lower quantile
+                                                            self.original_weights,
+                                                            self.parallelize_pop,
+                                                            self.original_losses)
+
+        # self.n_var = ind.shape[1]
+        # self.n_obj = len(self.original_losses)
+        # super().__init__(self.n_var, self.n_obj, n_constr=0, xl=-1.0, xu=1.0, **kwargs)
 
         gc.collect()
+
+    def get_problems(self):
+        return self.lower_quantile_problem, self.upper_quantile_problem
+
+
+class SingleQuantileWeights(Problem):
+
+    def __init__(self,
+                 original_ind,
+                 quantiles,
+                 output_size,
+                 data_map,
+                 time_steps,
+                 num_encoder_steps,
+                 transformer_output,
+                 ix_weight,
+                 original_weights,
+                 parallelize_pop,
+                 original_losses,
+                 **kwargs):
+        self.ini_ind = original_ind
+        self.quantiles = quantiles
+        self.output_size = output_size
+        self.data_map = data_map
+        self.time_steps = time_steps
+        self.num_encoder_steps = num_encoder_steps
+        self.transformer_output = transformer_output
+        self.ix_weight = ix_weight
+        self.original_weights = original_weights
+        self.parallelize_pop = parallelize_pop
+        self.original_losses = original_losses[ix_weight, :]
+
+        n_var = original_ind.shape[1]
+        n_obj = 2
+        super().__init__(n_var, n_obj, n_constr=0, xl=-1.0, xu=1.0, **kwargs)
 
     def _evaluate(self, X, out, *args, **kwargs):
         args = [[x,
@@ -107,13 +147,12 @@ class WeightsNN_Moo(Problem):
                  self.time_steps,
                  self.num_encoder_steps,
                  self.transformer_output,
-                 self.weights_params,
-                 self.loss_to_obj,
-                 self.p50_w,
-                 self.p50_b]
+                 self.ix_weight,
+                 self.original_weights
+                 ]
                 for x in X]
 
-        F = repeat_different_args(run_moo_nn,
+        F = repeat_different_args(run_single_w_nn,
                                   args,
                                   parallel=self.parallelize_pop,
                                   n_jobs=None,
@@ -131,14 +170,12 @@ class WeightsNN_Moo(Problem):
                  self.time_steps,
                  self.num_encoder_steps,
                  self.transformer_output,
-                 self.weights_params,
-                 self.loss_to_obj,
-                 self.p50_w,
-                 self.p50_b,
-                 True] # output_eq_loss
+                 self.ix_weight,
+                 self.original_weights,
+                 True]  # eq_f_loss
                 for x in X]
 
-        F_eq_F = repeat_different_args(run_moo_nn,
+        F_eq_F = repeat_different_args(run_single_w_nn,
                                        args,
                                        parallel=self.parallelize_pop,
                                        n_jobs=None,
@@ -152,8 +189,8 @@ class WeightsNN_Moo(Problem):
 
 if __name__ == "__main__":
     results_cfg = {'formatter': 'snp',
-                   'experiment_name': '60t_ema',
-                   'results': 'TFTModel_ES_ema_r_q159_pred_1'
+                   'experiment_name': '60t_ema_q159',
+                   'results': 'TFTModel_ES_ema_r_q159_lr01_pred'
                    }
 
     model_results = joblib.load(os.path.join(get_result_folder(results_cfg), results_cfg['results'] + '.z'))
@@ -166,22 +203,32 @@ if __name__ == "__main__":
 
     type_func = 'mean_across_quantiles'  # 'ind_loss_woP50' #'mean_across_quantiles'
 
-    problem = WeightsNN_Moo(architecture=experiment_cfg['architecture'],
-                            model_folder=model_folder,
-                            data_formatter=formatter,
-                            data_config=config.data_config,
-                            loss_to_obj=get_loss_to_obj_function(type_func),
-                            use_gpu=False,
-                            parallelize_pop=True)
+    dual_q_problem = DualQuantileWeights(architecture=experiment_cfg['architecture'],
+                                         model_folder=model_folder,
+                                         data_formatter=formatter,
+                                         data_config=config.data_config,
+                                         use_gpu=True,
+                                         parallelize_pop=False)
+
+    lower_q_problem, upper_q_problem = dual_q_problem.get_problems()
 
     # %%
-    X = np.random.rand(100, problem.n_var)
+    X = np.random.rand(100, lower_q_problem.n_var)
 
     print('Evaluating')
     res = {}
     t0 = time.time()
-    problem._evaluate(X, res)
+    lower_q_problem._evaluate(X, res)
     print('Eval time: {} s'.format(round(time.time() - t0, 4)))
-    F = res['F']
+    F_l = res['F']
 
-    F_2, eq_F = problem.compute_eq_F(X)
+    F_2, eq_F = lower_q_problem.compute_eq_F(X)
+
+    print('Evaluating')
+    res = {}
+    t0 = time.time()
+    upper_q_problem._evaluate(X, res)
+    print('Eval time: {} s'.format(round(time.time() - t0, 4)))
+    F_u = res['F']
+
+    F_2, eq_F = upper_q_problem.compute_eq_F(X)

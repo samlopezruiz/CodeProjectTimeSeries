@@ -1,3 +1,5 @@
+import copy
+
 import numpy as np
 import pandas as pd
 
@@ -13,6 +15,13 @@ def get_last_layer_weights(model, layer_name='quantiles'):
         last_layer = relevant_layers[0]
         return last_layer.get_weights(), last_layer
 
+def get_new_weights(original_weights, selected_weights):
+    new_weights = copy.deepcopy(original_weights)
+    new_weights[0][:, 0] = selected_weights['lq'][:-1]
+    new_weights[0][:, 2] = selected_weights['uq'][:-1]
+    new_weights[1][0] = selected_weights['lq'][-1]
+    new_weights[1][2] = selected_weights['uq'][-1]
+    return new_weights
 
 def params_conversion_weights(weights):
     shapes = [w.shape for w in weights]
@@ -26,10 +35,17 @@ def params_conversion_weights(weights):
     return ind, params
 
 
+def get_ix_ind_from_weights(weights, ix_weight):
+    w = weights[0][:, ix_weight].reshape(1, -1)
+    b = weights[1][ix_weight].reshape(1, 1)
+    ind = np.hstack([w, b])
+    return ind
+
+
 def reconstruct_weights(ind, params):
     shapes, flatten_dim = params['shapes'], params['flatten_dim']
     reconstruct = []
-    ind = ind.reshape(-1,)
+    ind = ind.reshape(-1, )
     for i in range(len(shapes)):
         if i == 0:
             reconstruct.append(ind[:flatten_dim[i]].reshape(shapes[i]))
@@ -37,7 +53,6 @@ def reconstruct_weights(ind, params):
             reconstruct.append(ind[flatten_dim[i - 1]:flatten_dim[i - 1] + flatten_dim[i]].reshape(shapes[i]))
 
     return reconstruct
-
 
 
 def create_output_map(prediction,
@@ -95,7 +110,6 @@ def run_moo_nn(x,
                p50_w,
                p50_b,
                output_eq_loss=False):
-
     new_weights = reconstruct_weights(x, w_params)
 
     if p50_w is not None and p50_b is not None:
@@ -122,3 +136,35 @@ def run_moo_nn(x,
         return loss_to_obj(losses)
 
 
+def run_single_w_nn(x,
+                    quantiles,
+                    output_size,
+                    data_map,
+                    time_steps,
+                    num_encoder_steps,
+                    transformer_output,
+                    ix_weight,
+                    original_weights,
+                    output_eq_loss=False):
+
+    new_weights = copy.deepcopy(original_weights)
+    weights, b = x[:-1], x[-1]
+    new_weights[0][:, ix_weight] = weights
+    new_weights[1][ix_weight] = b
+
+    prediction = dense_layer_output(new_weights, transformer_output)
+    unscaled_output_map = create_output_map(prediction,
+                                            quantiles,
+                                            output_size,
+                                            data_map,
+                                            time_steps,
+                                            num_encoder_steps)
+
+    losses = compute_moo_q_loss(quantiles,
+                                unscaled_output_map,
+                                output_eq_loss=output_eq_loss)
+
+    if output_eq_loss:
+        return losses[0][ix_weight, :], losses[1][ix_weight, :]
+    else:
+        return losses[ix_weight, :]
