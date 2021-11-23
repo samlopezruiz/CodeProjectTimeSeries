@@ -8,17 +8,22 @@ from timeseries.experiments.market.utils.plot import plot_forecast_intervals, gr
 
 if __name__ == "__main__":
     # %%
-    general_cfg = {'save_plot': False}
+    general_cfg = {'save_plot': False,
+                   'plot_title': False}
 
     forecast_cfg = {'formatter': 'snp',
-                    'experiment_name': '60t_ema_q159',
-                    'forecast': 'TFTModel_ES_ema_r_q159_NSGA2_g100_p100_s1__all_pred_1'}
+                    'experiment_name': '60t_ema_q258',
+                    'forecast': 'TFTModel_ES_ema_r_q258_lr01_pred',
+                    'subfolders': []
+                    }
+                    # 'subfolders': ['moo', 'selec_sols']}
+
     additional_vars = ['ESc']
 
     base_path = os.path.join('outputs/results',
                              forecast_cfg['formatter'],
                              forecast_cfg['experiment_name'],
-                             'moo',
+                             *forecast_cfg['subfolders'],
                              forecast_cfg['forecast'])
     suffix = ''
 
@@ -42,22 +47,32 @@ if __name__ == "__main__":
     else:
         steps = ['t+{}'.format(i + 1) for i in range(n_output_steps)]
 
-    sorted_ix_cm = np.argsort(results['hit_rates']['grouped_by_id_hit_rate'][:, 0, 0] +
-                              results['hit_rates']['grouped_by_id_hit_rate'][:, 1, 1])[::-1]
+    # sorted_ix_cm = np.argsort(results['hit_rates']['grouped_by_id_hit_rate'][:, 0, 0] +
+    #                           results['hit_rates']['grouped_by_id_hit_rate'][:, 1, 1])[::-1]
 
     img_path = os.path.join('outputs/results',
                              forecast_cfg['formatter'],
                              forecast_cfg['experiment_name'],
-                             'img')
+                             'img',
+                            *forecast_cfg['subfolders'])
 
     filename = forecast_cfg['forecast']
 
-    sorted_ix_cm = [1]
-    y_range = [2000, 2050]
-    x_range = ['2015-04-19T20:00', '2015-04-24T15:00']
+    #%%
+    plot_segments = []
+    plot_segments.append({'sorted_ix_cm': 1,
+                          'y_range': [2000, 2050],
+                          'x_range': ['2015-04-19T20:00', '2015-04-24T15:00']})
+    plot_segments.append({'sorted_ix_cm': 20,
+                          'y_range': [2850, 2970],
+                          'x_range': ['2019-09-01T21:00', '2019-09-06T17:00']})
+    plot_segments.append({'sorted_ix_cm': 27,
+                          'y_range': [4000, 4250],
+                          'x_range': ['2021-05-09T21:00', '2021-05-14T17:00']})
 
-    for ix in sorted_ix_cm[:10]:
-        id = identifiers[ix]
+
+    for plot_segment in plot_segments:
+        id = identifiers[plot_segment['sorted_ix_cm']]
         title = 'Filename: {} <br>Model: {}, Vars Definition: {},' \
                 '<br>Dataset: {}, <br>Quantiles: {}, Group Id: {}'.format(forecast_cfg['forecast'],
                                                                           results['experiment_cfg']['architecture'],
@@ -75,8 +90,12 @@ if __name__ == "__main__":
                                 additional_vars=['ESc'],
                                 additional_rows=[0],
                                 additional_data=mkt_data,
-                                title=title,
+                                title=title if general_cfg['plot_title'] else None,
                                 save=general_cfg['save_plot'],
                                 file_path=os.path.join(img_path, filename+'_id{}'.format(id)),
-                                y_range=y_range,
-                                x_range=x_range)
+                                y_range=plot_segment['y_range'],
+                                x_range=plot_segment['x_range'],
+                                save_png=True,
+                                label_scale=1.2,
+                                size=(1980, 1080*2//3),
+                                )

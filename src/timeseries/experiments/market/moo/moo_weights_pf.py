@@ -11,7 +11,7 @@ from timeseries.experiments.market.expt_settings.configs import ExperimentConfig
 from timeseries.experiments.market.moo.harness.moo import run_moo, get_algorithm
 from timeseries.experiments.market.moo.problem_def import WeightsNN_Moo
 from timeseries.experiments.market.moo.utils.utils import get_loss_to_obj_function, sort_1st_col
-from timeseries.experiments.market.plot.plot import plot_2D_pareto_front, plot_2D_moo_results
+from timeseries.experiments.market.plot.plot import plot_2D_pareto_front, plot_2D_moo_results_equal_w
 from timeseries.experiments.market.utils.filename import get_output_folder, quantiles_name, get_result_folder, \
     termination_name
 from timeseries.experiments.market.utils.harness import get_model_data_config

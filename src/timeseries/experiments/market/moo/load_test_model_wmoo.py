@@ -7,7 +7,7 @@ import tensorflow as tf
 
 from algorithms.tft2.harness.train_test import compute_moo_q_loss
 from timeseries.experiments.market.moo.utils.utils import get_loss_to_obj_function, rank_solutions, aggregate_qcd_qee
-from timeseries.experiments.market.plot.plot import plot_2D_moo_results
+from timeseries.experiments.market.plot.plot import plot_2D_moo_results_equal_w
 from timeseries.experiments.market.utils.filename import get_result_folder, quantiles_name, termination_name
 from timeseries.experiments.market.utils.harness import load_predict_model, get_model_data_config
 from timeseries.experiments.market.utils.results import post_process_results
@@ -108,14 +108,14 @@ if __name__ == "__main__":
                 camera_position=camera_position
                 )
 
-    plot_2D_moo_results(quantiles_loss_2k, eq_quantiles_loss_2k,
-                        selected_ix=selected_ix if general_cfg['use_moo_weights'] else None,
-                        save=general_cfg['save_plot'],
-                        file_path=img_path,
-                        original_ixs=original_ix,
-                        figsize=(20, 15),
-                        xaxis_limit=xaxis_limit,
-                        title='MOO using {} for quantiles: {}'.format(moo_result['moo_method'],
+    plot_2D_moo_results_equal_w(quantiles_loss_2k, eq_quantiles_loss_2k,
+                                selected_ixs=selected_ix if general_cfg['use_moo_weights'] else None,
+                                save=general_cfg['save_plot'],
+                                file_path=img_path,
+                                original_ixs=original_ix,
+                                figsize=(20, 15),
+                                xaxis_limit=xaxis_limit,
+                                title='MOO using {} for quantiles: {}'.format(moo_result['moo_method'],
                                                                       moo_result['quantiles']))
 
     print('original quantiles loss: {}'.format(moo_result['original_losses']))

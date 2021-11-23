@@ -1,54 +1,40 @@
-# Lint as: python3
-"""Trains TFT based on a defined set of parameters.
-
-Uses default parameters supplied from the configs file to train a TFT model from
-scratch.
-
-Usage:
-python3 script_train_fixed_params {expt_name} {output_folder}
-
-Command line args:
-  expt_name: Name of dataset/experiment to train.
-  output_folder: Root folder in which experiment is saved
-
-
-"""
-
 import os
+
+import joblib
+import pandas as pd
 import tensorflow as tf
 
-from timeseries.experiments.market.expt_settings.configs import ExperimentConfig
-from timeseries.experiments.market.utils.harness import load_predict_model
+from timeseries.experiments.market.utils.filename import get_result_folder
+from timeseries.experiments.market.utils.harness import load_predict_model, get_model_data_config
 from timeseries.experiments.market.utils.results import post_process_results
 from timeseries.experiments.utils.files import save_vars
+from timeseries.plotly.plot import plotly_color_1st_row
 
 if __name__ == "__main__":
     print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
     print("Device Name: ", tf.test.gpu_device_name())
     print('TF eager execution: {}'.format(tf.executing_eagerly()))
 
-    general_cfg = {'save_forecast': True,
-                   'use_all_data': True}
+    general_cfg = {'save_forecast': False,
+                   'save_plot': True,
+                   'use_all_data': True,
+                   'plot_title': False
+                   }
 
-    model_cfg = {'total_time_steps': 24 + 5,
-                 'num_encoder_steps': 24,
-                 'num_heads': 5,
-                 'hidden_layer_size': 50,
-                 }
+    results_cfg = {'formatter': 'snp',
+                   'experiment_name': '60t_ema_q357',
+                   'results': 'TFTModel_ES_ema_r_q357_lr01_pred_6'
+                   }
 
-    experiment_cfg = {'formatter': 'snp',
-                      'experiment_name': '60t_macd',
-                      'dataset_config': 'ES_60t_regime_ESc_r_ESc_macd_T10Y2Y_VIX_2015-01_to_2021-06_macd',
-                      # 'dataset_config': 'ES_60t_regime_ESc_r_ESc_macd_T10Y2Y_VIX_2018-01_to_2021-06',
-                      'vars_definition': 'ES_macd_vol'
-                      }
+    model_results = joblib.load(os.path.join(get_result_folder(results_cfg), results_cfg['results'] + '.z'))
 
-    config = ExperimentConfig(experiment_cfg['formatter'], experiment_cfg)
-    formatter = config.make_data_formatter()
-    formatter.update_model_params(model_cfg)
-    model_folder = os.path.join(config.model_folder, experiment_cfg['experiment_name'])
+    config, formatter, model_folder = get_model_data_config(model_results['experiment_cfg'],
+                                                            model_results['model_cfg'],
+                                                            model_results['fixed_cfg'])
+    experiment_cfg = model_results['experiment_cfg']
 
     results, data = load_predict_model(use_gpu=True,
+                                       architecture=experiment_cfg['architecture'],
                                        model_folder=model_folder,
                                        data_config=config.data_config,
                                        data_formatter=formatter,
@@ -60,5 +46,51 @@ if __name__ == "__main__":
     if general_cfg['save_forecast']:
         save_vars(results, os.path.join(config.results_folder,
                                         experiment_cfg['experiment_name'],
-                                        '{}{}_forecasts'.format('all_' if general_cfg['use_all_data'] else '',
-                                                                experiment_cfg['vars_definition'])))
+                                        '{}{}_pred'.format('all_' if general_cfg['use_all_data'] else '',
+                                                           experiment_cfg['vars_definition'])))
+
+    # %%
+    subsets_lbls = {0: 'train', 1: 'test', 2: 'validation'}
+    weighted_errors = []
+    for q_error_lbl, weighted_error in results['weighted_errors'].items():
+        df = weighted_error.copy()
+        df.set_index(df['forecast_time'], inplace=True)
+        df.drop(['forecast_time', 'identifier'], axis=1, inplace=True)
+        weighted_errors.append(df.mean(axis=1).to_frame(name='{} error'.format(q_error_lbl)))
+    weighted_errors = pd.concat(weighted_errors, axis=1)
+
+    # %%
+    data = results['data'].loc[:, ['ESc', 'test', 'datetime']].copy()
+    data.set_index(['datetime'], inplace=True, drop=True)
+    data = pd.concat([data, weighted_errors], axis=1, join='inner')
+    mean_e = {}
+    cum_mean_e = {}
+    for ss, df_ss in data.groupby(by='test'):
+        cumm_df = df_ss.loc[:, list(weighted_errors.columns)].expanding().mean()
+        cumm_df = cumm_df.mean(axis=1).to_frame(name='{} error'.format(subsets_lbls[ss]))
+        mean_e[ss] = df_ss.loc[:, list(weighted_errors.columns)].mean(axis=0)
+        cum_mean_e[ss] = cumm_df
+
+    # %%
+    cummulative_mean_error = pd.concat([m for _, m in cum_mean_e.items()], axis=1).sort_index()
+    data = results['data'].loc[:, ['ESc', 'test', 'datetime']].copy()
+    data.set_index(['datetime'], inplace=True, drop=True)
+    data = pd.concat([data, cummulative_mean_error], axis=1, join='inner')
+    data.rename(columns={'test': 'subset'}, inplace=True)
+    data.fillna(method='ffill', inplace=True)
+
+    # plotly_time_series(data, rows=[0, 1, 2, 2, 2])
+
+    plotly_color_1st_row(data,
+                         color_col='subset',
+                         first_row_feats=['ESc'],
+                         rows=[1, 1, 1],
+                         save_png=True,
+                         label_scale=1.5,
+                         size=(1980*2//3, 1080*2//3),
+                         save=general_cfg['save_plot'],
+                         file_path=os.path.join(config.results_folder,
+                                                experiment_cfg['experiment_name'],
+                                                'img',
+                                                '{}_subset_errors'.format(experiment_cfg['vars_definition'])),
+                         other_feats=list(cummulative_mean_error.columns))

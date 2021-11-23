@@ -14,7 +14,7 @@ if __name__ == '__main__':
     data_from = '2011-12'
     data_to = '2021-12'
     df_ss = df.loc[data_from:data_to]
-    df_ss = df_ss.resample('60T').last().dropna() if resample else df_ss
+    df_ss = df_ss.resample('5T').last().dropna() if resample else df_ss
 
     add_features(df_ss,
                  macds=['ESc'],
@@ -35,7 +35,7 @@ if __name__ == '__main__':
 
 
     #%%
-    df_plot_ss = df_ss.head(1000)
+    df_plot_ss = df_ss.head(10000)
     features = ['ESc', 'ESc_e3', 'ESc_r', 'ESc_e3_r']
     rows = [0, 0, 1, 1]
 

@@ -1,16 +1,16 @@
 import os
 
+import numpy as np
 import pandas as pd
 
 from algorithms.hmm.func import resample_dfs
 from timeseries.data.market.files.utils import load_market, load_data
-from timeseries.experiments.market.plot.plot import plot_train_test_groups, plot_mkt_candles
 from timeseries.experiments.market.preprocess.func import append_timediff_subsets
-from timeseries.experiments.market.split.func import time_subset, set_subsets_and_test, group_by
-from timeseries.experiments.market.utils.filename import subset_filename, subsets_and_test_filename
+from timeseries.experiments.market.split.func import time_subset, set_subsets_and_test
+from timeseries.experiments.market.utils.filename import subsets_and_test_filename
 from timeseries.experiments.market.utils.preprocessing import downsample_df, add_date_known_inputs
 from timeseries.experiments.market.utils.save import save_subsets_and_test
-import numpy as np
+from timeseries.plotly.plot import plotly_ts_regime
 
 np.random.seed(42)
 
@@ -19,7 +19,7 @@ if __name__ == '__main__':
     in_cfg = {'save_results': True,
               'save_plot': False,
               'verbose': 1,
-              'plot_title': True,
+              'plot_title': False,
               'image_folder': 'img',
               'results_folder': 'res'}
 
@@ -35,7 +35,7 @@ if __name__ == '__main__':
                 'downsample_p': '60T'}
 
     split_cfg = {'group': 'week',
-                 'groups_of': 12,
+                 'groups_of': 8,
                  'test_ratio': 0.15,
                  'valid_ratio': 0.15,
                  'random': True,
@@ -66,9 +66,25 @@ if __name__ == '__main__':
 
     # Add known inputs
     add_date_known_inputs(df_subsets)
-    plot_train_test_groups(df_subsets, split_cfg, plot_last=30000, features=['ESc', 'test_train_subset'],
-                           resample=False, period='90T', template='plotly_dark', save=in_cfg['save_plot'],
-                           file_path=[in_cfg['image_folder'], subsets_and_test_filename(data_cfg, split_cfg)])
+
+    #%%
+    df_plot = df_subsets.iloc[-40000:-10000, :]
+    plotly_ts_regime(df_plot,
+                     features=['ESc'],  # , 'test_train_subset'],
+                     resample=False,
+                     regime_col='test',
+                     period='90T',
+                     markers='markers',
+                     markersize=5,
+                     plot_title=in_cfg['plot_title'],
+                     template='plotly_white',
+                     save=in_cfg['save_plot'],
+                     file_path=[in_cfg['image_folder'], subsets_and_test_filename(data_cfg, split_cfg)],
+                     save_png=True,
+                     legend=True,
+                     label_scale=2,
+                     title='SPLIT CFG: {}'.format(str(split_cfg)),
+                     legend_labels=['train', 'test', 'val'])
 
     df_subsets['symbol'] = data_cfg['inst']
     result = {

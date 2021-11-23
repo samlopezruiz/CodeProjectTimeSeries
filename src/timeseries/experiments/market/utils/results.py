@@ -111,9 +111,12 @@ def hit_rate_from_forecast(results, n_output_steps, plot_=True):
     else:
         label = 't+{}'.format(1)
 
-    cm, cm_metrics = confusion_mat(y_true=forecasts['targets'][label],
-                                   y_pred=forecasts['p50'][label],
-                                   plot_=plot_)
+    try:
+        cm, cm_metrics = confusion_mat(y_true=forecasts['targets'][label],
+                                       y_pred=forecasts['p50'][label],
+                                       plot_=plot_)
+    except:
+        cm, cm_metrics = None, None
 
     grouped = group_forecasts(forecasts, n_output_steps, target_col)
 
@@ -123,10 +126,9 @@ def hit_rate_from_forecast(results, n_output_steps, plot_=True):
             confusion_mats.append(confusion_mat(y_true=ss_df[label],
                                                 y_pred=grouped['p50'][identifier][label],
                                                 plot_=False)[0])
+            confusion_mats = np.stack(confusion_mats)
         except:
-            pass
-
-    confusion_mats = np.stack(confusion_mats)
+            confusion_mats = None
 
     return {
         'global_hit_rate': (cm, cm_metrics),
@@ -151,10 +153,30 @@ def compile_multiple_results(moo_results, experiment_labels, hv_ref=[10] * 2):
         results[q_lbl]['risks'] = {}
         results[q_lbl]['history'] = {}
         results[q_lbl]['hv_hist'] = {}
+        results[q_lbl]['hv'] = {}
         for experiment, exp_lbl in zip(moo_results, experiment_labels):
             results[q_lbl]['risks'][exp_lbl] = [e[bound]['F'] for e in experiment]
             results[q_lbl]['history'][exp_lbl] = [e[bound]['pop_hist'] for e in experiment]
             results[q_lbl]['hv_hist'][exp_lbl] = [[get_hypervolume(F, hv_ref) for F in hist] for hist
                                                   in [e[bound]['pop_hist'] for e in experiment] if hist is not None]
+            results[q_lbl]['hv'][exp_lbl] = [get_hypervolume(hist[-1], hv_ref) for hist
+                                             in [e[bound]['pop_hist'] for e in experiment] if hist is not None]
+
+    return results
+
+
+def compile_multiple_results_q(moo_results, q_items=None, experiment_labels=None):
+    if experiment_labels is None:
+        experiment_labels = list(range(len(moo_results)))
+
+    if q_items is None:
+        q_items = {'lq': 'lower quantile', 'uq': 'upper quantile'}
+
+    results = {}
+    for q_lbl, q_name in q_items.items():
+        exps = {}
+        for i, moo_result in enumerate(moo_results):
+            exps[experiment_labels[i]] = moo_result[q_lbl]
+        results[q_name] = exps
 
     return results

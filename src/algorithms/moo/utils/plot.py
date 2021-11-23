@@ -16,6 +16,7 @@ from algorithms.moo.utils.utils import get_pymoo_pops_obj, get_deap_pops_obj
 from timeseries.experiments.utils.files import create_dir, get_new_file_path
 from timeseries.plotly.utils import plotly_save
 import seaborn as sns
+
 pio.renderers.default = "browser"
 
 colors = [
@@ -29,15 +30,16 @@ colors = [
     '#7f7f7f',  # middle gray
     '#bcbd22',  # curry yellow-green
     '#17becf'  # blue-teal
-    'rgba(0, 0, 0, 0)' #transparent ix=
+    'rgba(0, 0, 0, 0)'  # transparent ix=
 ]
 
 marker_symbols = ['circle', 'x', 'cross', 'circle-open']
 
-
 import pymoo
 from matplotlib import pyplot as plt
 from pymoo.factory import get_performance_indicator
+
+sns_colors = sns.color_palette()
 
 
 def plot_hv(hypervols, title='', save=False):
@@ -324,17 +326,43 @@ def plot_runs(y_runs,
               legend_labels=None,
               show_grid=True,
               use_date=False,
-              show_title=True):
-    x = np.arange(y_runs.shape[1]).astype(int) + 1
-
+              show_title=True,
+              linewidth=5):
     fig, ax = plt.subplots(figsize=size)
-    for y in y_runs:
-        sns.lineplot(x=x, y=y, ax=ax, color='gray' if mean_run is not None else None, alpha=0.8, linewidth=4)
-        # sns.scatterplot(x=x, y=y, ax=ax, color='black', alpha=0.3)
-    if mean_run is not None:
-        sns.lineplot(x=x, y=mean_run, ax=ax, color='blue', linewidth=6)
 
-    plt.xlim([0, y_runs.shape[1]])
+    if isinstance(y_runs, list):
+        xs = [np.arange(y_run.shape[1]).astype(int) + 1 for y_run in y_runs]
+        for j, (x, y_run) in enumerate(zip(xs, y_runs)):
+            for i, y in enumerate(y_run):
+                # sns.lineplot(x=x, y=y, ax=ax,
+                #              color=sns_colors[i],
+                #              alpha=0.8,
+                #              linewidth=linewidth,
+                #              dashes=[(1, 1)],
+                #              markers=True)
+                ax.plot(x, y, '--' if j == 1 else '-',
+                        color=sns_colors[i],
+                        alpha=1,
+                        linewidth=linewidth,
+                        )
+
+        plt.xlim([0, max([len(x) for x in xs])])
+
+    else:
+        x = np.arange(y_runs.shape[1]).astype(int) + 1
+
+        for y in y_runs:
+            sns.lineplot(x=x, y=y, ax=ax,
+                         color='gray' if mean_run is not None else None,
+                         alpha=0.8,
+                         linewidth=linewidth)
+        if mean_run is not None:
+            sns.lineplot(x=x, y=mean_run, ax=ax,
+                         color='blue',
+                         linewidth=int(linewidth * 1.2))
+
+        plt.xlim([0, len(x)])
+
     ax.set(xlabel='x' if x_label is None else x_label,
            ylabel='x' if y_label is None else y_label)
     if show_title:
@@ -350,7 +378,6 @@ def plot_runs(y_runs,
         save_fig(fig, file_path, use_date)
 
 
-
 def plot_histogram(Y,
                    x_labels,
                    x_label=None,
@@ -360,7 +387,9 @@ def plot_histogram(Y,
                    file_path=None,
                    save=False,
                    show_grid=True,
-                   use_date=False):
+                   use_date=False,
+                   ylim=None,
+                   show_title=True):
     Y = pd.DataFrame(Y.T, columns=x_labels)
     df = Y.melt()
     df.columns = ['variable' if x_label is None else x_label,
@@ -370,7 +399,10 @@ def plot_histogram(Y,
         plt.grid()
     # for i, y in enumerate(Y):
     sns.barplot(data=df, x=x_label, y=y_label, capsize=.2)
-    ax.set_title('' if title is None else title)
+    if show_title:
+        ax.set_title('' if title is None else title)
+    if ylim:
+        plt.ylim(ylim[0], ylim[1])
     plt.show()
 
     if save:
@@ -381,5 +413,5 @@ def save_fig(fig, file_path, use_date):
     if file_path is not None:
         create_dir(file_path)
         file_path = get_new_file_path(file_path, '.png', use_date)
-        print('Saving image: {}\n'.format(file_path))
+        print('Saving image:\n{}\n'.format(file_path))
         fig.savefig(os.path.join(file_path))

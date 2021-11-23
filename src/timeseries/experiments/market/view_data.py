@@ -8,8 +8,8 @@ if __name__ == "__main__":
     general_cfg = {'save_forecast': True}
 
     experiment_cfg = {'formatter': 'snp',
-                  'experiment_name': '60t_ema_test',
-                  'dataset_config': 'ES_5t_regime_2015-01_to_2021-06_ema',
+                  'experiment_name': '60t_ema_test_ttv',
+                  'dataset_config': 'ES_60t_regime_2015-01_to_2021-06_ema_ttv',
                   'vars_definition': 'ES_ema_r',
                   'architecture': 'TFTModel'
                   }
@@ -24,6 +24,7 @@ if __name__ == "__main__":
 
     train.set_index('datetime', inplace=True)
     test.set_index('datetime', inplace=True)
+    valid.set_index('datetime', inplace=True)
 
     #%%
     df_plot = test.head(1000)

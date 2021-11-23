@@ -23,13 +23,14 @@ if __name__ == "__main__":
     print('TF eager execution: {}'.format(tf.executing_eagerly()))
 
     general_cfg = {'save_forecast': True,
-                   'save_plot': True,
+                   'save_plot': False,
                    'use_all_data': True,
-                   'use_moo_weights': False}
+                   'use_moo_weights': True,
+                   'manual_selection': False}
 
     results_cfg = {'formatter': 'snp',
-                   'experiment_name': '60t_ema_q159',
-                   'results': 'TFTModel_ES_ema_r_q159_NSGA3_g100_p100_s1_dual_wmoo'
+                   'experiment_name': '5t_ema_q258',
+                   'results': 'TFTModel_ES_slow_ema_r_q258_NSGA2_g200_p200_s1_dual_wmoo'
                    }
 
     moo_results = joblib.load(os.path.join(get_result_folder(results_cfg), 'moo', results_cfg['results'] + '.z'))
@@ -42,25 +43,19 @@ if __name__ == "__main__":
 
     risk_selected = {'qerl': 0.5,
                      'qcru': 0.5}
-    # risk_selected = {'qer-l': 0.5,
-    #                  'qer-u': 0.5}
 
-    basename = '{}_{}_q{}_{}_{}_p{}_s{}_{}_'.format(experiment_cfg['architecture'],
-                                                    experiment_cfg['vars_definition'],
-                                                    quantiles_name(moo_results['lq']['quantiles']),
-                                                    moo_results['lq']['moo_method'],
-                                                    termination_name(moo_results['lq']['algo_cfg']['termination']),
-                                                    moo_results['lq']['algo_cfg']['pop_size'],
-                                                    int(moo_results['lq']['algo_cfg']['use_sampling']),
-                                                    risk_name(risk_selected) if general_cfg['use_moo_weights'] else '',
-                                                    )
+    manual_selected_ixs = {'lq': 28,
+                           'uq': 32}
 
     labels, quantiles_losses, original_ixs, selected_ixs = [], [], [], []
     selected_weights, original_weights = {}, {}
     for bound, moo_result in moo_results.items():
         weights, quantiles_loss, eq_quantiles_loss = moo_result['X'], moo_result['F'], moo_result['eq_F']
         original_ix = np.argmin(np.sum(np.abs(quantiles_loss - moo_result['original_losses']), axis=1))
-        selected_ix = get_selected_ix(quantiles_loss, risk_selected, upper=bound == 'uq')
+        if general_cfg['manual_selection']:
+            selected_ix = manual_selected_ixs[bound]
+        else:
+            selected_ix = get_selected_ix(quantiles_loss, risk_selected, upper=bound == 'uq')
 
         moo_results[bound]['original_ix'] = original_ix
         moo_results[bound]['selected_ix'] = selected_ix
@@ -71,6 +66,23 @@ if __name__ == "__main__":
         selected_weights[bound] = weights[selected_ix, :]
         original_weights[bound] = weights[original_ix, :]
 
+    #%% Overwrite selected ixs if needed
+    risk_lbl = ''
+    if general_cfg['use_moo_weights']:
+        if general_cfg['manual_selection']:
+            risk_lbl = 'lix{}_uix{}'.format(selected_ixs[0], selected_ixs[1])
+        else:
+            risk_name(risk_selected)
+    basename = '{}_{}_q{}_{}_{}_p{}_s{}_{}_'.format(experiment_cfg['architecture'],
+                                                    experiment_cfg['vars_definition'],
+                                                    quantiles_name(moo_results['lq']['quantiles']),
+                                                    moo_results['lq']['moo_method'],
+                                                    termination_name(moo_results['lq']['algo_cfg']['termination']),
+                                                    moo_results['lq']['algo_cfg']['pop_size'],
+                                                    int(moo_results['lq']['algo_cfg']['use_sampling']),
+                                                    risk_lbl,
+                                                    )
+
     # %%
     xaxis_limit = 1.
     img_path = os.path.join(config.results_folder,
@@ -79,7 +91,7 @@ if __name__ == "__main__":
                             '{}pf'.format(basename))
 
     plot_2D_moo_dual_results(quantiles_losses,
-                             selected_ix=selected_ixs if general_cfg['use_moo_weights'] else None,
+                             selected_ixs=selected_ixs if general_cfg['use_moo_weights'] else None,
                              save=general_cfg['save_plot'],
                              file_path=img_path,
                              original_ixs=original_ixs,
@@ -103,8 +115,7 @@ if __name__ == "__main__":
                                        data_config=config.data_config,
                                        data_formatter=formatter,
                                        use_all_data=general_cfg['use_all_data'],
-                                       last_layer_weights=new_weights,
-                                       exclude_p50=True)
+                                       last_layer_weights=new_weights)
 
     post_process_results(results, formatter, experiment_cfg, plot_=False)
 
@@ -117,5 +128,6 @@ if __name__ == "__main__":
         save_vars(results, os.path.join(config.results_folder,
                                         experiment_cfg['experiment_name'],
                                         'moo',
+                                        'selec_sols',
                                         '{}{}pred'.format(basename,
                                                           'all_' if general_cfg['use_all_data'] else '')))

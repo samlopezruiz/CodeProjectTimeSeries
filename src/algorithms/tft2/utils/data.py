@@ -1,5 +1,6 @@
 from algorithms.tft.libs.tft_model import InputTypes
 from algorithms.tft.libs.utils import get_single_col_by_input_type, extract_cols_from_data_type
+from timeseries.experiments.market.data_formatter.base import DataTypes
 
 
 def get_col_mapping(column_definition):
@@ -16,13 +17,28 @@ def get_col_mapping(column_definition):
         for tup in column_definition
         if tup[2] not in {InputTypes.ID, InputTypes.TIME}
     ]
-    historical_cols = [
+    unkown = [
         tup[0]
         for tup in column_definition
-        if tup[2] not in {InputTypes.ID, InputTypes.TIME, InputTypes.TARGET, InputTypes.STATIC_INPUT}
+        if tup[2] == InputTypes.OBSERVED_INPUT
     ]
+    kown = [
+        tup[0]
+        for tup in column_definition
+        if tup[2] == InputTypes.KNOWN_INPUT
+    ]
+    obs = [
+        tup[0]
+        for tup in column_definition
+        if tup[2] == InputTypes.TARGET
+    ]
+    # historical_cols = [
+    #     tup[0]
+    #     for tup in column_definition
+    #     if tup[2] not in {InputTypes.ID, InputTypes.TIME, InputTypes.STATIC_INPUT}
+    # ]
+    historical_cols = unkown + kown + obs
 
-    historical_cols += static_cols
 
     col_mappings = {
         'identifier': [id_col],

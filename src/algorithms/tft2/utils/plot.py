@@ -5,7 +5,13 @@ from algorithms.tft2.utils.data import get_col_mapping
 from src.timeseries.plotly.plot import plotly_time_series
 
 
-def plot_self_attn(attentions, params, taus):
+def plot_self_attn(attentions,
+                   params,
+                   taus,
+                   label_scale=1,
+                   save=False,
+                   file_path=None,
+                   size=(1980, 1080)):
     self_attns = None
     # Plot attention for each head
     for i, head_self_attn in enumerate(attentions['decoder_self_attn']):
@@ -16,7 +22,14 @@ def plot_self_attn(attentions, params, taus):
                                     name='self_attn t={}'.format(tau)) for tau in taus]
         self_attns = pd.concat(self_attn_taus, axis=1)
         self_attns.index = np.array(self_attns.index) - params['num_encoder_steps']
-        plotly_time_series(self_attns, xaxis_title='Position Index (n)', title='Self Attention Head {}'.format(i))
+        plotly_time_series(self_attns,
+                           xaxis_title='Position Index (n)',
+                           title='Self Attention Head {}'.format(i),
+                           label_scale=label_scale,
+                           save=save,
+                           file_path=file_path+'_head'.format(i),
+                           save_png=True,
+                           size=size)
     return self_attns
 
 

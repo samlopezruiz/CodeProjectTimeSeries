@@ -15,7 +15,7 @@ def files_with_substring(file_path, substring):
 
 def latex_table(title, tabbular_text):
     table_str = '\\begin{table}[h] \n\\begin{center}\n'
-    table_str += '\\caption{{{0}}}\\label{{tbl:{1}}}\n'.format(title.upper().replace('_', ' '),
+    table_str += '\\caption{{{0}}}\\label{{tbl:{1}}}\n'.format(title.replace('_', ' '),
                                                                title.lower().replace(' ', '_'))
     table_str += tabbular_text
     table_str += '\\end{center} \n\\end{table}\n'
@@ -24,9 +24,20 @@ def latex_table(title, tabbular_text):
 
 def write_text_file(file_path, text, extension='.txt', use_date=False):
     create_dir(file_path)
-    path = get_new_file_path(file_path, extension, use_date=use_date)
-    with open(os.path.join(*path), "w") as text_file:
+    path = get_new_file_path(file_path, extension, use_date_suffix=use_date)
+    print('Saving text file to:\n{}\n'.format(path))
+    with open(os.path.join(path), "w") as text_file:
         text_file.write(text)
+
+
+def write_latex_from_scores(scores, out_file_path):
+    output_text = ''
+    for key in scores:
+        if isinstance(scores[key], pd.DataFrame):
+            table_text = latex_table(key, scores[key].to_latex())
+            output_text += table_text + '\n\n'
+
+    write_text_file(out_file_path, output_text)
 
 
 def get_type_str(obj):

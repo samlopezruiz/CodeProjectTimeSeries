@@ -1,3 +1,4 @@
+import copy
 import datetime as dte
 import multiprocessing
 import os
@@ -369,7 +370,7 @@ def train_test_model(use_gpu,
     for k in params:
         print("{}: {}".format(k, params[k]))
 
-    best_loss = np.Inf
+    # best_loss = np.Inf
 
     with tf.device('/device:GPU:0' if use_gpu else "/cpu:0"):
 
@@ -382,12 +383,13 @@ def train_test_model(use_gpu,
             model.cache_batched_data(valid, "valid", num_samples=valid_samples)
 
         model.fit(prefetch_data)
+        fit_history = copy.deepcopy(model.fit_history)
 
         val_loss = model.evaluate()
 
-        if val_loss < best_loss:
-            opt_manager.update_score(params, val_loss, model)
-            best_loss = val_loss
+        # if val_loss < best_loss:
+        opt_manager.update_score(params, val_loss, model)
+            # best_loss = val_loss
 
     print("Training completed @ {}".format(dte.datetime.now()))
     print("Validation loss = {}".format(val_loss))
@@ -408,13 +410,13 @@ def train_test_model(use_gpu,
         print("Training completed @ {}".format(dte.datetime.now()))
         print("Best validation loss = {}".format(val_loss))
 
-        return predict_from_model(params, data_formatter, model, test)
+        return predict_from_model(params, data_formatter, model, test, val_loss, fit_history)
     else:
         return val_loss
 
 
 #
-def predict_from_model(best_params, data_formatter, model, test):
+def predict_from_model(best_params, data_formatter, model, test, val_loss, fit_history):
     print("Computing test loss")
     output_map = model.predict(test, return_targets=True)
     unscaled_output_map = {}
@@ -422,23 +424,32 @@ def predict_from_model(best_params, data_formatter, model, test):
         unscaled_output_map[k] = data_formatter.format_predictions(df)
 
     losses = {}
+    weighted_errors = {}
     targets = unscaled_output_map['targets']
     for q in model.quantiles:
         key = 'p{}'.format(int(q * 100))
         losses[key + '_loss'] = utils.numpy_normalised_quantile_loss(
             extract_numerical_data(targets), extract_numerical_data(unscaled_output_map[key]), q)
+        weighted_errors[key] = utils.numpy_normalised_weighted_errors(
+            extract_numerical_data(targets), extract_numerical_data(unscaled_output_map[key]), q)
+        weighted_errors[key]['forecast_time'] = unscaled_output_map[key]['forecast_time']
+        weighted_errors[key]['identifier'] = unscaled_output_map[key]['identifier']
 
     print("Params:")
     for k in best_params:
         print(k, " = ", best_params[k])
-    print("\nNormalised Quantile Losses for Test Data: {}".format(
-        [p_loss.mean() for k, p_loss in losses.items()]))
+
+    test_loss = [p_loss.mean() for k, p_loss in losses.items()]
+    print("\nNormalised Quantile Losses for Test Data: {}".format(test_loss))
 
     results = {'quantiles': model.quantiles,
                'forecasts': unscaled_output_map,
+               'weighted_errors': weighted_errors,
+               'val_loss': val_loss,
+               'test_loss': test_loss,
                'losses': losses,
                'learning_rate': model.learning_rate,
-               'fit_history': model.fit_history,
+               'fit_history': fit_history,
                'target': data_formatter.test_true_y.columns[0] if data_formatter.test_true_y is not None else None,
                'fixed_params': data_formatter.get_fixed_params(),
                'model_params': data_formatter.get_default_model_params()}
@@ -452,8 +463,7 @@ def load_predict_model(use_gpu,
                        data_config,
                        data_formatter,
                        use_all_data=False,
-                       last_layer_weights=None,
-                       exclude_p50=True):
+                       last_layer_weights=None):
     """Trains tft based on defined model params.
   Args:
       :param use_all_data:
@@ -485,7 +495,7 @@ def load_predict_model(use_gpu,
     params = opt_manager.get_next_parameters()
 
     with tf.device('/device:GPU:0' if use_gpu else "/cpu:0"):
-        # model = TemporalFusionTransformer(params, use_cudnn=use_gpu)
+
         model = Model(params)
         model.load(opt_manager.hyperparam_folder, use_keras_loadings=True)
 
@@ -494,29 +504,7 @@ def load_predict_model(use_gpu,
             weights, last_layer = get_last_layer_weights(model)
             last_layer.set_weights(last_layer_weights)
 
-            # # get original p50 weights
-            # if exclude_p50:
-            #     p50_w = weights[0][:, 1]
-            #     p50_b = weights[1][1]
-            #     weights_woP50 = [weights[0][:, [0, 2]], weights[1][[0, 2]]]
-            #
-            #     # get conversion parameters from weights wo p50
-            #     ind, w_params_woP50 = params_conversion_weights(weights_woP50)
-            #     new_weights = reconstruct_weights(last_layer_weights, w_params_woP50)
-            #
-            #     new_weights[0] = np.vstack([new_weights[0][:, 0],
-            #                                 p50_w,
-            #                                 new_weights[0][:, 1]]).T
-            #     new_weights[1] = np.array([new_weights[1][0],
-            #                                p50_b,
-            #                                new_weights[1][1]])
-            # else:
-            #     ind, w_params_wP50 = params_conversion_weights(weights)
-            #     new_weights = reconstruct_weights(last_layer_weights, w_params_wP50)
-
-            # last_layer.set_weights(new_weights)
-
-        return predict_from_model(params, data_formatter, model, test), test
+        return predict_from_model(params, data_formatter, model, test, None, None), test
 
 
 def get_model(architecture):
@@ -525,6 +513,7 @@ def get_model(architecture):
         raise Exception('{} not a valid option. \nOptions: {}'.format(architecture, architecture_options))
 
     if architecture == 'TFTModel':
+        # model = TemporalFusionTransformer
         model = TFTModel
     elif architecture == 'LSTMModel':
         model = LSTMModel

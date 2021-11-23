@@ -16,15 +16,43 @@ def plot_mkt_candles(df, inst, features=None, resample=False, period='90T', ts_h
                       template=template, rows=[i for i in range(len(features))])
 
 
-def plot_train_test_groups(df, split_cfg=None, plot_last=None, regime_col='test', features=['ESc', 'subset'],
-                           resample=False, period='90T', template='plotly_dark', save=False, file_path=None):
+def plot_train_test_groups(df,
+                           split_cfg=None,
+                           plot_last=None,
+                           regime_col='test',
+                           features=['ESc', 'subset'],
+                           resample=False,
+                           period='90T',
+                           template='plotly_dark',
+                           save=False,
+                           legend=False,
+                           file_path=None,
+                           label_scale=1,
+                           markersize=5,
+                           markers='lines+markers',
+                           save_png=False,
+                           legend_labels=None
+                           ):
     # df_merged = merge_train_test_groups(dfs_train, dfs_test)
     if plot_last is not None:
         df = df.iloc[-plot_last:, :]
     df_plot = df.resample(period).last() if resample else df
     title = 'SPLIT CFG: {}'.format(str(split_cfg)) if split_cfg is not None else "SPLIT GROUPS"
-    plotly_ts_regime(df_plot, features=features, regime_col=regime_col, title=title, adjust_height=(True, 0.8),
-                     template=template, rows=[i for i in range(len(features))], save=save, file_path=file_path)
+    plotly_ts_regime(df_plot,
+                     features=features,
+                     regime_col=regime_col,
+                     title=title,
+                     adjust_height=(True, 0.8),
+                     template=template,
+                     rows=[i for i in range(len(features))],
+                     save=save,
+                     markers=markers,
+                     file_path=file_path,
+                     legend=legend,
+                     save_png=save_png,
+                     markersize=markersize,
+                     label_scale=label_scale,
+                     legend_labels=legend_labels)
 
 
 def get_legend_labels(prefix, suffix=None, length=None):
@@ -134,19 +162,20 @@ def plot_2D_pareto_front(Fs,
         save_fig(fig, file_path, use_date)
 
 
-def plot_2D_moo_results(Fs,
-                        eq_Fs=None,
-                        save=False,
-                        file_path=None,
-                        selected_ix=None,
-                        original_ixs=None,
-                        figsize=(15, 15),
-                        use_date=False,
-                        xlabel='Quantile coverage risk',
-                        ylabel='Quantile estimation risk',
-                        title='Multi objective optimization',
-                        legend_labels_suffix=None,
-                        xaxis_limit=None):
+def plot_2D_moo_results_equal_w(Fs,
+                                eq_Fs=None,
+                                save=False,
+                                file_path=None,
+                                selected_ixs=None,
+                                original_ixs=None,
+                                figsize=(15, 15),
+                                use_date=False,
+                                xlabel='Quantile coverage risk',
+                                ylabel='Quantile estimation risk',
+                                title='Multi objective optimization',
+                                legend_labels=None,
+                                xaxis_limit=None):
+
     if eq_Fs is not None:
         fig, ax = plt.subplots(2, 2, figsize=figsize)
         ax00, ax01, ax10, ax11 = ax[0, 0], ax[0, 1], ax[1, 0], ax[1, 1]
@@ -159,14 +188,14 @@ def plot_2D_moo_results(Fs,
     Fs_x_plot_masks = get_x_mask(Fs, xaxis_limit)
 
     if isinstance(Fs, list):
-        labels = get_legend_labels('Model', suffix=legend_labels_suffix, length=len(Fs))
+        # labels = get_legend_labels('Model', suffix=legend_labels, length=len(Fs))
 
         for i, F in enumerate(Fs):
             ax00.plot(F[Fs_x_plot_masks[i], 0], F[Fs_x_plot_masks[i], 1],
                       'o',
                       markersize=8,
                       color=sns_colors[i],
-                      label=labels[i])
+                      label=legend_labels[i])
     else:
         ax00.plot(Fs[Fs_x_plot_masks, 0], Fs[Fs_x_plot_masks, 1],
                   'o',
@@ -176,12 +205,12 @@ def plot_2D_moo_results(Fs,
 
     if isinstance(Fs, list):
         for i, F in enumerate(Fs):
-            labels = get_legend_labels('Model', suffix=legend_labels_suffix, length=len(Fs))
+            # labels = get_legend_labels('Model', suffix=legend_labels, length=len(Fs))
             ax01.plot(F[Fs_x_plot_masks[i], 0], np.sum(F[Fs_x_plot_masks[i], :], axis=1),
                       'o',
                       markersize=8,
                       color=sns_colors[i],
-                      label=labels[i])
+                      label=legend_labels[i])
     else:
         ax01.plot(Fs[Fs_x_plot_masks, 0], np.sum(Fs[Fs_x_plot_masks, :], axis=1),
                   'o',
@@ -190,40 +219,40 @@ def plot_2D_moo_results(Fs,
                   label='Error')
     if eq_Fs is not None:
         if isinstance(eq_Fs, list):
-            QCP_labels = get_legend_labels('QCR', suffix=legend_labels_suffix, length=len(Fs))
-            QEE_labels = get_legend_labels('QER', suffix=legend_labels_suffix, length=len(Fs))
+            # QCP_labels = get_legend_labels('QCR', suffix=legend_labels, length=len(Fs))
+            # QEE_labels = get_legend_labels('QER', suffix=legend_labels, length=len(Fs))
             for i, (F, eq_F) in enumerate(zip(Fs, eq_Fs)):
-                ax10.plot(F[Fs_x_plot_masks[i], 0], eq_F[Fs_x_plot_masks[i], 0],
-                          'v',
+                ax10.plot(eq_F[Fs_x_plot_masks[i], 0], eq_F[Fs_x_plot_masks[i], 1],
+                          'o',
                           markersize=8,
                           color=sns_colors[i],
-                          label=QCP_labels[i])
-                ax10.plot(F[Fs_x_plot_masks[i], 0], eq_F[Fs_x_plot_masks[i], 1],
-                          '^',
-                          markersize=8,
-                          color=sns_colors[i],
-                          label=QEE_labels[i])
+                          label=legend_labels[i])
+                # ax10.plot(F[Fs_x_plot_masks[i], 0], eq_F[Fs_x_plot_masks[i], 1],
+                #           '^',
+                #           markersize=8,
+                #           color=sns_colors[i],
+                #           label=QEE_labels[i])
         else:
-            ax10.plot(Fs[Fs_x_plot_masks, 0], eq_Fs[Fs_x_plot_masks, 0],
-                      'v',
+            ax10.plot(eq_Fs[Fs_x_plot_masks, 0], eq_Fs[Fs_x_plot_masks, 1],
+                      'o',
                       markersize=8,
                       color=sns_colors[0],
-                      label='QCR - equal weights')
-            ax10.plot(Fs[Fs_x_plot_masks, 0], eq_Fs[Fs_x_plot_masks, 1],
-                      '^',
-                      markersize=8,
-                      color=sns_colors[0],
-                      label='QER - equal weights')
+                      label='Pareto front - equal weights')
+            # ax10.plot(Fs[Fs_x_plot_masks, 0], eq_Fs[Fs_x_plot_masks, 1],
+            #           '^',
+            #           markersize=8,
+            #           color=sns_colors[0],
+            #           label='QER - equal weights')
 
     if eq_Fs is not None:
         if isinstance(eq_Fs, list):
-            labels = get_legend_labels('Error', suffix=legend_labels_suffix, length=len(Fs))
+            # labels = get_legend_labels('Error', suffix=legend_labels_suffix, length=len(Fs))
             for i, (F, eq_F) in enumerate(zip(Fs, eq_Fs)):
                 ax11.plot(F[Fs_x_plot_masks[i], 0], np.sum(eq_F[Fs_x_plot_masks[i], :], axis=1),
                           'o',
                           markersize=8,
                           color=sns_colors[i],
-                          label=labels[i])
+                          label=legend_labels[i])
         else:
             ax11.plot(Fs[Fs_x_plot_masks, 0], np.sum(eq_Fs[Fs_x_plot_masks, :], axis=1),
                       'o',
@@ -233,12 +262,12 @@ def plot_2D_moo_results(Fs,
 
     if original_ixs is not None:
         highlight_point(Fs, eq_Fs, axes, original_ixs, color='black', label='Original Solution')
-    if selected_ix is not None:
-        highlight_point(Fs, eq_Fs, axes, selected_ix, color='red', label='Selected Solution')
+    if selected_ixs is not None:
+        highlight_point(Fs, eq_Fs, axes, selected_ixs, color='red', label='Selected Solution')
 
     ax01.set_title('Total Error', fontweight="bold")
-    ax01.set_xlabel('Quantile coverage error')
-    ax01.set_ylabel('Error')
+    ax01.set_xlabel('Quantile coverage risk')
+    ax01.set_ylabel('Total error')
     ax01.legend()
 
     ax00.set_title('Pareto front', fontweight="bold")
@@ -248,13 +277,13 @@ def plot_2D_moo_results(Fs,
 
     if eq_Fs is not None:
         ax11.set_title('Total Error - equal weights', fontweight="bold")
-        ax11.set_xlabel('Quantile coverage error')
-        ax11.set_ylabel('Error')
+        ax11.set_xlabel('Quantile coverage risk - equal weights')
+        ax11.set_ylabel('Total error')
         ax11.legend()
 
         ax10.set_title('Error - equal weights', fontweight="bold")
-        ax10.set_xlabel('Quantile coverage error')
-        ax10.set_ylabel('Error')
+        ax10.set_xlabel('Quantile coverage risk - equal weights')
+        ax10.set_ylabel('Quantile estimation risk - equal weights')
         ax10.legend()
 
     fig.suptitle(title)
@@ -268,7 +297,7 @@ def plot_2D_moo_results(Fs,
 def plot_2D_moo_dual_results(Fs,
                              save=False,
                              file_path=None,
-                             selected_ix=None,
+                             selected_ixs=None,
                              original_ixs=None,
                              figsize=(15, 15),
                              use_date=False,
@@ -293,8 +322,8 @@ def plot_2D_moo_dual_results(Fs,
                     plot_2D_trace_moo(ax, i, f, ix_x_mask, 'black', 'black', marker='*',
                                       markersize=24,
                                       label='Original solution' if j == 0 else None)
-                if selected_ix is not None:
-                    ix_x_mask = np.arange(f.shape[0]) == selected_ix[i][j]
+                if selected_ixs is not None:
+                    ix_x_mask = np.arange(f.shape[0]) == selected_ixs[i][j]
                     plot_2D_trace_moo(ax, i, f, ix_x_mask, 'red', 'red',
                                       marker='*',
                                       markersize=24,
@@ -306,13 +335,12 @@ def plot_2D_moo_dual_results(Fs,
                 plot_2D_trace_moo(ax, i, F, ix_x_mask, 'black', 'black', marker='*',
                                   markersize=24,
                                   label='Original solution')
-            if selected_ix is not None:
-                ix_x_mask = np.arange(F.shape[0]) == selected_ix[i]
+            if selected_ixs is not None:
+                ix_x_mask = np.arange(F.shape[0]) == selected_ixs[i]
                 plot_2D_trace_moo(ax, i, F, ix_x_mask, 'red', 'red',
                                   marker='*',
                                   markersize=24,
                                   label='Selected solution')
-
 
     if col_titles is None:
         col_titles = ['quantile A', 'quantile B']
@@ -385,32 +413,32 @@ def highlight_point(Fs, eq_Fs, axes, ixs, color, label):
                           markersize=24,
                           color=color,
                           label=label if i == 0 else None)
-                ax10.plot(F[ixs[i], 0], eq_F[ixs[i], 0],
-                          'v',
-                          markersize=8,
+                ax10.plot(eq_F[ixs[i], 0], eq_F[ixs[i], 1],
+                          '*',
+                          markersize=24,
                           color=color,
-                          label=label)
-                ax10.plot(F[ixs[i], 0], eq_F[ixs[i], 1],
-                          '^',
-                          markersize=8,
-                          color=color,
-                          label=label)
+                          label=label if i == 0 else None)
+                # ax10.plot(F[ixs[i], 0], eq_F[ixs[i], 1],
+                #           '^',
+                #           markersize=8,
+                #           color=color,
+                #           label=label)
         else:
             ax11.plot(Fs[ixs, 0], np.sum(eq_Fs, axis=1)[ixs],
                       '*',
                       markersize=24,
                       color=color,
                       label=label)
-            ax10.plot(Fs[ixs, 0], eq_Fs[ixs, 0],
-                      'v',
-                      markersize=8,
+            ax10.plot(eq_Fs[ixs, 0], eq_Fs[ixs, 1],
+                      'o',
+                      markersize=24,
                       color=color,
                       label=label)
-            ax10.plot(Fs[ixs, 0], eq_Fs[ixs, 1],
-                      '^',
-                      markersize=8,
-                      color=color,
-                      label=label)
+            # ax10.plot(Fs[ixs, 0], eq_Fs[ixs, 1],
+            #           '^',
+            #           markersize=8,
+            #           color=color,
+            #           label=label)
 
 
 def get_x_mask(F_input, xaxis_limit):

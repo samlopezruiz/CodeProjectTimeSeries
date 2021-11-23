@@ -88,6 +88,13 @@ def tensorflow_quantile_loss(y, y_pred, quantile):
 
   return tf.math.reduce_sum(q_loss, axis=-1)
 
+def numpy_normalised_weighted_errors(y, y_pred, quantile):
+  prediction_underflow = y - y_pred
+  weighted_errors = quantile * np.maximum(prediction_underflow, 0.) \
+                    + (1. - quantile) * np.maximum(-prediction_underflow, 0.)
+  normaliser = y.abs().mean()
+
+  return 2 * weighted_errors / normaliser
 
 def numpy_normalised_quantile_loss(y, y_pred, quantile):
   """Computes normalised quantile loss for numpy arrays.

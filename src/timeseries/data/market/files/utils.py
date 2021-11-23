@@ -67,7 +67,7 @@ def load_market(data_cfg, end=".csv", last_folder='src_folder'):
 
 def load_multiple_markets(data_cfgs, resampling='D', ffill=True):
     data = [load_market(cfg) for cfg in data_cfgs]
-    data_resampled = [df.resample(resampling).last() for df, _ in data]
+    data_resampled = [df.resample(resampling).last() for df in data]
     df = pd.concat(data_resampled, axis=1)
     df.rename(columns=renamer(), inplace=True)
     if ffill:

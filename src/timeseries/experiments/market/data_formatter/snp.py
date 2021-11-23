@@ -195,7 +195,7 @@ class SnPFormatter(GenericDataFormatter):
         column_definitions = self.get_column_definition()
         time_column = utils.get_single_col_by_input_type(InputTypes.TIME, column_definitions)
         self.valid_true_y = pd.Series(valid[true_target].values, index=valid[time_column], name=true_target).to_frame()
-        self.test_true_y = pd.Series(test[true_target].values, index=valid[time_column], name=true_target).to_frame()
+        self.test_true_y = pd.Series(test[true_target].values, index=test[time_column], name=true_target).to_frame()
 
 
 

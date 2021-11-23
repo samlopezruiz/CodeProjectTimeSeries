@@ -102,7 +102,10 @@ def plotly_time_series(df,
                        markersize=5,
                        plot_title=True,
                        label_scale=1,
-                       adjust_height=(False, 0.6), plot_ytitles=False, **kwargs):
+                       adjust_height=(False, 0.6),
+                       plot_ytitles=False,
+                       save_png=False,
+                       **kwargs):
     params_ok, params = plotly_params_check(df, **kwargs)
     features, rows, cols, type_plot, alphas = params
     n_rows = len(set(rows))
@@ -165,9 +168,102 @@ def plotly_time_series(df,
     time.sleep(1.5)
 
     if file_path is not None and save is True:
-        plotly_save(fig, file_path, size)
+        plotly_save(fig, file_path, size, save_png=save_png)
     # return fig
 
+
+def plotly_color_1st_row(df,
+                         color_col,
+                         first_row_feats,
+                         other_feats,
+                         rows=None,
+                         title=None,
+                         save=False,
+                         legend=True,
+                         file_path=None,
+                         size=(1980, 1080),
+                         xaxis_title="time",
+                         markersize=5,
+                         plot_title=True,
+                         label_scale=1,
+                         adjust_height=(False, 0.6),
+                         plot_ytitles=False,
+                         save_png=False,
+                         **kwargs):
+    # params_ok, params = plotly_params_check(df, **kwargs)
+    # features, rows, cols, type_plot, alphas = params
+    if rows is None:
+        rows = list(range(len(other_feats)))
+    n_rows = len(set(rows)) + 1
+    n_cols = 1  # len(set(cols))
+    # if not params_ok:
+    #     return
+
+    f = len(other_feats) + 1
+    if adjust_height[0]:
+        heights = [(1 - adjust_height[1]) / (n_rows - 1) for _ in range(n_rows - 1)]
+        heights.insert(0, adjust_height[1])
+    else:
+        heights = [1 / n_rows for _ in range(n_rows)]
+
+    fig = make_subplots(rows=n_rows, cols=n_cols, shared_xaxes=True, row_heights=heights)
+
+    for i, (color_lbl, df_ss) in enumerate(df.groupby(by=color_col)):
+        for f in range(len(first_row_feats)):
+            df_ssf = df_ss[first_row_feats[f]]  # .dropna()
+            fig.append_trace(
+                go.Scatter(
+                    x=df_ssf.index,
+                    y=df_ssf,
+                    visible=True,
+                    showlegend=True if i == 0 else False,
+                    name=first_row_feats[f],
+                    mode='markers',
+                    line=dict(color='lightgray' if color_col is not None else None),
+                    marker=dict(size=markersize,
+                                color=colors[i]),
+                ),
+                row=1,
+                col=1
+            )
+
+    for i in range(len(other_feats)):
+        df_ss = df[other_feats[i]]  # .dropna()
+        fig.append_trace(
+            go.Scatter(
+                x=df_ss.index,
+                y=df_ss,
+                visible=True,
+                showlegend=legend,
+                name=other_feats[i],
+                mode='lines',
+                # line=dict(color='lightgray' if color_col is not None else None),
+                marker=dict(size=markersize,
+                            color=colors[i]),
+            ),
+            row=rows[i] + 1,
+            col=1
+        )
+
+        if i == n_rows - 1:
+            fig['layout']['xaxis' + str(i + 1)]['title'] = xaxis_title
+
+        # if plot_ytitles:
+        #     for i in range(n_rows):
+        #         fig['layout']['yaxis' + str(i + 1)]['title'] = features[i]
+
+    fig.update_layout(template="plotly_white", xaxis_rangeslider_visible=False,
+                      title=title if plot_title else None, legend=dict(font=dict(size=18 * label_scale)))
+
+    fig.update_xaxes(tickfont=dict(size=14 * label_scale), title_font=dict(size=18 * label_scale))
+    fig.update_yaxes(tickfont=dict(size=14 * label_scale), title_font=dict(size=18 * label_scale))
+
+    # plotly(fig)
+    fig.show()
+    time.sleep(1.5)
+
+    if file_path is not None and save is True:
+        plotly_save(fig, file_path, size, save_png=save_png)
 
 def plotly_ts_regime(df,
                      title=None,
@@ -185,6 +281,8 @@ def plotly_ts_regime(df,
                      adjust_height=(False, 0.6),
                      label_scale=1,
                      use_date_suffix=False,
+                     save_png=False,
+                     legend_labels=None,
                      **kwargs):
     params_ok, params = plotly_params_check(df, **kwargs)
     features, rows, cols, type_plot, alphas = params
@@ -202,27 +300,69 @@ def plotly_ts_regime(df,
     fig = make_subplots(rows=n_rows, cols=n_cols, shared_xaxes=True, row_heights=heights)
     reg_colors = ['lightblue', 'dodgerblue', 'darkblue', 'black']
 
+    if regime_col is not None:
+        color_scale = colors[:int(max(df[regime_col].dropna().values)) + 1]
+
     for i in range(f):
-        df_ss = df[features[i]].dropna()
-        fig.append_trace(
-            go.Scatter(
-                x=df_ss.index,
-                y=df_ss,
-                visible=True,
-                showlegend=legend,
-                name=features[i],
-                mode=markers,
-                line=dict(color='lightgray' if regime_col is not None else None),
-                marker=dict(size=markersize,
-                            color=None if regime_col is None else df[regime_col].dropna().values,
-                            colorscale=None if regime_col is None else colors[
-                                                                       :int(max(df[regime_col].dropna().values)) + 1]),
-                # ["red", "green", "blue"]),  # Bluered_r, Inferno
-                opacity=alphas[i]
-            ),
-            row=rows[i] + 1,
-            col=cols[i] + 1
-        )
+
+        if regime_col is not None and len(features) == 1:
+
+            for j, (val, df_g) in enumerate(df.groupby(by=regime_col)):
+                df_ss = df_g[features[i]].dropna()
+
+                fig.append_trace(
+                    go.Scatter(
+                        x=df_ss.index,
+                        y=df_ss,
+                        visible=True,
+                        showlegend=False,
+                        name=val if legend_labels is None else legend_labels[j],
+                        mode=markers,
+                        line=dict(color='lightgray' if regime_col is not None else None),
+                        marker=dict(size=markersize,
+                                    color=color_scale[j],
+                                    colorscale=color_scale),
+                    ),
+                    row=rows[i] + 1,
+                    col=cols[i] + 1
+                )
+                # only for legend markers
+                fig.append_trace(
+                    go.Scatter(
+                        x=df_ss[:1] * np.nan,
+                        y=df_ss[:1] * np.nan,
+                        visible=True,
+                        showlegend=legend,
+                        name=val if legend_labels is None else legend_labels[j],
+                        mode=markers,
+                        marker=dict(size=markersize * 3,
+                                    color=color_scale[j],
+                                    colorscale=color_scale),
+                    ),
+                    row=rows[i] + 1,
+                    col=cols[i] + 1
+                )
+
+        else:
+            df_ss = df[features[i]].dropna()
+            fig.append_trace(
+                go.Scatter(
+                    x=df_ss.index,
+                    y=df_ss,
+                    visible=True,
+                    showlegend=legend,
+                    name=features[i],
+                    mode=markers,
+                    line=dict(color='lightgray' if regime_col is not None else None),
+                    marker=dict(size=markersize,
+                                color=None if regime_col is None else df[regime_col].dropna().values,
+                                colorscale=None if regime_col is None else color_scale),
+                    # ["red", "green", "blue"]),  # Bluered_r, Inferno
+                    opacity=alphas[i]
+                ),
+                row=rows[i] + 1,
+                col=cols[i] + 1
+            )
         for i in range(n_rows):
             fig['layout']['yaxis' + str(i + 1)]['title'] = features[i]
 
@@ -240,18 +380,23 @@ def plotly_ts_regime(df,
     # 'lightcyan',
     # colors = ['beige', 'palegoldenrod', 'burlywood', 'orange', 'dodgerblue', 'teal']
 
+    fig.update_layout(legend={'itemsizing': 'trace'})
     fig.update_layout(template=template, xaxis_rangeslider_visible=False,
                       title=title if plot_title else None, legend=dict(font=dict(size=18 * label_scale)))
 
-    fig.update_xaxes(tickfont=dict(size=14 * label_scale), title_font=dict(size=18 * label_scale))
-    fig.update_yaxes(tickfont=dict(size=14 * label_scale), title_font=dict(size=18 * label_scale))
+    fig.update_xaxes(color='black', tickfont=dict(size=14 * label_scale),
+                     title_font=dict(size=18 * label_scale),
+                     showgrid=True, gridwidth=1, gridcolor='gray')
+    fig.update_yaxes(color='black', tickfont=dict(size=14 * label_scale),
+                     title_font=dict(size=18 * label_scale),
+                     showgrid=True, gridwidth=1, gridcolor='gray')
 
     # plotly(fig)
     fig.show()
     time.sleep(1.5)
 
     if file_path is not None and save is True:
-        plotly_save(fig, file_path, size, use_date_suffix)
+        plotly_save(fig, file_path, size, save_png, use_date_suffix)
 
 
 def plotly_one_series(s, title=None, save=False, legend=True, file_path=None, size=(1980, 1080),
@@ -879,7 +1024,7 @@ def plotly_histogram_regimes(df, color_col, n_components, title=None, save=False
 
 def plotly_ts_regime_hist_vars(df, price_col, regime_col, n_bins=200, title=None, save=False, legend=False,
                                file_path=None, size=(1980, 1080), markers='lines+markers', markersize=5,
-                               plot_title=True,
+                               plot_title=True, save_png=False,
                                adjust_height=(False, 0.5), label_scale=1, **kwargs):
     params_ok, params = plotly_params_check(df, **kwargs)
     features, rows, cols, type_plot, alphas = params
@@ -969,14 +1114,23 @@ def plotly_ts_regime_hist_vars(df, price_col, regime_col, n_bins=200, title=None
                       title=title if plot_title else None, legend=dict(font=dict(size=18 * label_scale)))
     # fig.update_traces(opacity=0.9)
     fig.update_xaxes(matches='x')
-    fig.update_xaxes(tickfont=dict(size=14 * label_scale), title_font=dict(size=18 * label_scale))
-    fig.update_yaxes(tickfont=dict(size=14 * label_scale), title_font=dict(size=14 * label_scale))
+    fig.update_xaxes(color='black', tickfont=dict(size=14 * label_scale),
+                     title_font=dict(size=18 * label_scale),
+                     showgrid=True, gridwidth=1, gridcolor='LightGray')
+    fig.update_yaxes(color='black', tickfont=dict(size=14 * label_scale),
+                     title_font=dict(size=14 * label_scale),
+                     showgrid=True, gridwidth=1, gridcolor='LightGray')
+    fig.update_annotations(font_size=14 * label_scale)
+    fig.update_annotations(font=dict(
+        size=14 * label_scale,
+        color="black"
+    ))
 
     fig.show()
     time.sleep(1.5)
 
     if file_path is not None and save is True:
-        plotly_save(fig, file_path, size)
+        plotly_save(fig, file_path, size, save_png=save_png)
 
 
 def plotly_ts_regime2():
@@ -1219,8 +1373,6 @@ def plot_4D(F,
         xaxis_title=axis_labels[0],
         yaxis_title=axis_labels[1],
         zaxis_title=axis_labels[2]))
-
-
 
     if camera_position is not None:
         fig.update_layout(scene_camera=dict(eye=dict(x=camera_position[0],

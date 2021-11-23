@@ -291,7 +291,7 @@ class LSTMModel(TSModel):
         """Builds TFT from parameters.
 
     Args:
-      raw_params: Parameters to define TFT
+      raw_params: Parameters to define MODEL
     """
 
         self.name = self.__class__.__name__

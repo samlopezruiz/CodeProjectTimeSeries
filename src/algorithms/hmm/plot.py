@@ -65,7 +65,9 @@ def plotTimeSeries(Q, hidden_states, ylabel, filename):
     return None
 
 
-def plot_hmm(df_reg, price_col, hmm_vars, n_states, in_cfg, regime_col='state', resample=False, n_regimes=None):
+def plot_hmm(df_reg, price_col, hmm_vars, n_states, in_cfg,
+             regime_col='state', resample=False, n_regimes=None, label_scale=1):
+
     save_folder = in_cfg['image_folder']
     save_plots = in_cfg['save_results']
     df_plot = df_reg.resample('90T').last() if resample else df_reg
@@ -75,5 +77,7 @@ def plot_hmm(df_reg, price_col, hmm_vars, n_states, in_cfg, regime_col='state', 
         title = 'n_states: {}, vars: {}'.format(count_regimes(n_regimes), n_states, str(hmm_vars))
     name = 'hmm_{}'.format('_' + '_'.join(hmm_vars))
     plotly_ts_regime_hist_vars(df_plot, price_col, regime_col, features=hmm_vars, adjust_height=(True, 0.6),
-                               markersize=4, save=save_plots, file_path=[save_folder, name],
-                               size=(1980, 1080), title=title)
+                               markersize=4, save_png=True, save=save_plots, file_path=[save_folder, name],
+                               size=(1980, 1080),
+                               plot_title=in_cfg['plot_title'],
+                               title=title, label_scale=label_scale)
