@@ -1,3 +1,4 @@
+import copy
 import gc
 import time
 
@@ -15,7 +16,8 @@ def run_dual_moo_weights(moo_method,
                          lower_q_problem,
                          upper_q_problem,
                          dual_q_problem,
-                         model_results):
+                         model_results,
+                         verbose=0):
 
     results, times = {}, []
     for bound, problem in zip(['lq', 'uq'], [lower_q_problem, upper_q_problem]):
@@ -32,10 +34,16 @@ def run_dual_moo_weights(moo_method,
         moo_result = run_moo(problem,
                              algorithm,
                              algo_cfg,
-                             verbose=2,
+                             verbose=verbose,
                              save_history=general_cfg['save_history'])
 
-        _, eq_F = problem.compute_eq_F(moo_result['res'].pop.get('X'))
+        #%%
+        eq_F = problem.compute_eq_F(moo_result['res'].pop.get('X'))
+
+        # swap columns because q < 0.5
+        # if bound == 'lq':
+        #     eq_F[:, 0], eq_F[:, 1] = copy.copy(eq_F[:, 1]), copy.copy(eq_F[:, 0])
+
         X_sorted, F_sorted, eq_F_sorted = sort_1st_col(moo_result['res'].pop.get('X'),
                                                        moo_result['res'].pop.get('F'),
                                                        eq_F)

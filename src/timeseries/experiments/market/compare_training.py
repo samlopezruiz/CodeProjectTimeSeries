@@ -33,14 +33,13 @@ if __name__ == "__main__":
     #                   ('60t_ema_q258_vol', 'TFTModel_ES_ema_r_vol_q258_lr01_pred'),
     #                   ('60t_ema_q258_svol', 'TFTModel_ES_ema_r_svol_q258_lr01_pred'),
     #                   ]
-    training_files = [('60t_ema_q357', 'TFTModel_ES_ema_r_q357_lr01_pred_wottv'),
-                      ('60t_ema_q357', 'TFTModel_ES_ema_r_q357_lr01_pred'),
-                      ('60t_ema_q357', 'TFTModel_ES_ema_r_q357_lr01_pred_3'),
-                      ('60t_ema_q357', 'TFTModel_ES_ema_r_q357_lr01_pred_2'),
-                      ('60t_ema_q357', 'TFTModel_ES_ema_r_q357_lr01_pred_1'),
+    training_files = [('60t_ema_q258', 'TFTModel_ES_ema_r_q258_lr01_pred'),
+                      ('60t_ema_q258_svol', 'TFTModel_ES_ema_r_svol_q258_lr01_pred'),
+                      ('60t_ema_q258_vol', 'TFTModel_ES_ema_r_vol_q258_lr01_pred'),
                       ]
 
-    experiment_labels = ['wo ttv', 'normal', 't switch t', 'tv_good', 'tv']
+
+    experiment_labels = ['60t_ema_q258', '60t_ema_q258_svol', '60t_ema_q258_vol']
 
     # training_files = [('60t_ema_q258', 'TFTModel_ES_ema_r_q258_lr01_pred_old'),
     #                   ('60t_ema_q258', 'TFTModel_ES_ema_r_q258_lr01_pred'),
@@ -60,7 +59,10 @@ if __name__ == "__main__":
     #                      for nn_result in nn_results]
 
     # experiment_labels = ['{} lr:{}'.format(nn_result['experiment_cfg']['architecture'].replace('Model', ''),
-    #                                        nn_result['model_params']['learning_rate'])
+    #                                        nn_result['model_params']['learning_rate'])]
+    # experiment_labels = ['batch:{}'.format(nn_result['model_params']['minibatch_size'])
+    #                      for nn_result in nn_results]
+
     # experiment_labels = ['{}'.format(nn_result['experiment_cfg']['vars_definition'])
     #                      for nn_result in nn_results]
 

@@ -7,9 +7,11 @@ import matplotlib.pyplot as plt
 import logging
 
 from algorithms.moo.utils.indicators import get_hypervolume
+from algorithms.tft2.utils.data import get_col_mapping
 from timeseries.experiments.market.plot_forecasts import group_forecasts
 from timeseries.experiments.market.utils.preprocessing import reconstruct_forecasts
 from timeseries.plotly.plot import plotly_time_series, plotly_time_series_bars_hist, plotly_multiple
+from timeseries.utils.utils import array_from_lists, mean_std_from_array
 
 
 def subset_results(metrics, metric_names=['rmse', 'minmax']):
@@ -39,6 +41,7 @@ def get_results(metrics, model_cfg, test_x_pp, metric_names=['rmse', 'minmax'], 
         results['reg_round'] = np.round(results['regime'])
     return results
 
+
 def results_by_state(all_forecast_df):
     groupby_state = all_forecast_df.groupby('state')
     score_states = pd.DataFrame()
@@ -52,7 +55,6 @@ def results_by_state(all_forecast_df):
 
 def plot_multiple_results_forecast(all_forecast_df, forecast_dfs, use_regimes, results, max_subplots=15, n_plots=2,
                                    save=False, file_path=None):
-
     if use_regimes:
         file_path0 = copy(file_path)
         file_path0[-1] = file_path0[-1] + '_hist'
@@ -135,13 +137,14 @@ def hit_rate_from_forecast(results, n_output_steps, plot_=True):
         'grouped_by_id_hit_rate': confusion_mats
     }
 
+
 def post_process_results(results, formatter, experiment_cfg, plot_=True):
     model_params = formatter.get_default_model_params()
     n_output_steps = model_params['total_time_steps'] - model_params['num_encoder_steps']
 
     print('Reconstructing forecasts...')
     if results['target']:
-        results['reconstructed_forecasts'] = reconstruct_forecasts(formatter, results['forecasts'])
+        results['reconstructed_forecasts'] = reconstruct_forecasts(formatter, results['forecasts'], n_output_steps)
     results['hit_rates'] = hit_rate_from_forecast(results, n_output_steps, plot_=plot_)
     results['experiment_cfg'] = experiment_cfg
 
@@ -151,11 +154,13 @@ def compile_multiple_results(moo_results, experiment_labels, hv_ref=[10] * 2):
     for q_lbl, bound in zip(['lower quantile', 'upper quantile'], ['lq', 'uq']):
         results[q_lbl] = {}
         results[q_lbl]['risks'] = {}
+        results[q_lbl]['eq_risks'] = {}
         results[q_lbl]['history'] = {}
         results[q_lbl]['hv_hist'] = {}
         results[q_lbl]['hv'] = {}
         for experiment, exp_lbl in zip(moo_results, experiment_labels):
             results[q_lbl]['risks'][exp_lbl] = [e[bound]['F'] for e in experiment]
+            results[q_lbl]['eq_risks'][exp_lbl] = [e[bound]['eq_F'] for e in experiment]
             results[q_lbl]['history'][exp_lbl] = [e[bound]['pop_hist'] for e in experiment]
             results[q_lbl]['hv_hist'][exp_lbl] = [[get_hypervolume(F, hv_ref) for F in hist] for hist
                                                   in [e[bound]['pop_hist'] for e in experiment] if hist is not None]
@@ -180,3 +185,42 @@ def compile_multiple_results_q(moo_results, q_items=None, experiment_labels=None
         results[q_name] = exps
 
     return results
+
+def get_hv_results_from_runs(results, experiment_labels):
+    hvs, q_exp_hvs = [], []
+    for q_lbl, q_res in results.items():
+        y_runs = [exp_res for exp_lbl, exp_res in q_res['hv'].items()]
+        exp_runs = array_from_lists(y_runs)
+        mean_std_df = mean_std_from_array(exp_runs, labels=experiment_labels)
+        text = ['{:.3f} ({:.3f})'.format(s['mean'], s['std']) for _, s in mean_std_df.iterrows()]
+        hvs.append(pd.DataFrame(text, columns=['Hv {}'.format(q_lbl)], index=experiment_labels))
+        q_exp_hvs.append(exp_runs)
+
+    q_exp_hvs = np.stack(q_exp_hvs)
+    hvs_df = pd.concat(hvs, axis=1)
+    return q_exp_hvs, hvs_df
+
+def process_self_attention(attentions, params, taus=[1, 3, 5]):
+    self_attentions = []
+    # Plot attention for each head
+    for i, head_self_attn in enumerate(attentions['decoder_self_attn']):
+        self_attn_sample_avg = np.mean(head_self_attn, axis=0)
+        n_ts, pred_steps = params['total_time_steps'], params['total_time_steps'] - params['num_encoder_steps']
+
+        self_attn_taus = [pd.Series(self_attn_sample_avg[n_ts - (pred_steps - tau) - 1, :n_ts - (pred_steps - tau)],
+                                    name='self_attn t={}'.format(tau)) for tau in taus]
+        self_attns = pd.concat(self_attn_taus, axis=1)
+        self_attns.index = np.array(self_attns.index) - params['num_encoder_steps']
+        self_attentions.append(self_attns)
+    return self_attentions
+
+
+def process_historical_vars_attention(attentions, params):
+    col_mapping = get_col_mapping(params['column_definition'])
+    historical_attn = pd.DataFrame(np.mean(attentions['historical_flags'], axis=0),
+                                   columns=col_mapping['historical_inputs'])
+    historical_attn.index = np.array(historical_attn.index) - params['num_encoder_steps']
+
+    mean_hist_attn = historical_attn.mean(axis=0).sort_values(ascending=False).to_frame(name='mean attn')
+    sorted_hist_attn = historical_attn.loc[:, mean_hist_attn.index]
+    return sorted_hist_attn, mean_hist_attn

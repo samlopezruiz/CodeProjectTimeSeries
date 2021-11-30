@@ -49,7 +49,7 @@ def set_y_labels(f, features, fig):
 
 
 def plotly_save(fig, file_path, size, save_png=False, use_date_suffix=False):
-    print("saving .html and/or .png")
+    print("Saving image:")
     create_dir(file_path)
     image_path = get_new_file_path(file_path, '.png', use_date_suffix)
     html_path = get_new_file_path(file_path, '.html', use_date_suffix)
@@ -57,9 +57,11 @@ def plotly_save(fig, file_path, size, save_png=False, use_date_suffix=False):
         size = (1980, 1080)
 
     if save_png:
-        fig.write_image(os.path.join(image_path), width=size[0], height=size[1], engine='orca')
+        print(image_path)
+        fig.write_image(image_path, width=size[0], height=size[1], engine='orca')
 
-    fig.write_html(os.path.join(html_path))
+    print(html_path)
+    fig.write_html(html_path)
 
 
 def find_extreme_points(fitnesses, best_point):

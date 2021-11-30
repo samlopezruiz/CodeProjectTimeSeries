@@ -6,9 +6,9 @@ import pandas as pd
 import seaborn as sns
 
 from algorithms.compare.winners import Winners
-from algorithms.moo.utils.plot import plot_runs, plot_histogram
+from algorithms.moo.utils.plot import plot_runs, plot_boxplot
 from timeseries.experiments.market.utils.filename import get_result_folder
-from timeseries.experiments.market.utils.results import compile_multiple_results
+from timeseries.experiments.market.utils.results import compile_multiple_results, get_hv_results_from_runs
 from timeseries.experiments.utils.files import save_vars
 from timeseries.utils.utils import write_text_file, latex_table, array_from_lists, mean_std_from_array, \
     write_latex_from_scores
@@ -21,37 +21,32 @@ if __name__ == "__main__":
     general_cfg = {'save_plot': True,
                    'save_results': True,
                    'show_title': False,
-                   'comparison_name': 'moo_methods_g100_s100_r20',
+                   'comparison_name': 'moo_methods_ES_ema_r_q258_g100_p100_s0_c1_eq0',
                    }
 
     results_cfg = {'formatter': 'snp',
-                   'experiment_name': '60t_ema_q159'}
+                   }
 
-    weights_files = ['TFTModel_ES_ema_r_q159_NSGA2_g100_p100_s1_dual_wmoo_repeat20',
-                     'TFTModel_ES_ema_r_q159_NSGA3_g100_p100_s1_dual_wmoo_repeat20',
-                     'TFTModel_ES_ema_r_q159_MOEAD_g100_p100_s1_dual_wmoo_repeat20']
+    weights_files = [
+        ('60t_ema_q258', 'TFTModel_ES_ema_r_q258_NSGA2_g100_p100_s0_c1_eq0_dual_wmoo_repeat20'),
+        ('60t_ema_q258', 'TFTModel_ES_ema_r_q258_NSGA3_g100_p100_s0_c1_eq0_dual_wmoo_repeat20'),
+    ]
 
-    results_folder = os.path.join(get_result_folder(results_cfg), 'compare')
-    moo_results = [joblib.load(os.path.join(get_result_folder(results_cfg), 'moo', file) + '.z') for file in
-                   weights_files]
+    results_folder = os.path.join(get_result_folder(results_cfg), 'compare', general_cfg['comparison_name'])
+    moo_results = [joblib.load(os.path.join(get_result_folder(results_cfg), file[0], 'moo', file[1]) + '.z')
+                   for file in weights_files]
 
+    # experiment_labels = [
+    #     'q {}'.format('-'.join((np.array(experiment[0]['lq']['quantiles']) * 10).astype(int).astype(str))) for
+    #     experiment
+    #     in moo_results]
     experiment_labels = [experiment[0]['lq']['moo_method'] for experiment in moo_results]
     results = compile_multiple_results(moo_results, experiment_labels, hv_ref=[10] * 2)
 
-    #%% HV results
-    hvs, q_exp_hvs = [], []
-    for q_lbl, q_res in results.items():
-        y_runs = [exp_res for exp_lbl, exp_res in q_res['hv'].items()]
-        exp_runs = array_from_lists(y_runs)
-        mean_std_df = mean_std_from_array(exp_runs, labels=experiment_labels)
-        text = ['{:.3f} ({:.3f})'.format(s['mean'], s['std']) for _, s in mean_std_df.iterrows()]
-        hvs.append(pd.DataFrame(text, columns=['Hv {}'.format(q_lbl)], index=experiment_labels))
-        q_exp_hvs.append(exp_runs)
+    # %% HV results
+    q_exp_hvs, hvs_df = get_hv_results_from_runs(results, experiment_labels)
 
-    q_exp_hvs = np.stack(q_exp_hvs)
-    hvs_df = pd.concat(hvs, axis=1)
-
-    #%% Winners
+    # %% Winners
     metric = np.negative(np.mean(q_exp_hvs, axis=2))
     winners = Winners(metric, experiment_labels)
     scores = winners.score(q_exp_hvs, alternative='greater')
@@ -60,11 +55,11 @@ if __name__ == "__main__":
 
     for q_lbl, q_res in results.items():
         for exp_lbl, exp_res in q_res['hv_hist'].items():
-            y_runs = np.array(exp_res)
+            y_runs = np.array(exp_res)[:, 1:] #remove first generation in case of constraints
 
             filename = '{}_{}_runs'.format(exp_lbl, q_lbl.replace(" ", "_"))
             plot_runs(y_runs,
-                      mean_run=np.mean(exp_res, axis=0),
+                      mean_run=np.mean(y_runs, axis=0),
                       x_label='Generation',
                       y_label='Hypervolume',
                       title='{} HV history for {}'.format(exp_lbl, q_lbl),
@@ -80,8 +75,9 @@ if __name__ == "__main__":
     for q_lbl, q_res in results.items():
         y_runs = []
         for exp_lbl, exp_res in q_res['hv_hist'].items():
-            q_exp_mean.append(np.mean(exp_res, axis=0))
-            y_runs.append(np.mean(exp_res, axis=0))
+            exp_res_mod = np.array(exp_res)[:, 1:]
+            q_exp_mean.append(np.mean(exp_res_mod, axis=0))
+            y_runs.append(np.mean(exp_res_mod, axis=0))
             all_plot_labels.append('{} {}'.format(exp_lbl, 'lq' if q_lbl == 'lower quantile' else 'uq'))
 
         filename = '{}_{}_comparison'.format(general_cfg['comparison_name'], q_lbl.replace(" ", "_"))
@@ -103,20 +99,19 @@ if __name__ == "__main__":
               show_grid=True,
               show_title=general_cfg['show_title'])
 
-    plot_histogram(q_exp_mean,
-                   all_plot_labels,
-                   x_label='Algorithm',
-                   y_label='Hypervolume',
-                   title='Hypervolume for quantiles',
-                   size=(15, 9),
-                   ylim=(96, 99),
-                   file_path=os.path.join(results_folder, 'img', filename),
-                   save=general_cfg['save_plot'],
-                   show_grid=True,
-                   show_title=general_cfg['show_title'])
+    plot_boxplot(q_exp_mean,
+                 all_plot_labels,
+                 x_label='Algorithm',
+                 y_label='Hypervolume',
+                 title='Hypervolume for quantiles',
+                 size=(15, 9),
+                 # ylim=(96, 99),
+                 file_path=os.path.join(results_folder, 'img', filename),
+                 save=general_cfg['save_plot'],
+                 show_grid=True,
+                 show_title=general_cfg['show_title'])
 
-
-    #%%
+    # %%
     if general_cfg['save_results']:
         results['results_cfg'] = results_cfg
         results['weights_files'] = weights_files

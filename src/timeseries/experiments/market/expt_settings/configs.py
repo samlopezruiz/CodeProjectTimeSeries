@@ -195,7 +195,7 @@ class ExperimentConfig(object):
              'additional_macd_vars': ['NQc'],
              'additional_returns_vars': get_inst_ohlc_names('NQ'),
              'true_target': 'ESc_e3'}
-
+    #
         dataset_class['ES_60t_regime_2015-01_to_2021-06_ema_group_w8'] = \
             copy.deepcopy(dataset_class['ES_60t_regime_2015-01_to_2021-06_ema'])
         dataset_class['ES_60t_regime_2015-01_to_2021-06_ema_group_w8']['market_file'] = \
@@ -203,20 +203,25 @@ class ExperimentConfig(object):
         dataset_class['ES_60t_regime_2015-01_to_2021-06_ema_group_w8']['regime_file'] = \
             'regime_ESc_r_T10Y2Y_VIX'  # with 5 regimes
 
+        dataset_class['ES_60t_regime_2015-01_to_2021-06_ema_group_d56'] = \
+            copy.deepcopy(dataset_class['ES_60t_regime_2015-01_to_2021-06_ema_group_w8'])
+        dataset_class['ES_60t_regime_2015-01_to_2021-06_ema_group_d56']['market_file'] = \
+            'split_ES_minute_60T_dwn_smpl_2015-01_to_2021-06_g56day_r15'
+
         dataset_class['ES_60t_regime_2015-01_to_2021-06_ema_ttv'] = \
             copy.deepcopy(dataset_class['ES_60t_regime_2015-01_to_2021-06_ema'])
         dataset_class['ES_60t_regime_2015-01_to_2021-06_ema_ttv']['market_file'] =\
             'split_ES_minute_60T_dwn_smpl_2015-01_to_2021-06_g12week_r15' #with valid data
 
-        dataset_class['ES_60t_regime_2015-01_to_2021-06_ema_ttv_16w'] = \
+        dataset_class['ES_60t_regime_2015-01_to_2021-06_ema_ttv_w16'] = \
             copy.deepcopy(dataset_class['ES_60t_regime_2015-01_to_2021-06_ema_ttv'])
         dataset_class['ES_60t_regime_2015-01_to_2021-06_ema_ttv']['market_file'] = \
             'split_ES_minute_60T_dwn_smpl_2015-01_to_2021-06_g16week_r15'
 
-        dataset_class['ES_5t_regime_2015-01_to_2021-06_ema_r'] = \
-            {'market_file': 'split_ES_minute_5T_dwn_smpl_2015-01_to_2021-06_g12week_r25',
+        dataset_class['ES_5t_regime_2015-01_to_2021-06_ema_group_w8'] = \
+            {'market_file': 'split_ES_minute_5T_dwn_smpl_2015-01_to_2021-06_g8week_r15',
              'additional_file': 'subset_NQ_minute_5T_dwn_smpl_2012-01_to_2021-07',
-             'regime_file': 'regime_ESc_r_ESc_macd_T10Y2Y_VIX',
+             'regime_file': 'regime_ESc_r_T10Y2Y_VIX',
              'macd_vars': ['ESc'],
              'rsi_vars': ['ESc'],
              'macd_periods': [24, 12, 6],
@@ -227,10 +232,6 @@ class ExperimentConfig(object):
              'additional_returns_vars': get_inst_ohlc_names('NQ'),
              'true_target': 'ESc_e11'}
 
-        dataset_class['ES_5t_regime_2015-01_to_2021-06_ema_ttv'] = \
-            copy.deepcopy(dataset_class['ES_5t_regime_2015-01_to_2021-06_ema_r'])
-        dataset_class['ES_5t_regime_2015-01_to_2021-06_ema_ttv']['market_file'] = \
-            'split_ES_minute_5T_dwn_smpl_2015-01_to_2021-06_g12week_r15_1'
 
         if self.dataset_config not in dataset_class:
             raise Exception('{} not found in dataset configurations. '

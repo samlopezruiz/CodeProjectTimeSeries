@@ -5,7 +5,7 @@ import pandas as pd
 
 from algorithms.tft2.harness.train_test import compute_moo_q_loss
 from algorithms.tft2.utils.nn import dense_layer_output
-
+import tensorflow as tf
 
 def get_last_layer_weights(model, layer_name='quantiles'):
     relevant_layers = [l for l in model.model.layers if layer_name in l.name]
@@ -145,7 +145,7 @@ def run_single_w_nn(x,
                     transformer_output,
                     ix_weight,
                     original_weights,
-                    output_eq_loss=False):
+                    overwrite_q=None):
 
     new_weights = copy.deepcopy(original_weights)
     weights, b = x[:-1], x[-1]
@@ -162,9 +162,9 @@ def run_single_w_nn(x,
 
     losses = compute_moo_q_loss(quantiles,
                                 unscaled_output_map,
-                                output_eq_loss=output_eq_loss)
+                                overwrite_q=overwrite_q)
 
-    if output_eq_loss:
-        return losses[0][ix_weight, :], losses[1][ix_weight, :]
-    else:
-        return losses[ix_weight, :]
+    # if output_eq_loss:
+    #     return losses[0][ix_weight, :], losses[1][ix_weight, :]
+    # else:
+    return losses[ix_weight, :]

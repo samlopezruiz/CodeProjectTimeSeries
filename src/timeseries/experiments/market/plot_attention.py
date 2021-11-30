@@ -10,46 +10,43 @@ from algorithms.moo.utils.plot import save_fig
 from algorithms.tft2.utils.data import get_col_mapping
 from algorithms.tft2.utils.plot import plot_self_attn
 from timeseries.experiments.market.utils.filename import get_result_folder
+from timeseries.experiments.market.utils.results import process_historical_vars_attention
 from timeseries.plotly.plot import plotly_time_series
 
 sns.set_theme('poster')
 if __name__ == "__main__":
     # %%
-    general_cfg = {'save_plot': False,
+    general_cfg = {'save_plot': True,
                    }
 
     results_cfg = {'formatter': 'snp',
-                   'experiment_name': '60t_ema_q357',
-                   'results': 'attention_valid'
+                   'experiment_name': '5t_ema_q258',
+                   'results': 'attention_processed'
                    }
 
-    result = joblib.load(os.path.join(get_result_folder(results_cfg), results_cfg['results'] + '.z'))
+    results = joblib.load(os.path.join(get_result_folder(results_cfg), results_cfg['results'] + '.z'))
 
     # %%
-    attentions, params = result['attentions'], result['params']
-    plot_self_attn(attentions,
-                   params,
-                   taus=[1, 3, 5],
-                   label_scale=1.5,
-                   save=general_cfg['save_plot'],
-                   file_path=os.path.join(get_result_folder(results_cfg),
-                                          'img',
-                                          'hist_attn_position'),
-                   size=(1980 * 2 // 3, 1080 * 2 // 3)
-                   )
+    self_attentions = results['self_attentions']
+    features_attentions = results['features_attentions']
+    mean_features_attentions = results['mean_features_attentions']
 
-    col_mapping = get_col_mapping(params['column_definition'])
-    historical_attn = pd.DataFrame(np.mean(attentions['historical_flags'], axis=0),
-                                   columns=col_mapping['historical_inputs'])
-    historical_attn.index = np.array(historical_attn.index) - params['num_encoder_steps']
-
-    mean_hist_attn = historical_attn.mean(axis=0).sort_values(ascending=False).to_frame(name='mean attn')
-    sorted_hist_attn = historical_attn.loc[:, mean_hist_attn.index]
+    for i, self_attn in enumerate(self_attentions):
+        plotly_time_series(self_attn,
+                           xaxis_title='Position Index (n)',
+                           title='Self Attention Head {}'.format(i),
+                           label_scale=1,
+                           save=general_cfg['save_plot'],
+                           file_path=os.path.join(get_result_folder(results_cfg),
+                                                  'img',
+                                                  'head_{}'.format(i)),
+                           save_png=True,
+                           size=(1980 * 2 // 3, 1080 * 2 // 3))
 
     # %%
     n_features_plot = 3
-    plotly_time_series(sorted_hist_attn,
-                       features=sorted_hist_attn.columns[:n_features_plot],
+    plotly_time_series(features_attentions,
+                       features=features_attentions.columns[:n_features_plot],
                        rows=list(range(n_features_plot)),
                        xaxis_title='Position Index (n)',
                        plot_ytitles=True,
@@ -59,10 +56,10 @@ if __name__ == "__main__":
                                               'hist_attn_position'),
                        label_scale=1.5,
                        save_png=True,
-                       size=(1980*2//3, 1080*2//3))
+                       size=(1980 * 2 // 3, 1080 * 2 // 3))
 
     # %%
-    df = mean_hist_attn.copy()
+    df = mean_features_attentions.copy()
     df['feature'] = df.index
     fig, ax = plt.subplots(figsize=(15, 15))
     sns.barplot(data=df, x='mean attn', ax=ax, y='feature', orient='h')

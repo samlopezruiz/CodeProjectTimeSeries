@@ -12,7 +12,7 @@ from pymoo.optimize import minimize
 
 from algorithms.moo.smsemoa import SMSEMOA
 from algorithms.moo.utils.indicators import get_hypervolume, hv_hist_from_runs
-from algorithms.moo.utils.plot import plot_runs, plot_histogram
+from algorithms.moo.utils.plot import plot_runs, plot_boxplot
 from algorithms.moo.utils.utils import get_moo_args, get_hv_hist_vs_n_evals
 from timeseries.data.market.files.utils import save_df
 from timeseries.experiments.utils.files import save_vars
@@ -219,32 +219,32 @@ def run_multiple_problems(probs, algos, general_cfg, params, algo_cfg, prob_cfg,
                                           '{}_k{}_hv'.format(problem, k)],
                     use_date=general_cfg['use_date'])
 
-        plot_histogram(hvs_algos,
-                       algos,
-                       x_label='Algorithm',
-                       y_label='Hypervolume',
-                       title='{} k={} hypervolume history'.format(problem, k),
-                       size=(15, 9),
-                       file_path=['output',
+        plot_boxplot(hvs_algos,
+                     algos,
+                     x_label='Algorithm',
+                     y_label='Hypervolume',
+                     title='{} k={} hypervolume history'.format(problem, k),
+                     size=(15, 9),
+                     file_path=['output',
                                   folder_cfg['experiment'],
                                   folder_cfg['images'],
                                   '{}_k{}_hv'.format(problem, k)],
-                       save=general_cfg['save_stat_plots'],
-                       show_grid=False,
-                       use_date=general_cfg['use_date'])
+                     save=general_cfg['save_stat_plots'],
+                     show_grid=False,
+                     use_date=general_cfg['use_date'])
 
-        plot_histogram(exec_times,
-                       algos,
-                       x_label='Algorithm',
-                       y_label='Seconds',
-                       title='{} k={} execution times'.format(problem, k),
-                       size=(15, 9),
-                       file_path=['output',
+        plot_boxplot(exec_times,
+                     algos,
+                     x_label='Algorithm',
+                     y_label='Seconds',
+                     title='{} k={} execution times'.format(problem, k),
+                     size=(15, 9),
+                     file_path=['output',
                                   folder_cfg['experiment'],
                                   folder_cfg['images'],
                                   '{}_k{}_exec_t'.format(problem, k)],
-                       save=general_cfg['save_stat_plots'],
-                       show_grid=False,
-                       use_date=general_cfg['use_date'])
+                     save=general_cfg['save_stat_plots'],
+                     show_grid=False,
+                     use_date=general_cfg['use_date'])
 
         gc.collect()

@@ -8,7 +8,7 @@ import tensorflow as tf
 from algorithms.tft2.harness.train_test import compute_moo_q_loss
 from timeseries.experiments.market.moo.utils.model import get_new_weights
 from timeseries.experiments.market.moo.utils.utils import get_selected_ix
-from timeseries.experiments.market.plot.plot import plot_2D_moo_dual_results
+from timeseries.experiments.market.plot.plot import plot_2D_moo_dual_results, get_rect_risk, get_ixs_risk
 from timeseries.experiments.market.utils.filename import get_result_folder, quantiles_name, termination_name, risk_name
 from timeseries.experiments.market.utils.harness import load_predict_model, get_model_data_config
 from timeseries.experiments.market.utils.results import post_process_results
@@ -22,15 +22,16 @@ if __name__ == "__main__":
     print("Device Name: ", tf.test.gpu_device_name())
     print('TF eager execution: {}'.format(tf.executing_eagerly()))
 
-    general_cfg = {'save_forecast': True,
-                   'save_plot': False,
+    general_cfg = {'save_forecast': False,
+                   'save_plot': True,
+                   'plot_title': False,
                    'use_all_data': True,
-                   'use_moo_weights': True,
-                   'manual_selection': False}
+                   'use_moo_weights': False,
+                   'manual_selection': True}
 
     results_cfg = {'formatter': 'snp',
-                   'experiment_name': '5t_ema_q258',
-                   'results': 'TFTModel_ES_slow_ema_r_q258_NSGA2_g200_p200_s1_dual_wmoo'
+                   'experiment_name': '60t_ema_q357',
+                   'results': 'TFTModel_ES_ema_r_q357_NSGA2_g100_p100_s0_c1_eq0_dual_wmoo'
                    }
 
     moo_results = joblib.load(os.path.join(get_result_folder(results_cfg), 'moo', results_cfg['results'] + '.z'))
@@ -41,17 +42,27 @@ if __name__ == "__main__":
 
     experiment_cfg = moo_results['lq']['experiment_cfg']
 
-    risk_selected = {'qerl': 0.5,
-                     'qcru': 0.5}
+    # %%
+    add_risk = 0.05
+    xaxis_limit = 1.
 
-    manual_selected_ixs = {'lq': 28,
-                           'uq': 32}
+    risk_selected = {'qcrl': 0.4,
+                     'qcru': 0.15}
+
+    limits_ixs = [get_ixs_risk(moo_result['F'], add_risk) for _, moo_result in moo_results.items()]
+
+    # manual_selected_ixs = {'lq': limits_ixs[0][0],
+    #                        'uq': limits_ixs[1][0]}
+    manual_selected_ixs = {'lq': 68,
+                           'uq': 76}
 
     labels, quantiles_losses, original_ixs, selected_ixs = [], [], [], []
     selected_weights, original_weights = {}, {}
+    original_losses = []
     for bound, moo_result in moo_results.items():
         weights, quantiles_loss, eq_quantiles_loss = moo_result['X'], moo_result['F'], moo_result['eq_F']
         original_ix = np.argmin(np.sum(np.abs(quantiles_loss - moo_result['original_losses']), axis=1))
+        original_losses.append(moo_result['original_losses'])
         if general_cfg['manual_selection']:
             selected_ix = manual_selected_ixs[bound]
         else:
@@ -66,65 +77,68 @@ if __name__ == "__main__":
         selected_weights[bound] = weights[selected_ix, :]
         original_weights[bound] = weights[original_ix, :]
 
-    #%% Overwrite selected ixs if needed
+    # Overwrite selected ixs if needed
     risk_lbl = ''
     if general_cfg['use_moo_weights']:
         if general_cfg['manual_selection']:
             risk_lbl = 'lix{}_uix{}'.format(selected_ixs[0], selected_ixs[1])
         else:
-            risk_name(risk_selected)
-    basename = '{}_{}_q{}_{}_{}_p{}_s{}_{}_'.format(experiment_cfg['architecture'],
-                                                    experiment_cfg['vars_definition'],
-                                                    quantiles_name(moo_results['lq']['quantiles']),
-                                                    moo_results['lq']['moo_method'],
-                                                    termination_name(moo_results['lq']['algo_cfg']['termination']),
-                                                    moo_results['lq']['algo_cfg']['pop_size'],
-                                                    int(moo_results['lq']['algo_cfg']['use_sampling']),
-                                                    risk_lbl,
-                                                    )
+            risk_lbl = risk_name(risk_selected)
+    basename = '{}_{}_q{}_{}_{}_p{}_s{}_{}_tol{}_'.format(experiment_cfg['architecture'],
+                                                          experiment_cfg['vars_definition'],
+                                                          quantiles_name(moo_results['lq']['quantiles']),
+                                                          moo_results['lq']['moo_method'],
+                                                          termination_name(
+                                                              moo_results['lq']['algo_cfg']['termination']),
+                                                          moo_results['lq']['algo_cfg']['pop_size'],
+                                                          int(moo_results['lq']['algo_cfg']['use_sampling']),
+                                                          risk_lbl,
+                                                          int(add_risk * 100)
+                                                          )
 
-    # %%
-    xaxis_limit = 1.
     img_path = os.path.join(config.results_folder,
                             experiment_cfg['experiment_name'],
                             'img',
+                            'moo',
                             '{}pf'.format(basename))
 
     plot_2D_moo_dual_results(quantiles_losses,
                              selected_ixs=selected_ixs if general_cfg['use_moo_weights'] else None,
                              save=general_cfg['save_plot'],
                              file_path=img_path,
-                             original_ixs=original_ixs,
+                             original_losses=original_losses,
+                             # original_ixs=original_ixs,
                              figsize=(20, 15),
                              xaxis_limit=xaxis_limit,
                              col_titles=labels,
                              legend_labels=None,
+                             add_risk=add_risk,
+                             markersize=8,
+                             plot_title=general_cfg['plot_title'],
                              title='MOO using {} for quantiles: {}'.format(moo_result['moo_method'],
                                                                            moo_result['quantiles']))
 
-    # print('original quantiles loss: {}'.format(moo_result['original_losses']))
-    # print('selected quantiles loss: {}'.format(quantiles_loss[selected_ix, :]))
-
     # %%
-    new_weights = get_new_weights(moo_results['lq']['original_weights'], selected_weights) if \
-        general_cfg['use_moo_weights'] else None
-
-    results, data = load_predict_model(use_gpu=True,
-                                       architecture=experiment_cfg['architecture'],
-                                       model_folder=model_folder,
-                                       data_config=config.data_config,
-                                       data_formatter=formatter,
-                                       use_all_data=general_cfg['use_all_data'],
-                                       last_layer_weights=new_weights)
-
-    post_process_results(results, formatter, experiment_cfg, plot_=False)
-
-    q_losses = compute_moo_q_loss(results['quantiles'], results['forecasts'])
-    print('lower quantile risk: {} \nupper quantile risk: {}'.format(q_losses[0, :], q_losses[2, :]))
-
-    results['data'] = data
-    results['objective_space'] = q_losses
     if general_cfg['save_forecast']:
+        new_weights = get_new_weights(moo_results['lq']['original_weights'], selected_weights) if \
+            general_cfg['use_moo_weights'] else None
+
+        results, data = load_predict_model(use_gpu=True,
+                                           architecture=experiment_cfg['architecture'],
+                                           model_folder=model_folder,
+                                           data_config=config.data_config,
+                                           data_formatter=formatter,
+                                           use_all_data=general_cfg['use_all_data'],
+                                           last_layer_weights=new_weights)
+
+        post_process_results(results, formatter, experiment_cfg, plot_=False)
+
+        q_losses = compute_moo_q_loss(results['quantiles'], results['forecasts'])
+        print('lower quantile risk: {} \nupper quantile risk: {}'.format(q_losses[0, :], q_losses[2, :]))
+
+        results['data'] = data
+        results['objective_space'] = q_losses
+
         save_vars(results, os.path.join(config.results_folder,
                                         experiment_cfg['experiment_name'],
                                         'moo',

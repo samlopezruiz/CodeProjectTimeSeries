@@ -9,19 +9,17 @@ from multiprocessing import cpu_count
 import numpy as np
 import tensorflow as tf
 from joblib import Parallel, delayed
-from tensorflow import keras
 from tqdm import tqdm
 
+import algorithms.tft2.libs.hyperparam_opt as hyperparam_opt
 from algorithms.nnhmm.func import nnhmm_fit, nnhmm_predict
 from algorithms.tft2.libs import utils as utils
 from algorithms.tft2.libs.hyperparam_opt import HyperparamOptManager
-from algorithms.tft2.libs.tft_model import TemporalFusionTransformer
 from algorithms.tft2.utils.data import extract_numerical_data
 # from timeseries.experiments.market.train_tft_fixed_params import formatter
 from algorithms.ts.models import TFTModel, LSTMModel, DCNNModel
 from timeseries.experiments.market.expt_settings.configs import ExperimentConfig
-from timeseries.experiments.market.moo.utils.model import get_last_layer_weights, params_conversion_weights, \
-    reconstruct_weights
+from timeseries.experiments.market.moo.utils.model import get_last_layer_weights
 from timeseries.experiments.market.utils.console import print_progress, print_pred_time, print_progress_loop
 from timeseries.experiments.market.utils.dataprep import to_np
 from timeseries.experiments.market.utils.models import get_params
@@ -319,7 +317,9 @@ def train_test_model(use_gpu,
                      tb_callback=True,
                      use_best_params=False,
                      indicators_use_time_subset=False,
-                     split_data=None):
+                     split_data=None,
+                     n_train_samples=None
+                     ):
     """Trains tft based on defined model params.
   Args:
       :param split_data:
@@ -359,6 +359,9 @@ def train_test_model(use_gpu,
         fixed_params["num_epochs"] = 1
         params["hidden_layer_size"] = 5
         train_samples, valid_samples = 100, 10
+
+    if n_train_samples is not None:
+        train_samples, valid_samples = n_train_samples, n_train_samples // 10
 
     # Sets up hyperparam manager
     print("*** Loading hyperparm manager ***")
@@ -424,7 +427,7 @@ def predict_from_model(best_params, data_formatter, model, test, val_loss, fit_h
         unscaled_output_map[k] = data_formatter.format_predictions(df)
 
     losses = {}
-    weighted_errors = {}
+    weighted_errors, eq_weighted_errors = {}, {}
     targets = unscaled_output_map['targets']
     for q in model.quantiles:
         key = 'p{}'.format(int(q * 100))
@@ -432,8 +435,13 @@ def predict_from_model(best_params, data_formatter, model, test, val_loss, fit_h
             extract_numerical_data(targets), extract_numerical_data(unscaled_output_map[key]), q)
         weighted_errors[key] = utils.numpy_normalised_weighted_errors(
             extract_numerical_data(targets), extract_numerical_data(unscaled_output_map[key]), q)
+        eq_weighted_errors[key] = utils.numpy_normalised_weighted_errors(
+            extract_numerical_data(targets), extract_numerical_data(unscaled_output_map[key]), 0.5)
+
         weighted_errors[key]['forecast_time'] = unscaled_output_map[key]['forecast_time']
         weighted_errors[key]['identifier'] = unscaled_output_map[key]['identifier']
+        eq_weighted_errors[key]['forecast_time'] = unscaled_output_map[key]['forecast_time']
+        eq_weighted_errors[key]['identifier'] = unscaled_output_map[key]['identifier']
 
     print("Params:")
     for k in best_params:
@@ -445,6 +453,7 @@ def predict_from_model(best_params, data_formatter, model, test, val_loss, fit_h
     results = {'quantiles': model.quantiles,
                'forecasts': unscaled_output_map,
                'weighted_errors': weighted_errors,
+               'eq_weighted_errors': eq_weighted_errors,
                'val_loss': val_loss,
                'test_loss': test_loss,
                'losses': losses,
@@ -521,3 +530,59 @@ def get_model(architecture):
         model = DCNNModel
 
     return model
+
+
+def get_attention_model(use_gpu,
+                        architecture,
+                        model_folder,
+                        data_config,
+                        data_formatter,
+                        get_attentions=False,
+                        samples=None):
+    """Trains tft based on defined model params.
+
+  Args:
+    expt_name: Name of experiment
+    use_gpu: Whether to run tensorflow with GPU operations
+    model_folder: Folder path where models are serialized
+    data_csv_path: Path to csv file containing data
+    data_formatter: Dataset-specific data fromatter (see
+      expt_settings.dataformatter.GenericDataFormatter)
+    use_testing_mode: Uses a smaller models and data sizes for testing purposes
+      only -- switch to False to use original default settings
+  """
+    Model = get_model(architecture)
+
+    print("Loading & splitting data...")
+    train, valid, test = data_formatter.split_data(data_config)
+    train_samples, valid_samples = data_formatter.get_num_samples_for_calibration()
+
+    # Sets up default params
+    fixed_params = data_formatter.get_experiment_params()
+    params = data_formatter.get_default_model_params()
+    params["model_folder"] = model_folder
+
+    if samples is not None:
+        valid_samples = samples
+
+    # Sets up hyperparam manager
+    print("*** Loading hyperparm manager ***")
+    opt_manager = hyperparam_opt.HyperparamOptManager({k: [params[k]] for k in params}, fixed_params, model_folder)
+
+    params = opt_manager.get_next_parameters()
+    print("Params Selected:")
+    for k in params:
+        print("{}: {}".format(k, params[k]))
+
+    with tf.device('/device:GPU:0' if use_gpu else "/cpu:0"):
+        model = Model(params)
+        model.load(opt_manager.hyperparam_folder, use_keras_loadings=True)
+
+        if not model.training_data_cached():
+            model.cache_batched_data(valid, "valid", num_samples=valid_samples)
+
+        attentions = model.get_attention() if get_attentions else None
+
+    results = {'attentions': attentions,
+               'params': params}
+    return results

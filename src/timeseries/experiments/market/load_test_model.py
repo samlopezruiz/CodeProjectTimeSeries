@@ -15,15 +15,15 @@ if __name__ == "__main__":
     print("Device Name: ", tf.test.gpu_device_name())
     print('TF eager execution: {}'.format(tf.executing_eagerly()))
 
-    general_cfg = {'save_forecast': False,
+    general_cfg = {'save_forecast': True,
                    'save_plot': True,
                    'use_all_data': True,
                    'plot_title': False
                    }
 
     results_cfg = {'formatter': 'snp',
-                   'experiment_name': '60t_ema_q357',
-                   'results': 'TFTModel_ES_ema_r_q357_lr01_pred_6'
+                   'experiment_name': '60t_ema_q159_test',
+                   'results': 'TFTModel_ES_ema_r_q159_lr01_pred_1'
                    }
 
     model_results = joblib.load(os.path.join(get_result_folder(results_cfg), results_cfg['results'] + '.z'))
@@ -43,11 +43,7 @@ if __name__ == "__main__":
     post_process_results(results, formatter, experiment_cfg)
 
     results['data'] = data
-    if general_cfg['save_forecast']:
-        save_vars(results, os.path.join(config.results_folder,
-                                        experiment_cfg['experiment_name'],
-                                        '{}{}_pred'.format('all_' if general_cfg['use_all_data'] else '',
-                                                           experiment_cfg['vars_definition'])))
+
 
     # %%
     subsets_lbls = {0: 'train', 1: 'test', 2: 'validation'}
@@ -59,7 +55,6 @@ if __name__ == "__main__":
         weighted_errors.append(df.mean(axis=1).to_frame(name='{} error'.format(q_error_lbl)))
     weighted_errors = pd.concat(weighted_errors, axis=1)
 
-    # %%
     data = results['data'].loc[:, ['ESc', 'test', 'datetime']].copy()
     data.set_index(['datetime'], inplace=True, drop=True)
     data = pd.concat([data, weighted_errors], axis=1, join='inner')
@@ -71,7 +66,6 @@ if __name__ == "__main__":
         mean_e[ss] = df_ss.loc[:, list(weighted_errors.columns)].mean(axis=0)
         cum_mean_e[ss] = cumm_df
 
-    # %%
     cummulative_mean_error = pd.concat([m for _, m in cum_mean_e.items()], axis=1).sort_index()
     data = results['data'].loc[:, ['ESc', 'test', 'datetime']].copy()
     data.set_index(['datetime'], inplace=True, drop=True)
@@ -79,6 +73,16 @@ if __name__ == "__main__":
     data.rename(columns={'test': 'subset'}, inplace=True)
     data.fillna(method='ffill', inplace=True)
 
+
+    if general_cfg['save_forecast']:
+        results['cummulative_mean_error'] = data
+        results['weighted_errors'] = weighted_errors
+        save_vars(results, os.path.join(config.results_folder,
+                                        experiment_cfg['experiment_name'],
+                                        '{}{}_pred'.format('all_' if general_cfg['use_all_data'] else '',
+                                                           experiment_cfg['vars_definition'])))
+
+    #%%
     # plotly_time_series(data, rows=[0, 1, 2, 2, 2])
 
     plotly_color_1st_row(data,

@@ -12,7 +12,6 @@ from timeseries.experiments.utils.files import save_vars
 # tensorboard --logdir src/timeseries/experiments/market/outputs/saved_models/snp/5t_ema_q258/logs/fit
 
 if __name__ == "__main__":
-    #%%
     print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
     print("Device Name: ", tf.test.gpu_device_name())
     print('TF eager execution: {}'.format(tf.executing_eagerly()))
@@ -26,6 +25,7 @@ if __name__ == "__main__":
                  'hidden_layer_size': 128,
                  'learning_rate': 0.01,
                  'minibatch_size': 64,
+                 # 'dropout_rate': 0.4,
                  }
 
     fixed_cfg = {'quantiles': [0.3, 0.5, 0.7],
@@ -33,7 +33,7 @@ if __name__ == "__main__":
                  }
 
     experiment_cfg = {'formatter': 'snp',
-                      'experiment_name': '60t_ema_q357',
+                      'experiment_name': '60t_ema_q357_4',
                       'dataset_config': 'ES_60t_regime_2015-01_to_2021-06_ema_group_w8',
                       'vars_definition': 'ES_ema_r',
                       'architecture': 'TFTModel'
@@ -64,7 +64,8 @@ if __name__ == "__main__":
 
     if general_cfg['send_notifications']:
         mins = round((time.time() - t0) / 60, 0)
-        telegram_send.send(messages=["training for {} completed in {} mins".format(filename, mins)])
+        gens = 'in {} epochs'.format(len(results['fit_history']['loss']) if results['fit_history'] is not None else '')
+        telegram_send.send(messages=["training for {} completed in {} mins {}".format(filename, mins, gens)])
 
     post_process_results(results, formatter, experiment_cfg)
 

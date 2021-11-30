@@ -378,18 +378,18 @@ def plot_runs(y_runs,
         save_fig(fig, file_path, use_date)
 
 
-def plot_histogram(Y,
-                   x_labels,
-                   x_label=None,
-                   y_label=None,
-                   title=None,
-                   size=(15, 9),
-                   file_path=None,
-                   save=False,
-                   show_grid=True,
-                   use_date=False,
-                   ylim=None,
-                   show_title=True):
+def plot_boxplot(Y,
+                 x_labels,
+                 x_label=None,
+                 y_label=None,
+                 title=None,
+                 size=(15, 9),
+                 file_path=None,
+                 save=False,
+                 show_grid=True,
+                 use_date=False,
+                 ylim=None,
+                 show_title=True):
     Y = pd.DataFrame(Y.T, columns=x_labels)
     df = Y.melt()
     df.columns = ['variable' if x_label is None else x_label,
@@ -398,7 +398,8 @@ def plot_histogram(Y,
     if show_grid:
         plt.grid()
     # for i, y in enumerate(Y):
-    sns.barplot(data=df, x=x_label, y=y_label, capsize=.2)
+    sns.boxplot(data=df, x=x_label, y=y_label)
+    # sns.barplot(data=df, x=x_label, y=y_label, capsize=.2)
     if show_title:
         ax.set_title('' if title is None else title)
     if ylim:

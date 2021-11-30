@@ -231,11 +231,11 @@ def add_date_known_inputs(df):
     df['days_from_start'] = list(range(df.shape[0]))
 
 
-def reconstruct_forecasts(formatter, results):
+def reconstruct_forecasts(formatter, results, n_output_steps):
     true_target = formatter.test_true_y
     true_target_col = formatter.test_true_y.columns[0]
-    return_forecast_cols = ['t+{}'.format(i+1) for i in range(5)]
-    target_forecast_cols = ['{} t+{}'.format(true_target_col, i + 1) for i in range(5)]
+    return_forecast_cols = ['t+{}'.format(i+1) for i in range(n_output_steps)]
+    target_forecast_cols = ['{} t+{}'.format(true_target_col, i + 1) for i in range(n_output_steps)]
 
     reconstructed_forecast = {}
     for key, forecast in results.items():

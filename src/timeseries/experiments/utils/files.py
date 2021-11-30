@@ -29,7 +29,7 @@ def get_new_file_path(file_path, extension, use_date_suffix):
                     counter += 1
         else:
             return os.path.join(path, filename)
-    return os.path.join(path, filename)
+    return os.path.normpath(os.path.join(path, filename))
 
 
 def save_df(df, file_path, use_date_suffix=False):

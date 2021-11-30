@@ -33,6 +33,7 @@ class Winners:
         self.n_elements = metrics.shape[1]
         self.ranking_count = np.zeros((self.n_elements, self.n_elements))
         self.condorcet_mat = np.zeros((self.n_elements, self.n_elements))
+        self.wr_mat = None
         self.calc_rankings()
         self.count_rankings()
 
@@ -75,6 +76,7 @@ class Winners:
             for i, algos_hvs in enumerate(problem_samples):
                 wr_mat[i, :, :] = wilcoxon_rank(algos_hvs, self.labels, alternative=alternative).values
             p_value = 0.05
+            self.wr_mat = wr_mat
             wr_mat_test = (wr_mat <= p_value).astype(int)
             self.condorcet_mat = np.sum(wr_mat_test, axis=0)
 
@@ -110,7 +112,19 @@ class Winners:
             'sorted_algos': sorted_algos,
             'border_scores': border_scores,
             'condorcet_scores': self.get_condorcet(),
+            'wr_scores': self.get_wr(),
             'condorcet_winner': condorcet_winner,
             'pairwise_wins': pairwise_wins
         }
+
+    def get_wr(self):
+        wr_mats = []
+        for i, w in enumerate(self.wr_mat):
+            wr_mats.append(pd.DataFrame(w,
+                                        columns=self.labels,
+                                        index=['{} ({})'.format(label, i) for label in self.labels]))
+        wr_mat = pd.concat(wr_mats, axis=0)
+        wr_mat.sort_index(axis=0, inplace=True)
+        wr_mat.sort_index(axis=1, inplace=True)
+        return wr_mat.round(4)
 

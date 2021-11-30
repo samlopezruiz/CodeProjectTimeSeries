@@ -15,6 +15,7 @@ def train_test_main(num_encoder_steps=30,
                     minibatch_size=64,
                     pred_steps=5,
                     num_epochs=2):
+
     model_cfg = {'total_time_steps': num_encoder_steps + pred_steps,
                  'num_encoder_steps': num_encoder_steps,
                  'num_heads': num_heads,
@@ -51,7 +52,8 @@ def train_test_main(num_encoder_steps=30,
                                tb_callback=False,
                                use_best_params=False,
                                indicators_use_time_subset=False,
-                               split_data=None
+                               split_data=None,
+                               n_train_samples=500
                                )
     log_irace_run(model_cfg, fixed_cfg, experiment_cfg, results)
     return results

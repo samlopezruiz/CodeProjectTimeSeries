@@ -27,14 +27,18 @@ if __name__ == '__main__':
 
     prob_cfg = {}
     results_cfg = {'formatter': 'snp',
-                   'experiment_name': '5t_ema_q258',
-                   'results': 'TFTModel_ES_slow_ema_r_q258_lr001_pred'
+                   'experiment_name': '60t_ema_q357',
+                   'results': 'TFTModel_ES_ema_r_q357_lr01_pred'
                    }
 
-    algo_cfg = {'termination': ('n_gen', 200),
-                'pop_size': 200,
-                'use_sampling': True,
+    algo_cfg = {'termination': ('n_gen', 100),
+                'pop_size': 100,
+                'use_sampling': False,
+                'optimize_eq_weights': False,
+                'use_constraints': True,
+                'constraints': [1., 1.],
                 }
+
 
     moo_method = 'NSGA2'
 
@@ -49,18 +53,24 @@ if __name__ == '__main__':
                                          model_folder=model_folder,
                                          data_formatter=formatter,
                                          data_config=config.data_config,
-                                         use_gpu=False,
-                                         parallelize_pop=False if moo_method == 'MOEAD' else True)
+                                         use_gpu=True,
+                                         parallelize_pop=False if moo_method == 'MOEAD' else True,
+                                         constraints_limits=algo_cfg['constraints'] if algo_cfg[
+                                             'use_constraints'] else None,
+                                         optimize_eq_weights=algo_cfg['optimize_eq_weights'])
 
     lower_q_problem, upper_q_problem = dual_q_problem.get_problems()
 
-    filename = '{}_{}_q{}_{}_{}_p{}_s{}_dual_wmoo'.format(experiment_cfg['architecture'],
-                                                          experiment_cfg['vars_definition'],
-                                                          quantiles_name(dual_q_problem.quantiles),
-                                                          moo_method,
-                                                          termination_name(algo_cfg['termination']),
-                                                          algo_cfg['pop_size'],
-                                                          int(algo_cfg['use_sampling']))
+    filename = '{}_{}_q{}_{}_{}_p{}_s{}_c{}_eq{}_dual_wmoo'.format(experiment_cfg['architecture'],
+                                                              experiment_cfg['vars_definition'],
+                                                              quantiles_name(dual_q_problem.quantiles),
+                                                              moo_method,
+                                                              termination_name(algo_cfg['termination']),
+                                                              algo_cfg['pop_size'],
+                                                              int(algo_cfg['use_sampling']),
+                                                              int(algo_cfg['use_constraints']),
+                                                              int(algo_cfg['optimize_eq_weights']),
+                                                              )
 
     res = run_dual_moo_weights(moo_method,
                                algo_cfg,
@@ -69,7 +79,8 @@ if __name__ == '__main__':
                                lower_q_problem,
                                upper_q_problem,
                                dual_q_problem,
-                               model_results)
+                               model_results,
+                               verbose=2)
 
     if general_cfg['send_notifications']:
         try:

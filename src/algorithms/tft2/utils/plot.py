@@ -12,7 +12,7 @@ def plot_self_attn(attentions,
                    save=False,
                    file_path=None,
                    size=(1980, 1080)):
-    self_attns = None
+    self_attentions = []
     # Plot attention for each head
     for i, head_self_attn in enumerate(attentions['decoder_self_attn']):
         self_attn_sample_avg = np.mean(head_self_attn, axis=0)
@@ -22,6 +22,7 @@ def plot_self_attn(attentions,
                                     name='self_attn t={}'.format(tau)) for tau in taus]
         self_attns = pd.concat(self_attn_taus, axis=1)
         self_attns.index = np.array(self_attns.index) - params['num_encoder_steps']
+        self_attentions.append(self_attns)
         plotly_time_series(self_attns,
                            xaxis_title='Position Index (n)',
                            title='Self Attention Head {}'.format(i),

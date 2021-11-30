@@ -187,6 +187,35 @@ def append_scatter_trace(fig, df_ss, feature, opacity, markersize=5, color_ix=No
     )
 
 
+def get_plot_segments(plot_identifiers, forecasts_grouped):
+    plot_segments = []
+    for i, id in enumerate(plot_identifiers):
+        # df = forecasts_grouped['targets'][id]
+        dt_index = forecasts_grouped['targets'][id].index
+        date_ix = (pd.Series(forecasts_grouped['targets'][id].index.dayofweek) > 4).astype(int)
+        step_up = date_ix.diff(1).fillna(0).astype(int)
+        step_down = date_ix.diff(-1).fillna(0).astype(int)
+        # df['step_up'] = step_up.values
+        # df['step_down'] = step_down.values
+        # df['weekend'] = date_ix.values
+        ini_ixs = np.where(step_up == np.max(step_up))[0]
+        ini_ixs_2dary = np.where(step_up == np.min(step_up))[0]
+        # plotly_time_series(df, features=['ESc_e11 t+1', 'step_up', 'step_down', 'weekend'], rows=[0, 1, 1, 2])
+
+        if sum(step_down < 0) > 3 or sum(step_up > 0) > 3:
+            x_range = None
+        else:
+            if len(ini_ixs) == 1 and len(ini_ixs_2dary) > 0 and ini_ixs_2dary[0] < ini_ixs[0]:
+                x_range = [dt_index[ini_ixs_2dary[0]], dt_index[ini_ixs[0] - 1]]
+            else:
+                x_range = [dt_index[ini_ixs[0]], dt_index[ini_ixs[1] - 1]]
+
+        plot_segments.append({'id': id,
+                              'y_range': None,
+                              'x_range': x_range})
+    return plot_segments
+
+
 def group_forecasts(forecasts, n_output_steps, target_col):
     if target_col:
         features = ['{} t+{}'.format(target_col, i + 1) for i in range(n_output_steps)]

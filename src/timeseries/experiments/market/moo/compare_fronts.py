@@ -11,18 +11,20 @@ sns.set_theme('poster')
 
 if __name__ == "__main__":
     # %%
-    general_cfg = {'save_plot': True,
+    general_cfg = {'save_plot': False,
                    'test_name': 'moo_methods'}
 
     results_cfg = {'formatter': 'snp'}
 
-    weights_files = [('60t_ema_q159', 'TFTModel_ES_ema_r_q159_NSGA3_g250_p250_s1_k2_wmoo'),
-                     ('60t_ema_q258', 'TFTModel_ES_ema_r_q258_NSGA3_g250_p250_s1_k2_wmoo'),
-                     ('60t_ema_q357', 'TFTModel_ES_ema_r_q357_NSGA3_g250_p250_s1_k2_wmoo'),
-                     ]
+    weights_files = [
+        ('60t_ema_q357', 'TFTModel_ES_ema_r_q357_NSGA3_g250_p250_s1_k2_wmoo'),
+        ('60t_ema_q258', 'TFTModel_ES_ema_r_q258_NSGA3_g250_p250_s1_k2_wmoo'),
+        ('60t_ema_q159', 'TFTModel_ES_ema_r_q159_NSGA3_g250_p250_s1_k2_wmoo'),
+    ]
 
     results_folder = get_result_folder(results_cfg)
-    moo_results = [joblib.load(os.path.join(results_folder, file[0], 'moo', 'old', file[1]) + '.z') for file in weights_files]
+    moo_results = [joblib.load(os.path.join(results_folder, file[0], 'moo', 'old', file[1]) + '.z') for file in
+                   weights_files]
     # legend_labels_suffix = ['s: {}, g:{}, p:{}'.format(int(moo_result['algo_cfg']['use_sampling']),
     #                                                    moo_result['algo_cfg']['termination'][1],
     #                                                    moo_result['algo_cfg']['pop_size']) for moo_result in moo_results]
@@ -43,8 +45,8 @@ if __name__ == "__main__":
     plot_2D_moo_results_equal_w(quantiles_losses, eq_quantiles_losses,
                                 save=general_cfg['save_plot'],
                                 file_path=os.path.join(os.path.dirname(results_folder),
-                                               'img',
-                                               filename),
+                                                       'img',
+                                                       filename),
                                 original_ixs=original_ixs,
                                 legend_labels=legend_label,
                                 figsize=(20, 15),

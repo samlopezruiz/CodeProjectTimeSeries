@@ -8,14 +8,10 @@ import numpy as np
 import tensorflow as tf
 from pymoo.core.problem import Problem
 
-from algorithms.tft2.harness.train_test import moo_q_loss_model, compute_moo_q_loss
+from algorithms.tft2.harness.train_test import moo_q_loss_model
 from algorithms.tft2.libs.hyperparam_opt import HyperparamOptManager
-from algorithms.tft2.libs.tft_model import TemporalFusionTransformer
-from algorithms.tft2.utils.nn import dense_layer_output
-from timeseries.data.market.utils.names import get_inst_ohlc_names
-from timeseries.experiments.market.expt_settings.configs import ExperimentConfig
 from timeseries.experiments.market.moo.utils.model import get_last_layer_weights, params_conversion_weights, \
-    run_moo_nn, create_output_map, reconstruct_weights
+    run_moo_nn
 from timeseries.experiments.market.moo.utils.utils import get_loss_to_obj_function
 from timeseries.experiments.market.utils.filename import get_result_folder
 from timeseries.experiments.market.utils.harness import get_model, get_model_data_config

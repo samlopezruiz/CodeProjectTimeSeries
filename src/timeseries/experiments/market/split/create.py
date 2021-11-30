@@ -32,7 +32,7 @@ if __name__ == '__main__':
                 'data_to': '2021-06',
                 'vol_filename': "Vol_5levels_ESc_2012_1-2021_6.z",
                 'downsample': True,
-                'downsample_p': '60T'}
+                'downsample_p': '5T'}
 
     split_cfg = {'group': 'week',
                  'groups_of': 8,
@@ -70,7 +70,8 @@ if __name__ == '__main__':
     #%%
     df_plot = df_subsets.iloc[-40000:-10000, :]
     plotly_ts_regime(df_plot,
-                     features=['ESc'],  # , 'test_train_subset'],
+                     features=['ESc', 'test_train_subset', 'week_of_year'],
+                     rows=[0, 1, 2],
                      resample=False,
                      regime_col='test',
                      period='90T',
