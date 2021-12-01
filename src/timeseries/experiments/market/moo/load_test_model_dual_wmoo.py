@@ -23,15 +23,16 @@ if __name__ == "__main__":
     print('TF eager execution: {}'.format(tf.executing_eagerly()))
 
     general_cfg = {'save_forecast': False,
-                   'save_plot': True,
+                   'save_plot': False,
                    'plot_title': False,
                    'use_all_data': True,
                    'use_moo_weights': False,
+                   'plot_tolerance': False,
                    'manual_selection': True}
 
     results_cfg = {'formatter': 'snp',
-                   'experiment_name': '60t_ema_q357',
-                   'results': 'TFTModel_ES_ema_r_q357_NSGA2_g100_p100_s0_c1_eq0_dual_wmoo'
+                   'experiment_name': '60t_ema_q258',
+                   'results': 'TFTModel_ES_ema_r_q258_NSGA2_g100_p100_s0_c1_eq0_dual_wmoo'
                    }
 
     moo_results = joblib.load(os.path.join(get_result_folder(results_cfg), 'moo', results_cfg['results'] + '.z'))
@@ -51,10 +52,10 @@ if __name__ == "__main__":
 
     limits_ixs = [get_ixs_risk(moo_result['F'], add_risk) for _, moo_result in moo_results.items()]
 
-    # manual_selected_ixs = {'lq': limits_ixs[0][0],
-    #                        'uq': limits_ixs[1][0]}
-    manual_selected_ixs = {'lq': 68,
-                           'uq': 76}
+    manual_selected_ixs = {'lq': limits_ixs[0][1],
+                           'uq': limits_ixs[1][0]}
+    # manual_selected_ixs = {'lq': 68,
+    #                        'uq': 76}
 
     labels, quantiles_losses, original_ixs, selected_ixs = [], [], [], []
     selected_weights, original_weights = {}, {}
@@ -112,7 +113,7 @@ if __name__ == "__main__":
                              xaxis_limit=xaxis_limit,
                              col_titles=labels,
                              legend_labels=None,
-                             add_risk=add_risk,
+                             add_risk=add_risk if general_cfg['plot_tolerance'] else None,
                              markersize=8,
                              plot_title=general_cfg['plot_title'],
                              title='MOO using {} for quantiles: {}'.format(moo_result['moo_method'],

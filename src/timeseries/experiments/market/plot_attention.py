@@ -16,11 +16,11 @@ from timeseries.plotly.plot import plotly_time_series
 sns.set_theme('poster')
 if __name__ == "__main__":
     # %%
-    general_cfg = {'save_plot': True,
+    general_cfg = {'save_plot': False,
                    }
 
     results_cfg = {'formatter': 'snp',
-                   'experiment_name': '5t_ema_q258',
+                   'experiment_name': '60t_ema_q258',
                    'results': 'attention_processed'
                    }
 
@@ -39,7 +39,7 @@ if __name__ == "__main__":
                            save=general_cfg['save_plot'],
                            file_path=os.path.join(get_result_folder(results_cfg),
                                                   'img',
-                                                  'head_{}'.format(i)),
+                                                  '{}_head_{}'.format(results_cfg['experiment_name'], i)),
                            save_png=True,
                            size=(1980 * 2 // 3, 1080 * 2 // 3))
 
@@ -53,7 +53,7 @@ if __name__ == "__main__":
                        save=general_cfg['save_plot'],
                        file_path=os.path.join(get_result_folder(results_cfg),
                                               'img',
-                                              'hist_attn_position'),
+                                              '{}_feat_attn_pos'.format(results_cfg['experiment_name'])),
                        label_scale=1.5,
                        save_png=True,
                        size=(1980 * 2 // 3, 1080 * 2 // 3))
@@ -70,5 +70,5 @@ if __name__ == "__main__":
         save_fig(fig,
                  file_path=os.path.join(get_result_folder(results_cfg),
                                         'img',
-                                        'hist_attn'),
+                                        '{}_feat_attn'.format(results_cfg['experiment_name'])),
                  use_date=False)

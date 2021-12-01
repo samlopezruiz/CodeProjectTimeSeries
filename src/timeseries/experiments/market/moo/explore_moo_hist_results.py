@@ -18,8 +18,8 @@ sns.set_style("dark")
 
 if __name__ == "__main__":
     # %%
-    general_cfg = {'save_plot': True,
-                   'save_results': True,
+    general_cfg = {'save_plot': False,
+                   'save_results': False,
                    'show_title': False,
                    'comparison_name': 'moo_methods_ES_ema_r_q258_g100_p100_s0_c1_eq0',
                    }

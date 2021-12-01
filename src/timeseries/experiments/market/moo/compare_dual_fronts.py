@@ -81,25 +81,25 @@ if __name__ == "__main__":
                              xaxis_limit=xaxis_limit,
                              markersize=5)
 
-    # for i, bound in enumerate(['lower quantile', 'upper quantile']):
-    #     risk_lbl = '_eqcr{}'.format(int(qcr_risk_selected[i] * 10)) if general_cfg['plot_selected'] else ''
-    #     plot_2D_moo_results_equal_w(quantiles_losses[i], eq_quantiles_losses[i],
-    #                                 save=general_cfg['save_plot'],
-    #                                 file_path=os.path.join(os.path.dirname(results_folder),
-    #                                                        'img',
-    #                                                        '{}_{}{}'.format(filename,
-    #                                                                         bounds[i],
-    #                                                                         risk_lbl)),
-    #                                 original_ixs=original_ixs[i],
-    #                                 selected_ixs=selected_ixs[i] if general_cfg['plot_selected'] else None,
-    #                                 legend_labels=experiment_labels,
-    #                                 figsize=(15, 15),
-    #                                 add_risk=add_risk if general_cfg['plot_tolerance'] else None,
-    #                                 plot_title=general_cfg['plot_title'],
-    #                                 title='Multi objective optimization results for {}'.format(bound),
-    #                                 xaxis_limit=xaxis_limit,
-    #                                 markersize=5)
-    #
-    #
-    #
-    # print(np.array(selected_ixs))
+    for i, bound in enumerate(['lower quantile', 'upper quantile']):
+        risk_lbl = '_eqcr{}'.format(int(qcr_risk_selected[i] * 10)) if general_cfg['plot_selected'] else ''
+        plot_2D_moo_results_equal_w(quantiles_losses[i], eq_quantiles_losses[i],
+                                    save=general_cfg['save_plot'],
+                                    file_path=os.path.join(os.path.dirname(results_folder),
+                                                           'img',
+                                                           '{}_{}{}'.format(filename,
+                                                                            bounds[i],
+                                                                            risk_lbl)),
+                                    original_ixs=original_ixs[i],
+                                    selected_ixs=selected_ixs[i] if general_cfg['plot_selected'] else None,
+                                    legend_labels=experiment_labels,
+                                    figsize=(15, 15),
+                                    add_risk=add_risk if general_cfg['plot_tolerance'] else None,
+                                    plot_title=general_cfg['plot_title'],
+                                    title='Multi objective optimization results for {}'.format(bound),
+                                    xaxis_limit=xaxis_limit,
+                                    markersize=5)
+
+
+
+    print(np.array(selected_ixs))

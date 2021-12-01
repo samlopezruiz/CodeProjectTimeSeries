@@ -27,8 +27,8 @@ if __name__ == '__main__':
 
     prob_cfg = {}
     results_cfg = {'formatter': 'snp',
-                   'experiment_name': '60t_ema_q357',
-                   'results': 'TFTModel_ES_ema_r_q357_lr01_pred'
+                   'experiment_name': '5t_ema_q258_10s',
+                   'results': 'TFTModel_ES_slow_ema_r_q258_lr001_pred'
                    }
 
     algo_cfg = {'termination': ('n_gen', 100),

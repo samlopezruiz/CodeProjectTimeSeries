@@ -588,7 +588,7 @@ def get_x_mask(F_input, xaxis_limit):
                 Fs_x_plot_masks = Fs[:, 0] < xaxis_limit
         else:
             if isinstance(Fs, list):
-                Fs_x_plot_masks = [np.ones((F.shape[0],)).astype(bool) < xaxis_limit for F in Fs]
+                Fs_x_plot_masks = [np.ones((F.shape[0],)).astype(bool) for F in Fs]
             else:
                 Fs_x_plot_masks = np.ones((Fs.shape[0],)).astype(bool)
 

@@ -53,6 +53,12 @@ def array_from_lists(lists):
     return arr
 
 
+def mean_std_text_df(df, label, round=3):
+    mean = df.mean(axis=0).round(round).astype(str)
+    std = df.std(axis=0).round(round).astype(str)
+    text = (mean + ' (' + std + ')').to_frame(name=label).T
+    return text
+
 
 def mean_std_from_array(arr, labels):
     df = pd.DataFrame()

@@ -47,9 +47,9 @@ def get_average_of_runs(F_runs, x_lim, labels, step_size=0.01):
 if __name__ == "__main__":
     # %%
     general_cfg = {'comparison_name': 'multiple_training',
-                   'save_results': False,
-                   'save_plot': False,
-                   'plot_title': True,
+                   'save_results': True,
+                   'save_plot': True,
+                   'plot_title': False,
                    }
 
     results_cfg = {'formatter': 'snp'}
@@ -80,7 +80,7 @@ if __name__ == "__main__":
     #     'q: {}'.format('-'.join((np.array(experiment[0]['lq']['quantiles']) * 10).astype(int).astype(str)))
     #     for experiment in moo_results]
     experiment_labels = [weights_file[0][8:] for weights_file in weights_files]
-    results = compile_multiple_results(moo_results, experiment_labels, hv_ref=None)
+    results = compile_multiple_results(moo_results, experiment_labels,  hv_ref=[10] * 2)
 
     # %% merge if necesary
     experiment_labels = ['q159', 'q258', 'q357']
@@ -114,24 +114,11 @@ if __name__ == "__main__":
         average_run, x = get_average_of_runs(F_runs, x_lim, experiment_labels, step_size=0.01)
         average_q_F[list(results.keys())[i]] = average_run
 
-    # for q_lbl, avg_res in average_q_F.items():
-    #     fig, ax = plt.subplots(figsize=(10, 10))
-    #
-    #     for exp_lbl, exp_mean in avg_res.items():
-    #         ax.plot(x, exp_mean, '-', label=exp_lbl, linewidth=4, markersize=3)
-    #
-    #     ax.set_xlim(0, x_lim)
-    #     ax.set_title('{}'.format(q_lbl))
-    #     plt.legend()
-    #     plt.xlabel('Quantile coverage risk')
-    #     plt.ylabel('Quantile estimation risk')
-    #     plt.show()
-
     quantiles_losses = [[np.vstack([x, F]).T for _, F in q_F.items()] for _, q_F in average_q_F.items()]
 
     plot_2D_moo_dual_results(quantiles_losses,
                              save=general_cfg['save_plot'],
-                             file_path=os.path.join(os.path.dirname(results_folder),
+                             file_path=os.path.join(results_folder,
                                                     'img',
                                                     '{}_plot'.format(general_cfg['comparison_name'])),
 

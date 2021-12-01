@@ -149,7 +149,10 @@ def post_process_results(results, formatter, experiment_cfg, plot_=True):
     results['experiment_cfg'] = experiment_cfg
 
 
-def compile_multiple_results(moo_results, experiment_labels, hv_ref=[10] * 2):
+def compile_multiple_results(moo_results, experiment_labels, hv_ref=None):
+    if hv_ref is None:
+        hv_ref = [10] * 2
+
     results = {}
     for q_lbl, bound in zip(['lower quantile', 'upper quantile'], ['lq', 'uq']):
         results[q_lbl] = {}
