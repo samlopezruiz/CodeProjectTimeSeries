@@ -1,0 +1,1 @@
+['../irace_main.py', '--num_encoder_steps=44', '--num_heads=3', '--hidden_layer_size=16', '--minibatch_size=64', '--datfile', 'c17-15.dat']

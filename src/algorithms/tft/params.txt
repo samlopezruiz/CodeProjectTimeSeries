@@ -1,0 +1,11 @@
+# dropout_rate = 0.3
+# hidden_layer_size = 5
+# learning_rate = 0.01
+# max_gradient_norm = 0.01
+# minibatch_size = 64
+# num_heads = 1
+# stack_size = 1
+# total_time_steps = 257
+# num_encoder_steps = 252
+# num_epochs = 1
+
