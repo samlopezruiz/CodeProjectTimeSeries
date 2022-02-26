@@ -47,4 +47,3 @@ It is clear the model is able to predict with good accuracy the next 6 output st
 
 <img src="https://github.com/samlopezruiz/CodeProjectTimeSeries/blob/main/docs/ensemble_forecast.png?raw=true" width="700" height="250"/>
 
-## Conclusions
