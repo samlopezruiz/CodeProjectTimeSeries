@@ -165,6 +165,103 @@ def plot_2D_pareto_front(Fs,
         save_fig(fig, file_path, use_date)
 
 
+def plot_2D_dual_moo_results_equal_w(Fs,
+                                     eq_Fs,
+                                     save=False,
+                                     file_path=None,
+                                     selected_ixs=None,
+                                     original_ixs=None,
+                                     figsize=(15, 7),
+                                     use_date=False,
+                                     xlabel='Quantile coverage risk',
+                                     ylabel='Quantile estimation risk',
+                                     title='Multi objective optimization',
+                                     legend_labels=None,
+                                     plot_title=True,
+                                     xaxis_limit=None,
+                                     markersize=4,
+                                     add_risk=None):
+    fig, ax = plt.subplots(1, 2, figsize=figsize)
+    ax00, ax01 = ax[0], ax[1]
+
+    axes = [ax00, ax01]
+
+    Fs_x_plot_masks = get_x_mask(eq_Fs, xaxis_limit)
+
+    y_min_tot, y_min_tot_eq = 10, 10
+    y_max_tot, y_max_tot_eq = 0, 0
+
+    for i, (eq_fs, f) in enumerate(zip(eq_Fs, Fs)):
+        if isinstance(eq_fs, list) and isinstance(f, list):
+            for j, (f_i, eq_f_i) in enumerate(zip(f, eq_fs)):
+                if add_risk is not None:
+                    rect_pareto, rect_total = get_rect_risk(f_i, add_risk, color_ix=j, external_F=eq_f_i)
+                    axes[i].add_patch(rect_pareto)
+
+                axes[i].plot(eq_f_i[:, 0], eq_f_i[:, 1],
+                             '-o',
+                             markersize=markersize,
+                             color=sns_colors[j],
+                             label=legend_labels[j])
+
+        else:
+            axes[i].plot(eq_fs[:, 0], eq_fs[:, 1],
+                         'o',
+                         markersize=markersize,
+                         color=sns_colors[0],
+                         label='Pareto front - equal weights')
+
+    if original_ixs is not None:
+        for i, (eq_fs, f) in enumerate(zip(eq_Fs, Fs)):
+            if isinstance(eq_fs, list) and isinstance(f, list):
+                for j, (f_i, eq_f_i) in enumerate(zip(f, eq_fs)):
+                    axes[i].plot(eq_f_i[original_ixs[i][j], 0], eq_f_i[original_ixs[i][j], 1],
+                                 '*',
+                                 markersize=26,
+                                 color='black',
+                                 markeredgecolor=sns_colors[j],
+                                 markeredgewidth=2,
+                                 label='Original' if j == 0 else None)
+            else:
+                axes[i].plot(eq_fs[original_ixs[i], 0], eq_fs[original_ixs[i], 1],
+                             '*',
+                             markersize=26,
+                             color='black',
+                             markeredgecolor='black',
+                             markeredgewidth=2,
+                             label='Original' if j == 0 else None)
+
+    # if original_ixs is not None:
+    #     highlight_point(Fs, eq_Fs, axes, original_ixs, color='black', label='Original', edgecolor=True)
+    # if selected_ixs is not None:
+    #     highlight_point(Fs, eq_Fs, axes, selected_ixs, color='red', label='Selected')
+
+    print(xaxis_limit)
+    ax01.set_title('Lower quantile', fontweight="bold")
+    ax01.set_xlabel('Quantile coverage risk')
+    ax01.set_ylabel('Total error')
+    if xaxis_limit is not None:
+        ax01.set_xlim(0, xaxis_limit)
+    # ax01.set_ylim(y_min_tot * .9, y_max_tot)
+    ax01.legend()
+
+    ax00.set_title('Upper quantile', fontweight="bold")
+    ax00.set_xlabel(xlabel)
+    ax00.set_ylabel(ylabel)
+    if xaxis_limit is not None:
+        ax00.set_xlim(0, xaxis_limit)
+    # ax01.set_ylim(y_min_tot * .9, y_max_tot)
+    ax00.legend()
+
+    if plot_title:
+        fig.suptitle(title)
+    plt.tight_layout()
+    plt.show()
+
+    if save:
+        save_fig(fig, file_path, use_date)
+
+
 def plot_2D_moo_results_equal_w(Fs,
                                 eq_Fs=None,
                                 save=False,

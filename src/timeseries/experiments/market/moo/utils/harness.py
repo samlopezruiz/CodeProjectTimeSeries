@@ -37,7 +37,6 @@ def run_dual_moo_weights(moo_method,
                              verbose=verbose,
                              save_history=general_cfg['save_history'])
 
-        #%%
         eq_F = problem.compute_eq_F(moo_result['res'].pop.get('X'))
 
         # swap columns because q < 0.5

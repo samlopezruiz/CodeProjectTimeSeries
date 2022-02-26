@@ -4,7 +4,8 @@ import joblib
 import numpy as np
 import seaborn as sns
 
-from timeseries.experiments.market.plot.plot import plot_2D_moo_dual_results, plot_2D_moo_results_equal_w
+from timeseries.experiments.market.plot.plot import plot_2D_moo_dual_results, plot_2D_moo_results_equal_w, \
+    plot_2D_dual_moo_results_equal_w
 from timeseries.experiments.market.utils.filename import get_result_folder
 from timeseries.experiments.market.utils.results import compile_multiple_results_q
 
@@ -99,7 +100,21 @@ if __name__ == "__main__":
                                     title='Multi objective optimization results for {}'.format(bound),
                                     xaxis_limit=xaxis_limit,
                                     markersize=5)
-
-
+    #%%
+    plot_2D_dual_moo_results_equal_w(quantiles_losses, eq_quantiles_losses,
+                                     save=True, #general_cfg['save_plot'],
+                                     file_path=os.path.join(os.path.dirname(results_folder),
+                                                            'img',
+                                                            '{}_{}_eqW'.format(filename,
+                                                                             risk_lbl)),
+                                     original_ixs=original_ixs,
+                                     selected_ixs=selected_ixs if general_cfg['plot_selected'] else None,
+                                     legend_labels=experiment_labels,
+                                     figsize=(15, 7),
+                                     add_risk=add_risk if general_cfg['plot_tolerance'] else None,
+                                     plot_title=general_cfg['plot_title'],
+                                     title='Multi objective optimization results',
+                                     xaxis_limit=0.8,
+                                     markersize=5)
 
     print(np.array(selected_ixs))

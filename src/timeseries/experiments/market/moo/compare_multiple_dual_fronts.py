@@ -47,8 +47,8 @@ def get_average_of_runs(F_runs, x_lim, labels, step_size=0.01):
 if __name__ == "__main__":
     # %%
     general_cfg = {'comparison_name': 'multiple_training',
-                   'save_results': True,
-                   'save_plot': True,
+                   'save_results': False,
+                   'save_plot': False,
                    'plot_title': False,
                    }
 
