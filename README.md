@@ -13,8 +13,6 @@ In this work, the following neural networks architectures for time series foreca
 ## Data
 The 3-variate time series are derived from the Lorenz attractor, which consists of a compact invariant set in the three-dimensional phase space of a smooth flow which has the complicated topological structure mentioned below and is asymptotically stable. The concept of an attractor, that is, an attracting set, often includes only the latter of these two properties; however, both the Lorenz attractor and other practically important attractors have both these properties.
 
-<img src="https://github.com/samlopezruiz/TimeseriesQuantileForecast/blob/master/src/docs/TFTModel_ES_ema_r_q258_NSGA2_g100_p100_s0__tol5_all_pred_id31.png?raw=true" width="700" height="250"/>
-
 
 The proposal of this work is the multi-objective framework for tuning the model according to the decision-maker preferences.  
 <br>
